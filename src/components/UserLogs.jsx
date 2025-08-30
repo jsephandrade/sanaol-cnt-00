@@ -27,8 +27,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import LogDetailsModal from '@/components/logs/LogDetailsModal';
-import LogsTable from '@/components/logs/LogsTable';
+import LogDetailsModal from '@/components/logs/LogDetailsModal.jsx';
+import LogsTable from '@/components/logs/LogsTable.jsx';
 
 const UserLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
