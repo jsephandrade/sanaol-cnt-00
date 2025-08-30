@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import ImagePlaceholder from '@/assets/placeholder.svg';
 
 export const usePOSData = () => {
