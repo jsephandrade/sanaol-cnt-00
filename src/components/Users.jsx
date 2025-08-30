@@ -274,6 +274,7 @@ const Users = () => {
           getInitials={getInitials} 
         />
       </div>
+      </div>
 
       <AddUserModal
         open={showAddModal}
