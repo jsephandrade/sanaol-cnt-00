@@ -26,12 +26,11 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
         <CardDescription>Next scheduled catering event</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          {/* Event Header */}
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div>
-              <h3 className="text-xl font-semibold text-foreground">{event.name}</h3>
-              <p className="text-muted-foreground">{event.client}</p>
+              <h3 className="text-lg font-semibold">{event.name}</h3>
+              <p className="text-sm text-muted-foreground">{event.client}</p>
             </div>
             <CustomBadge
               variant={getStatusBadgeVariant(event.status)}
@@ -41,96 +40,60 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
             </CustomBadge>
           </div>
 
-          {/* Info Boxes */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-background border rounded-lg p-4">
-              <div className="flex items-center gap-2 text-primary font-medium mb-2">
-                <CalendarDays className="h-4 w-4" />
+            <div className="flex flex-col p-3 border rounded-md">
+              <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                <CalendarDays className="h-4 w-4 text-primary" />
                 Date & Time
               </div>
-              <div className="text-foreground">
-                <div className="font-medium">{event.date}</div>
-                <div className="text-sm text-muted-foreground">{event.time}</div>
-              </div>
+              <p className="text-sm">
+                {event.date}
+                <br />
+                {event.time}
+              </p>
             </div>
 
-            <div className="bg-background border rounded-lg p-4">
-              <div className="flex items-center gap-2 text-primary font-medium mb-2">
-                <Map className="h-4 w-4" />
+            <div className="flex flex-col p-3 border rounded-md">
+              <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                <Map className="h-4 w-4 text-primary" />
                 Location
               </div>
-              <div className="text-foreground">
-                <div className="font-medium">{event.location}</div>
-              </div>
+              <p className="text-sm">{event.location}</p>
             </div>
 
-            <div className="bg-background border rounded-lg p-4">
-              <div className="flex items-center gap-2 text-primary font-medium mb-2">
-                <Users className="h-4 w-4" />
+            <div className="flex flex-col p-3 border rounded-md">
+              <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                <Users className="h-4 w-4 text-primary" />
                 Attendees
               </div>
-              <div className="text-foreground">
-                <div className="font-medium">{event.attendees} people</div>
-              </div>
+              <p className="text-sm">{event.attendees} guests</p>
             </div>
           </div>
 
-          {/* Contact and Financial Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Contact Person */}
-            <div className="bg-background border rounded-lg p-4">
-              <div className="flex items-center gap-2 text-primary font-medium mb-3">
-                <User className="h-4 w-4" />
-                Contact Person
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-medium">
-                  {event.contactPerson.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <div className="font-medium text-foreground">{event.contactPerson.name}</div>
-                  <div className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {event.contactPerson.phone}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Financial Info */}
-            <div className="bg-background border rounded-lg p-4">
-              <div className="flex items-center gap-2 text-primary font-medium mb-3">
-                <Banknote className="h-4 w-4" />
-                Financial
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
+              <h4 className="font-medium">Contact Person</h4>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Amount:</span>
-                  <span className="font-semibold text-foreground">${event.total.toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{event.contactPerson.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Per Guest:</span>
-                  <span className="font-medium text-foreground">${(event.total / event.attendees).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Deposit Paid:</span>
-                  <span className="font-medium text-green-600">Yes (50%)</span>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">{event.contactPerson.phone}</span>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <button className="px-4 py-2 border border-border rounded-lg text-foreground hover:bg-accent transition-colors">
-              View Full Details
-            </button>
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
-              Generate Report
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            <div className="space-y-3">
+              <h4 className="font-medium">Financial Summary</h4>
+              <div className="flex items-center gap-2">
+                <Banknote className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  Total: <span className="font-medium">${event.total.toFixed(2)}</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
