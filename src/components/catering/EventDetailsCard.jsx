@@ -97,7 +97,7 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
                 <div className="flex items-center gap-2">
                   <Banknote className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    Deposit: <span className="font-medium">${(event.deposit || event.total * 0.3).toFixed(2)}</span>
+                    Deposit: <span className="font-medium">${(event.deposit || event.total * 0.5).toFixed(2)}</span>
                     <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
                       event.depositPaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
