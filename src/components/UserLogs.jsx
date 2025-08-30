@@ -16,6 +16,10 @@ import {
   ShieldAlert,
   UserCog,
   Settings,
+  Calendar,
+  User,
+  Activity,
+  Info,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,8 +31,178 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import LogDetailsModal from '@/components/logs/LogDetailsModal.jsx';
-import LogsTable from '@/components/logs/LogsTable.jsx';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+// Inline LogDetailsModal component
+const LogDetailsModal = ({ log, open, onOpenChange }) => {
+  if (!log) return null;
+
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'login':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'action':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'security':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'system':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Activity Details
+          </DialogTitle>
+          <DialogDescription>
+            Detailed information about this log entry
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Action</span>
+            </div>
+            <p className="text-sm ml-6">{log.action}</p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">User</span>
+            </div>
+            <p className="text-sm ml-6 font-mono">{log.user}</p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Timestamp</span>
+            </div>
+            <p className="text-sm ml-6 font-mono">{log.timestamp}</p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Type</span>
+            </div>
+            <div className="ml-6">
+              <Badge variant="outline" className={getTypeColor(log.type)}>
+                {log.type.charAt(0).toUpperCase() + log.type.slice(1)}
+              </Badge>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Details</span>
+            </div>
+            <p className="text-sm ml-6 leading-relaxed">{log.details}</p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Inline LogsTable component
+const LogsTable = ({ logs, onLogClick }) => {
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'login':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'action':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'security':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'system':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Action</TableHead>
+            <TableHead>User</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Timestamp</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {logs.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                No logs found matching your criteria
+              </TableCell>
+            </TableRow>
+          ) : (
+            logs.map((log) => (
+              <TableRow 
+                key={log.id} 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => onLogClick(log)}
+              >
+                <TableCell className="font-medium">
+                  {log.action}
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  {log.user}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={getTypeColor(log.type)}>
+                    {log.type.charAt(0).toUpperCase() + log.type.slice(1)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  {log.timestamp}
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
 
 const UserLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
