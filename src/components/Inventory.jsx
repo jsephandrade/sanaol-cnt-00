@@ -240,24 +240,32 @@ const Inventory = () => {
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2 space-y-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle>Raw Materials Inventory</CardTitle>
-              <CardDescription>
-                Track and manage inventory items
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              className="flex gap-1"
-              onClick={() => setShowAddModal(true)}
-            >
-              <PlusCircle className="h-4 w-4 mr-1" /> Add Item
-            </Button>
-          </CardHeader>
+    <div className="space-y-4 md:space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-semibold">Inventory Management</h2>
+          <p className="text-sm text-muted-foreground mt-1">Track and manage raw materials and stock levels</p>
+        </div>
+      </div>
+      
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 space-y-2 sm:space-y-0">
+              <div>
+                <CardTitle className="text-lg">Raw Materials Inventory</CardTitle>
+                <CardDescription>
+                  Track and manage inventory items
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                className="flex gap-1 w-full sm:w-auto"
+                onClick={() => setShowAddModal(true)}
+              >
+                <PlusCircle className="h-4 w-4 mr-1" /> Add Item
+              </Button>
+            </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
               <div className="relative flex-1">
