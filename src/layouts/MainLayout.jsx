@@ -12,16 +12,12 @@ import {
 import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Bell, LogOut, MoreVertical } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { Link } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
+// ⬇️ Add these imports
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -36,6 +32,7 @@ import {
 
 const MainLayout = ({ children, title }) => {
   const isMobile = useIsMobile();
+  console.log('MainLayout rendering, isMobile:', isMobile);
   const { user, logout } = useAuth();
 
   const displayName = user?.name || 'Admin';
@@ -43,19 +40,19 @@ const MainLayout = ({ children, title }) => {
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
 
   return (
-    <SidebarProvider defaultOpen={!isMobile} collapsedWidth={56}>
-      <div className="flex min-h-screen w-full bg-background">
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="flex h-screen w-full bg-background">
         {/* Sidebar */}
-        <Sidebar variant="sidebar" className="w-64 lg:w-80">
+        <Sidebar variant="sidebar">
           <SidebarHeader>
-            <div className="flex items-center justify-center p-4 md:p-6">
+            <div className="flex items-center justify-center p-4">
               <div className="flex items-center space-x-2">
                 <img
                   src="/favicon.ico"
                   alt="TechnoMart Logo"
                   className="h-8 w-8 object-contain"
                 />
-                <span className="text-lg md:text-xl font-bold">TechnoMart</span>
+                <span className="text-xl font-bold">TechnoMart</span>
               </div>
             </div>
           </SidebarHeader>
@@ -72,9 +69,9 @@ const MainLayout = ({ children, title }) => {
                     {avatarInitial}
                   </span>
                 </div>
-                <div className="hidden sm:block">
-                  <p className="font-semibold text-sm">{displayName}</p>
-                  <p className="text-xs text-sidebar-foreground/70">{displayEmail}</p>
+                <div>
+                  <p className="font-semibold">{displayName}</p>
+                  <p className="text-sm text-sidebar-foreground/70">{displayEmail}</p>
                 </div>
               </div>
             </div>
@@ -82,68 +79,43 @@ const MainLayout = ({ children, title }) => {
         </Sidebar>
 
         {/* Main content */}
-        <SidebarInset className="flex flex-col flex-1">
+        <SidebarInset className="flex flex-col">
           {/* Header */}
-          <header className="sticky top-0 z-40 flex flex-col sm:flex-row justify-between items-start sm:items-center bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 sm:px-6 py-3 sm:py-2 min-h-[3.5rem] shadow-sm">
-            <div className="flex items-center w-full sm:w-auto">
+          <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
+            <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
-              <h1 className="text-lg sm:text-xl font-semibold truncate">
+              <h1 className="text-xl font-semibold">
                 {title || 'Canteen Management System'}
               </h1>
             </div>
-            <div className="flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end">
-              <Button variant="outline" size="sm" asChild className="sm:flex hidden">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" asChild>
                 <Link to="/notifications">
                   <Bell className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" asChild className="sm:flex hidden">
+              <Button variant="outline" asChild>
                 <Link to="/help">Help</Link>
               </Button>
-              <Button variant="outline" size="sm" asChild className="sm:flex hidden">
+              <Button variant="outline" asChild>
                 <Link to="/settings">Settings</Link>
               </Button>
 
-              {/* Mobile menu for additional options */}
-              <div className="sm:hidden">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem asChild>
-                      <Link to="/notifications" className="flex items-center">
-                        <Bell className="mr-2 h-4 w-4" />
-                        Notifications
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/help">Help</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings">Settings</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* Logout with confirmation */}
+              {/* ⬇️ Logout with confirmation */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" title="Logout">
-                    <LogOut className="h-4 w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Logout</span>
+                  <Button variant="ghost" title="Logout">
+                    <LogOut className="mr-1" />
+                    Logout
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="sm:max-w-md">
+                <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
                       Are you sure you want to logout?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      You'll be signed out of your account and may need to log in again to continue.
+                      You’ll be signed out of your account and may need to log in again to continue.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -161,12 +133,10 @@ const MainLayout = ({ children, title }) => {
           </header>
 
           {/* Content */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6">
-              <PageTransition>
-                {children}
-              </PageTransition>
-            </div>
+          <main className="flex-1 overflow-y-auto p-6">
+            <PageTransition>
+              {children}
+            </PageTransition>
           </main>
         </SidebarInset>
       </div>

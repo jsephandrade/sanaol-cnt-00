@@ -19,21 +19,11 @@ const Dashboard = () => {
   }))
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h2 className="text-xl sm:text-2xl font-semibold">Dashboard</h2>
-        <div className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
-        </div>
-      </div>
+    <div className="space-y-4 animate-fade-in">
+      <h2 className="text-2xl font-semibold">Dashboard</h2>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatsCard
           title="Today's Sales"
           value={dashboardStats.dailySales}
@@ -63,25 +53,21 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <div className="aspect-[4/3] md:aspect-[16/9]">
-          <SalesChart
-            data={salesTimeData}
-            title="Sales by Time of Day"
-            description="Hourly sales distribution for today"
-          />
-        </div>
-        <div className="aspect-[4/3] md:aspect-[16/9]">
-          <CategoryChart
-            data={categorySalesData}
-            title="Sales by Category"
-            description="Revenue distribution across menu categories"
-          />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SalesChart
+          data={salesTimeData}
+          title="Sales by Time of Day"
+          description="Hourly sales distribution for today"
+        />
+        <CategoryChart
+          data={categorySalesData}
+          title="Sales by Category"
+          description="Revenue distribution across menu categories"
+        />
       </div>
 
       {/* Popular Items & Recent Sales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PopularItems items={dashboardStats.popularItems} />
         <RecentSales sales={dashboardStats.recentSales} />
       </div>

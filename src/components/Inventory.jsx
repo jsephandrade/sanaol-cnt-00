@@ -240,32 +240,24 @@ const Inventory = () => {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-semibold">Inventory Management</h2>
-          <p className="text-sm text-muted-foreground mt-1">Track and manage raw materials and stock levels</p>
-        </div>
-      </div>
-      
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 space-y-2 sm:space-y-0">
-              <div>
-                <CardTitle className="text-lg">Raw Materials Inventory</CardTitle>
-                <CardDescription>
-                  Track and manage inventory items
-                </CardDescription>
-              </div>
-              <Button
-                size="sm"
-                className="flex gap-1 w-full sm:w-auto"
-                onClick={() => setShowAddModal(true)}
-              >
-                <PlusCircle className="h-4 w-4 mr-1" /> Add Item
-              </Button>
-            </CardHeader>
+    <div className="grid gap-4 md:grid-cols-3">
+      <div className="md:col-span-2 space-y-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div>
+              <CardTitle>Raw Materials Inventory</CardTitle>
+              <CardDescription>
+                Track and manage inventory items
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              className="flex gap-1"
+              onClick={() => setShowAddModal(true)}
+            >
+              <PlusCircle className="h-4 w-4 mr-1" /> Add Item
+            </Button>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
               <div className="relative flex-1">
@@ -534,46 +526,45 @@ const Inventory = () => {
             </div>
           </CardFooter>
         </Card>
-        </div>
+      </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Inventory Activity</CardTitle>
-              <CardDescription>
-                Latest inventory changes and updates
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
-                  >
-                    <div className="bg-muted rounded-full p-2">
-                      <History className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex justify-between items-start">
-                        <p className="font-medium text-sm">{activity.action}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.timestamp}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {activity.item} • {activity.quantity}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        By {activity.user}
-                      </p>
-                    </div>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Inventory Activity</CardTitle>
+            <CardDescription>
+              Latest inventory changes and updates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentActivities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
+                >
+                  <div className="bg-muted rounded-full p-2">
+                    <History className="h-4 w-4 text-muted-foreground" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium text-sm">{activity.action}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {activity.timestamp}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {activity.item} • {activity.quantity}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      By {activity.user}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <AddItemModal
