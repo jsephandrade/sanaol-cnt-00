@@ -39,10 +39,26 @@ const EditItemModal = ({ open, onOpenChange, item, onEditItem }) => {
     'Fruits',
   ];
 
+  const units = [
+    'kg',
+    'g',
+    'lbs',
+    'oz',
+    'liters',
+    'ml',
+    'pieces',
+    'boxes',
+    'cans',
+    'bottles',
+    'bags',
+    'cups',
+  ];
+
   useEffect(() => {
     if (item) {
       reset(item);
       setValue('category', item.category);
+      setValue('unit', item.unit);
     }
   }, [item, reset, setValue]);
 
@@ -146,15 +162,21 @@ const EditItemModal = ({ open, onOpenChange, item, onEditItem }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="unit">Unit</Label>
-              <Input
-                id="unit"
-                {...register('unit', { required: 'Unit is required' })}
-              />
-              {errors.unit && (
-                <span className="text-sm text-destructive">
-                  {errors.unit.message}
-                </span>
-              )}
+              <Select
+                defaultValue={item.unit}
+                onValueChange={(value) => setValue('unit', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="supplier">Supplier</Label>
