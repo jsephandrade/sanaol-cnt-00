@@ -39,6 +39,21 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
     'Fruits',
   ];
 
+  const units = [
+    'kg',
+    'g',
+    'lbs',
+    'oz',
+    'liters',
+    'ml',
+    'pieces',
+    'boxes',
+    'cans',
+    'bottles',
+    'bags',
+    'cups',
+  ];
+
   const onSubmit = (data) => {
     onAddItem(data);
     reset();
@@ -130,16 +145,18 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="unit">Unit</Label>
-              <Input
-                id="unit"
-                {...register('unit', { required: 'Unit is required' })}
-                placeholder="e.g., kg, pieces, bottles"
-              />
-              {errors.unit && (
-                <span className="text-sm text-destructive">
-                  {errors.unit.message}
-                </span>
-              )}
+              <Select onValueChange={(value) => setValue('unit', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="supplier">Supplier</Label>
