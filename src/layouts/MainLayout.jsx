@@ -1,3 +1,4 @@
+// MainLayout.jsx
 import React from 'react';
 import {
   SidebarProvider,
@@ -14,6 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { Link } from 'react-router-dom';
+import PageTransition from '@/components/PageTransition';
+
+// ⬇️ Add these imports
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -28,6 +32,7 @@ import {
 
 const MainLayout = ({ children, title }) => {
   const isMobile = useIsMobile();
+  console.log('MainLayout rendering, isMobile:', isMobile);
   const { user, logout } = useAuth();
 
   const displayName = user?.name || 'Admin';
@@ -96,6 +101,7 @@ const MainLayout = ({ children, title }) => {
                 <Link to="/settings">Settings</Link>
               </Button>
 
+              {/* ⬇️ Logout with confirmation */}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" title="Logout">
@@ -109,7 +115,7 @@ const MainLayout = ({ children, title }) => {
                       Are you sure you want to logout?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      You'll be signed out of your account and may need to log in again to continue.
+                      You’ll be signed out of your account and may need to log in again to continue.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -128,9 +134,9 @@ const MainLayout = ({ children, title }) => {
 
           {/* Content */}
           <main className="flex-1 overflow-y-auto p-6">
-            <div className="page-transition">
+            <PageTransition>
               {children}
-            </div>
+            </PageTransition>
           </main>
         </SidebarInset>
       </div>

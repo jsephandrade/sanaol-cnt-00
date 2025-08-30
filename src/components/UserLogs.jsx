@@ -9,17 +9,15 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  FileText,
   Search,
   Download,
   AlertTriangle,
-  LogIn,
+  Clock,
   ShieldAlert,
   UserCog,
+  LogIn,
   Settings,
-  Calendar,
-  User,
-  Activity,
-  Info,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,185 +29,11 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-
-// Inline LogDetailsModal component
-const LogDetailsModal = ({ log, open, onOpenChange }) => {
-  if (!log) return null;
-
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'login':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'action':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'security':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'system':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Activity Details
-          </DialogTitle>
-          <DialogDescription>
-            Detailed information about this log entry
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Action</span>
-            </div>
-            <p className="text-sm ml-6">{log.action}</p>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">User</span>
-            </div>
-            <p className="text-sm ml-6 font-mono">{log.user}</p>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Timestamp</span>
-            </div>
-            <p className="text-sm ml-6 font-mono">{log.timestamp}</p>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Info className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Type</span>
-            </div>
-            <div className="ml-6">
-              <Badge variant="outline" className={getTypeColor(log.type)}>
-                {log.type.charAt(0).toUpperCase() + log.type.slice(1)}
-              </Badge>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Info className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Details</span>
-            </div>
-            <p className="text-sm ml-6 leading-relaxed">{log.details}</p>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Inline LogsTable component
-const LogsTable = ({ logs, onLogClick }) => {
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'login':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'action':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'security':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'system':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Action</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Timestamp</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {logs.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                No logs found matching your criteria
-              </TableCell>
-            </TableRow>
-          ) : (
-            logs.map((log) => (
-              <TableRow 
-                key={log.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => onLogClick(log)}
-              >
-                <TableCell className="font-medium">
-                  {log.action}
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {log.user}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={getTypeColor(log.type)}>
-                    {log.type.charAt(0).toUpperCase() + log.type.slice(1)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm">
-                  {log.timestamp}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
 
 const UserLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLogType, setSelectedLogType] = useState('all');
   const [timeRange, setTimeRange] = useState('24h');
-  const [selectedLog, setSelectedLog] = useState(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const [logs, setLogs] = useState([
@@ -290,9 +114,34 @@ const UserLogs = () => {
     },
   ]);
 
-  const handleLogClick = (log) => {
-    setSelectedLog(log);
-    setIsDetailsModalOpen(true);
+  const getActionIcon = (type) => {
+    switch (type) {
+      case 'login':
+        return <LogIn className="h-4 w-4" />;
+      case 'security':
+        return <ShieldAlert className="h-4 w-4" />;
+      case 'system':
+        return <Settings className="h-4 w-4" />;
+      case 'action':
+        return <UserCog className="h-4 w-4" />;
+      default:
+        return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getActionColor = (type) => {
+    switch (type) {
+      case 'login':
+        return 'bg-blue-100 text-blue-800';
+      case 'security':
+        return 'bg-red-100 text-red-800';
+      case 'system':
+        return 'bg-gray-100 text-gray-800';
+      case 'action':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const handleBlockIP = (alertId) => {
@@ -397,7 +246,65 @@ const UserLogs = () => {
               </Select>
             </div>
 
-            <LogsTable logs={sortedLogs} onLogClick={handleLogClick} />
+            <div className="rounded-md border">
+              <div className="relative w-full overflow-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="h-10 px-4 text-left font-medium">
+                        Action
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">User</th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        Timestamp
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium hidden md:table-cell">
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedLogs.length > 0 ? (
+                      sortedLogs.map((log) => (
+                        <tr
+                          key={log.id}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <td className="p-4 align-middle">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`rounded-full p-1 ${getActionColor(
+                                  log.type
+                                )}`}
+                              >
+                                {getActionIcon(log.type)}
+                              </div>
+                              <span>{log.action}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 align-middle">{log.user}</td>
+                          <td className="p-4 align-middle whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {log.timestamp}
+                            </div>
+                          </td>
+                          <td className="p-4 align-middle hidden md:table-cell">
+                            <span className="line-clamp-1">{log.details}</span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="h-24 text-center">
+                          No logs found matching your criteria
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </CardContent>
           <CardFooter className="border-t py-3">
             <div className="text-xs text-muted-foreground">
@@ -543,12 +450,6 @@ const UserLogs = () => {
           </CardContent>
         </Card>
       </div>
-
-      <LogDetailsModal
-        log={selectedLog}
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-      />
     </div>
   );
 };
