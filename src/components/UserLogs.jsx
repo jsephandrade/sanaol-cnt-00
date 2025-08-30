@@ -28,12 +28,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
 const UserLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLogType, setSelectedLogType] = useState('all');
   const [timeRange, setTimeRange] = useState('24h');
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const [logs, setLogs] = useState([
@@ -167,6 +176,11 @@ const UserLogs = () => {
     });
   };
 
+  const handleRowClick = (log) => {
+    setSelectedLog(log);
+    setIsModalOpen(true);
+  };
+
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -268,7 +282,8 @@ const UserLogs = () => {
                       sortedLogs.map((log) => (
                         <tr
                           key={log.id}
-                          className="border-b transition-colors hover:bg-muted/50"
+                          className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handleRowClick(log)}
                         >
                           <td className="p-4 align-middle">
                             <div className="flex items-center gap-2">
@@ -450,6 +465,114 @@ const UserLogs = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Log Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Log Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this log entry
+            </DialogDescription>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Log ID
+                  </label>
+                  <p className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                    {selectedLog.id}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Action Type
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`rounded-full p-1 ${getActionColor(
+                        selectedLog.type
+                      )}`}
+                    >
+                      {getActionIcon(selectedLog.type)}
+                    </div>
+                    <span className="text-sm capitalize">{selectedLog.type}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Action
+                </label>
+                <p className="text-lg font-medium">{selectedLog.action}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    User
+                  </label>
+                  <p className="text-sm">{selectedLog.user}</p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Timestamp
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <p className="text-sm">{selectedLog.timestamp}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Details
+                </label>
+                <div className="bg-muted p-4 rounded-lg">
+                  <p className="text-sm">{selectedLog.details}</p>
+                </div>
+              </div>
+
+              {/* Additional technical details */}
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="text-sm font-medium">Technical Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Session ID:</span>
+                    <p className="font-mono bg-muted px-2 py-1 rounded">
+                      sess_{Math.random().toString(36).substr(2, 9)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">IP Address:</span>
+                    <p className="font-mono bg-muted px-2 py-1 rounded">
+                      {selectedLog.type === 'security' && selectedLog.details.includes('203.45.67.89') 
+                        ? '203.45.67.89' 
+                        : '192.168.1.105'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">User Agent:</span>
+                    <p className="font-mono bg-muted px-2 py-1 rounded text-xs truncate">
+                      Mozilla/5.0 (Windows NT 10.0; Win64; x64)
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Request ID:</span>
+                    <p className="font-mono bg-muted px-2 py-1 rounded">
+                      req_{Math.random().toString(36).substr(2, 9)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
