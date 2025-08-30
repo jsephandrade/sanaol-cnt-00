@@ -32,10 +32,15 @@ const CurrentOrder = ({
   onOpenPaymentModal,
   onOpenDiscountModal,
   onOpenHistoryModal,
+  isInSheet = false,
 }) => {
+  const cardClassName = isInSheet 
+    ? "h-full flex flex-col border-0 shadow-none" 
+    : "h-full flex flex-col";
+    
   return (
-    <div className="md:col-span-1">
-      <Card className="h-full flex flex-col">
+    <div className={isInSheet ? "" : "md:col-span-1"}>
+      <Card className={cardClassName}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />

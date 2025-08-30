@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuSelection from '@/components/pos/MenuSelection';
-import CurrentOrder from '@/components/pos/CurrentOrder';
+import CollapsibleCart from '@/components/pos/CollapsibleCart';
 import OrderQueue from '@/components/pos/OrderQueue';
 import PaymentModal from '@/components/pos/PaymentModal';
 import DiscountModal from '@/components/pos/DiscountModal';
@@ -74,17 +74,19 @@ const POS = () => {
         </TabsList>
 
         <TabsContent value="pos">
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-            <MenuSelection
-              categories={categories}
-              activeCategory={activeCategory}
-              setActiveCategory={setActiveCategory}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              onAddToOrder={addToOrder}
-            />
+          <div className="grid gap-4 grid-cols-1 portrait:md:grid-cols-1 landscape:md:grid-cols-3 xl:grid-cols-3">
+            <div className="portrait:md:col-span-1 landscape:md:col-span-2 xl:col-span-2">
+              <MenuSelection
+                categories={categories}
+                activeCategory={activeCategory}
+                setActiveCategory={setActiveCategory}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                onAddToOrder={addToOrder}
+              />
+            </div>
 
-            <CurrentOrder
+            <CollapsibleCart
               currentOrder={currentOrder}
               discount={discount}
               onUpdateQuantity={updateQuantity}
