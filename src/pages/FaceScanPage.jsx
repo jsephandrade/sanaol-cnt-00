@@ -75,7 +75,6 @@ const FaceScanPage = () => {
         
         <div className="flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md space-y-6">
-            {/* Back button */}
             <Link to="/login" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Login
