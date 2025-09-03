@@ -50,7 +50,7 @@ const PublicRoute = ({ children }) => {
   const { user } = useAuth();
   
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   
   return children;
@@ -105,8 +105,9 @@ const AppRoutes = () => {
           />
 
           {/* Protected routes */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Index />

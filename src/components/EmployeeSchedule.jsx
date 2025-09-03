@@ -6,7 +6,7 @@ import AddScheduleModal from '@/components/schedule/AddScheduleModal';
 import EditScheduleModal from '@/components/schedule/EditScheduleModal';
 import { ScheduleCalendar } from '@/components/schedule/ScheduleCalendar';
 import { ScheduleGrid } from '@/components/schedule/ScheduleGrid';
-import { StaffSummary } from '@/components/schedule/StaffSummary';
+import StaffSummary from '@/components/schedule/StaffSummary';
 
 const EmployeeSchedule = () => {
   const {
@@ -165,10 +165,7 @@ const EmployeeSchedule = () => {
         <ScheduleCalendar getSchedulesForDay={getSchedulesForDay} />
       </div>
 
-      <StaffSummary 
-        employeeList={employeeList} 
-        calculateWeeklyHours={calculateWeeklyHours} 
-      />
+      <StaffSummary employees={employeeList} schedule={schedule} />
 
       <EditScheduleModal
         editingSchedule={editingSchedule}
