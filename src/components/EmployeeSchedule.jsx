@@ -6,7 +6,7 @@ import AddScheduleModal from '@/components/schedule/AddScheduleModal';
 import EditScheduleModal from '@/components/schedule/EditScheduleModal';
 import { ScheduleCalendar } from '@/components/schedule/ScheduleCalendar';
 import { ScheduleGrid } from '@/components/schedule/ScheduleGrid';
-import StaffSummary from '@/components/schedule/StaffSummary';
+import { StaffSummary } from '@/components/schedule/StaffSummary';
 
 const EmployeeSchedule = () => {
   const {
