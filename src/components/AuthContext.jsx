@@ -1,15 +1,21 @@
 // AuthContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import authService from '@/api/services/authService';
+import apiClient from '@/api/client';
 
-// Mock user
-const ADMIN_EMAIL = 'admin@canteen.com';
-const ADMIN_PASS = '1234';
-
+// Context shape
 const AuthContext = createContext({
-  user: null, // { name: string, email: string } | null
+  user: null,
+  token: null,
+  // actions
   login: async () => false,
   socialLogin: async () => false,
-  logout: () => {},
+  logout: async () => {},
+  refreshToken: async () => false,
+  // role/permission helpers
+  hasRole: () => false,
+  hasAnyRole: () => false,
+  can: () => true,
 });
 
 export function useAuth() {
@@ -18,35 +24,131 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem('auth_token') || null;
+    } catch {
+      return null;
+    }
   });
 
-  const login = async (email, password) => {
-    if (email === ADMIN_EMAIL && password === ADMIN_PASS) {
-      const newUser = { name: 'Admin', email };
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
-      return true;
+  // Keep a ref for apiClient token provider to avoid stale closures
+  const tokenRef = useRef(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+
+  // Configure apiClient once
+  useEffect(() => {
+    // Dynamic token provider and 401 handler
+    apiClient.setAuthTokenProvider(() => tokenRef.current);
+    apiClient.onUnauthorized = () => {
+      // Clear auth state on 401 to trigger ProtectedRoute redirect
+      setUser(null);
+      setToken(null);
+      try {
+        localStorage.removeItem('user');
+        localStorage.removeItem('auth_token');
+      } catch {}
+    };
+  }, []);
+
+  // Initialize apiClient header from persisted token
+  useEffect(() => {
+    apiClient.setAuthToken(token);
+  }, [token]);
+
+  const persistAuth = (nextUser, nextToken) => {
+    setUser(nextUser);
+    setToken(nextToken);
+    try {
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      if (nextToken) {
+        localStorage.setItem('auth_token', nextToken);
+      } else {
+        localStorage.removeItem('auth_token');
+      }
+    } catch {}
+  };
+
+  const login = async (email, password, options = {}) => {
+    try {
+      const res = await authService.login(email, password, options);
+      if (res?.success) {
+        persistAuth(res.user, res.token || null);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
     }
-    return false;
   };
 
   const socialLogin = async (provider) => {
-    // Simulate a successful login
-    const newUser = { name: 'Admin', email: ADMIN_EMAIL };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    return true;
+    try {
+      const res = await authService.socialLogin(provider);
+      if (res?.success) {
+        persistAuth(res.user, res.token || null);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {}
+    persistAuth(null, null);
+  };
+
+  const refreshToken = async () => {
+    try {
+      const res = await authService.refreshToken();
+      if (res?.success && res?.token) {
+        setToken(res.token);
+        try { localStorage.setItem('auth_token', res.token); } catch {}
+        return true;
+      }
+      return false;
+    } catch (err) {
+      await logout();
+      return false;
+    }
+  };
+
+  // Role/permission helpers
+  const hasRole = (role) => (user?.role || '').toLowerCase() === (role || '').toLowerCase();
+  const hasAnyRole = (roles = []) => roles.some((r) => hasRole(r));
+  const can = (permission) => {
+    if (!permission) return true;
+    const perms = user?.permissions || [];
+    return perms.includes(permission) || perms.includes('*') || hasRole('admin');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, socialLogin, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        socialLogin,
+        logout,
+        refreshToken,
+        hasRole,
+        hasAnyRole,
+        can,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
