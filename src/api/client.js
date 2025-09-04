@@ -35,6 +35,14 @@ class ApiClient {
       retryOnStatuses: [408, 429, 500, 502, 503, 504],
       retryMethods: ['GET', 'HEAD', 'OPTIONS'],
     };
+    this.sendCredentials = Boolean(
+      typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SEND_CREDENTIALS === 'true' || import.meta.env.VITE_SEND_CREDENTIALS === '1')
+    );
+    this.csrf = {
+      enabled: true,
+      cookieName: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CSRF_COOKIE_NAME) || 'csrftoken',
+      headerName: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CSRF_HEADER_NAME) || 'X-CSRFToken',
+    };
   }
 
   // Static helpers
@@ -55,6 +63,10 @@ class ApiClient {
 
   setRetryConfig(config = {}) {
     this.retryConfig = { ...this.retryConfig, ...config };
+  }
+
+  setCSRFConfig({ enabled, cookieName, headerName } = {}) {
+    this.csrf = { ...this.csrf, ...(enabled === undefined ? {} : { enabled }), ...(cookieName ? { cookieName } : {}), ...(headerName ? { headerName } : {}) };
   }
 
   _sleep(ms) {
@@ -148,6 +160,15 @@ class ApiClient {
       if (headers['Content-Type']) delete headers['Content-Type'];
     }
 
+    // CSRF for cookie-based auth flows
+    const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(method);
+    if (this.csrf.enabled && unsafeMethod) {
+      const token = this._readCookie(this.csrf.cookieName);
+      if (token && !headers[this.csrf.headerName]) {
+        headers[this.csrf.headerName] = token;
+      }
+    }
+
     const retryConfig = { ...this.retryConfig, ...(options.retry || {}) };
     const timeoutMs = options.timeoutMs || 0;
 
@@ -163,6 +184,7 @@ class ApiClient {
         headers,
         body,
         signal,
+        credentials: options.credentials ?? (this.sendCredentials ? 'include' : 'same-origin'),
         // Ensure no unexpected keys leak into fetch
       };
 
@@ -265,3 +287,13 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 export default apiClient;
+
+// Private helpers
+ApiClient.prototype._readCookie = function (name) {
+  try {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  } catch {}
+  return '';
+};

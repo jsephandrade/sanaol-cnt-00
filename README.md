@@ -64,3 +64,12 @@ npm run dev
 - Use `validate(schema, data)` to assert API responses/requests.
 - DTO mappers live in `src/api/mappers/*` (e.g., `userApiToModel`, `userModelToCreatePayload`).
 - Services should validate and normalize fields (e.g., role/status casing) before returning to UI.
+
+### 🔒 Security & Compliance
+- CSRF: If your backend uses cookie-based auth, enable credentials and set CSRF names in `.env`.
+  - `VITE_SEND_CREDENTIALS=true`
+  - `VITE_CSRF_COOKIE_NAME=csrftoken` and `VITE_CSRF_HEADER_NAME=X-CSRFToken` (or your backend values)
+  - The API client auto-adds the CSRF header for unsafe methods (POST/PUT/PATCH/DELETE).
+- CORS: In dev, requests go through Vite proxy (`/api` → `VITE_DEV_PROXY_TARGET`) to avoid CORS. In prod, ensure backend CORS allows your frontend origin and credentials if you use cookies.
+- Input sanitization: This UI renders user-supplied text as plain text (React escapes it). Avoid injecting HTML; if needed, sanitize on the server.
+- PII safety: The app avoids logging tokens or user PII. Do not add console logs that include auth tokens, emails, or personal data.
