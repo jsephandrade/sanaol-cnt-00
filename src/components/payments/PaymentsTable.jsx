@@ -1,16 +1,7 @@
 import React from 'react';
-import { 
-  ArrowUpDown, 
-  MoreVertical, 
-  Download, 
-  ArrowDownUp,
-  Banknote,
-  CreditCard,
-  Smartphone,
-  CircleDollarSign
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CustomBadge } from '@/components/ui/custom-badge';
+import { ArrowUpDown, MoreVertical, Download, ArrowDownUp } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,20 +11,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const PaymentTable = ({ payments, getStatusBadgeVariant }) => {
-  const getPaymentMethodIcon = (method) => {
-    switch (method) {
-      case 'cash':
-        return <Banknote className="h-4 w-4" />;
-      case 'card':
-        return <CreditCard className="h-4 w-4" />;
-      case 'mobile':
-        return <Smartphone className="h-4 w-4" />;
-      default:
-        return <CircleDollarSign className="h-4 w-4" />;
-    }
-  };
-
+const PaymentsTable = ({
+  sortedPayments,
+  getPaymentMethodIcon,
+  getStatusBadgeVariant,
+}) => {
   return (
     <div className="rounded-md border">
       <div className="relative w-full overflow-auto">
@@ -45,11 +27,7 @@ export const PaymentTable = ({ payments, getStatusBadgeVariant }) => {
                   Order ID <ArrowUpDown className="h-3 w-3" />
                 </div>
               </th>
-              <th className="h-10 px-4 text-left font-medium">
-                <div className="flex items-center gap-1">
-                  Date <ArrowUpDown className="h-3 w-3" />
-                </div>
-              </th>
+              <th className="h-10 px-4 text-left font-medium">Date</th>
               <th className="h-10 px-4 text-left font-medium">Method</th>
               <th className="h-10 px-4 text-left font-medium">
                 <div className="flex items-center gap-1">
@@ -61,8 +39,8 @@ export const PaymentTable = ({ payments, getStatusBadgeVariant }) => {
             </tr>
           </thead>
           <tbody>
-            {payments.length > 0 ? (
-              payments.map((payment) => (
+            {sortedPayments.length > 0 ? (
+              sortedPayments.map((payment) => (
                 <tr
                   key={payment.id}
                   className="border-b transition-colors hover:bg-muted/50"
@@ -79,9 +57,7 @@ export const PaymentTable = ({ payments, getStatusBadgeVariant }) => {
                       <span className="capitalize">{payment.method}</span>
                     </div>
                   </td>
-                  <td className="p-4 align-middle">
-                    ₱{payment.amount.toFixed(2)}
-                  </td>
+                  <td className="p-4 align-middle">�,�{payment.amount.toFixed(2)}</td>
                   <td className="p-4 align-middle">
                     <CustomBadge
                       variant={getStatusBadgeVariant(payment.status)}
@@ -131,3 +107,5 @@ export const PaymentTable = ({ payments, getStatusBadgeVariant }) => {
     </div>
   );
 };
+
+export default PaymentsTable;

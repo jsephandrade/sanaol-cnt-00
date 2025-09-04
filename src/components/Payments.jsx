@@ -43,6 +43,8 @@ import {
 // Removed Tabs imports since we no longer show Settings
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch'; // NEW
+import PaymentsHeader from '@/components/payments/PaymentsHeader';
+import PaymentsFilters from '@/components/payments/PaymentsFilters';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -181,61 +183,17 @@ const Payments = () => {
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle>Payment Management</CardTitle>
-              <CardDescription>Track and process payments</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                <Download className="h-4 w-4 mr-1" /> Export
-              </Button>
-              {/* Filter button removed */}
-            </div>
-          </CardHeader>
+          <PaymentsHeader />
 
           <CardContent className="space-y-4">
-            <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by order ID or customer..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={dateRange} onValueChange={setDateRange}>
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Date Range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="7d">Last 7 Days</SelectItem>
-                  <SelectItem value="30d">Last 30 Days</SelectItem>
-                  <SelectItem value="custom">Custom Range</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <PaymentsFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+            />
 
             <div className="rounded-md border">
               <div className="relative w-full overflow-auto">

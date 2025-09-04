@@ -1,15 +1,15 @@
 import React from 'react';
-import { Check, X, ArrowDownUp, Calendar, Receipt } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
+import { Receipt, Check, X, ArrowDownUp, Calendar } from 'lucide-react';
 import { CustomBadge } from '@/components/ui/custom-badge';
 
-export const RecentTransactions = ({ payments, getStatusBadgeVariant }) => {
+const RecentTransactions = ({ sortedPayments, getStatusBadgeVariant }) => {
   return (
     <Card>
       <CardHeader>
@@ -17,9 +17,9 @@ export const RecentTransactions = ({ payments, getStatusBadgeVariant }) => {
         <CardDescription>View latest payment activities</CardDescription>
       </CardHeader>
       <CardContent>
-        {payments.length > 0 ? (
+        {sortedPayments.length > 0 ? (
           <div className="space-y-4">
-            {payments.slice(0, 5).map((payment) => (
+            {sortedPayments.slice(0, 5).map((payment) => (
               <div
                 key={payment.id}
                 className="flex justify-between items-center border-b pb-2 last:border-0"
@@ -65,9 +65,7 @@ export const RecentTransactions = ({ payments, getStatusBadgeVariant }) => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">
-                    ₱{payment.amount.toFixed(2)}
-                  </div>
+                  <div className="font-medium">�,�{payment.amount.toFixed(2)}</div>
                   <div className="text-xs text-muted-foreground capitalize">
                     {payment.method}
                   </div>
@@ -78,12 +76,12 @@ export const RecentTransactions = ({ payments, getStatusBadgeVariant }) => {
         ) : (
           <div className="text-center py-6">
             <Receipt className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">
-              No recent transactions to display
-            </p>
+            <p className="text-muted-foreground">No recent transactions to display</p>
           </div>
         )}
       </CardContent>
     </Card>
   );
 };
+
+export default RecentTransactions;
