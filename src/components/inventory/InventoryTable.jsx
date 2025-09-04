@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const InventoryTable = ({ 
-  items = [], 
+  items, 
   onEditItem, 
   onDisableItem,
   getStockPercentage,

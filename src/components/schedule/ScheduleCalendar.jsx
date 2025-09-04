@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Clock } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
-import { Badge } from '@/components/ui/badge';
 
-export const ScheduleCalendar = ({ getSchedulesForDay }) => {
-  const [date, setDate] = useState(new Date());
+export const ScheduleCalendar = ({ 
+  date, 
+  onDateSelect, 
+  schedule, 
+  employees 
+}) => {
+  const getDaySchedule = (selectedDate) => {
+    const dayName = selectedDate.toLocaleDateString('en-US', { 
+      weekday: 'long' 
+    });
+    
+    return schedule.filter(entry => entry.day === dayName);
+  };
 
-  const selectedDayName = date?.toLocaleDateString('en-US', { weekday: 'long' });
-  const schedulesForSelectedDay = selectedDayName ? getSchedulesForDay(selectedDayName) : [];
+  const daySchedule = date ? getDaySchedule(date) : [];
 
   return (
     <Card>
@@ -19,7 +35,7 @@ export const ScheduleCalendar = ({ getSchedulesForDay }) => {
         <Calendar
           mode="single"
           selected={date}
-          onSelect={setDate}
+          onSelect={onDateSelect}
           className="border rounded-md"
         />
 
@@ -33,28 +49,33 @@ export const ScheduleCalendar = ({ getSchedulesForDay }) => {
                 day: 'numeric',
               })}
             </h4>
-            <div className="space-y-2">
-              {schedulesForSelectedDay.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex justify-between items-center p-2 bg-muted rounded"
-                >
-                  <div>
-                    <p className="font-medium">{entry.employeeName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {entry.startTime} - {entry.endTime}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{entry.day}</Badge>
-                </div>
-              ))}
-
-              {schedulesForSelectedDay.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  No schedules for this day
-                </p>
-              )}
-            </div>
+            {daySchedule.length > 0 ? (
+              <div className="space-y-2">
+                {daySchedule.map((entry) => {
+                  const employee = employees.find(
+                    (emp) => emp.id === entry.employeeId
+                  );
+                  return (
+                    <div
+                      key={entry.id}
+                      className="flex items-center gap-2 p-2 border rounded-md text-sm"
+                    >
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {entry.startTime} - {entry.endTime}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {employee?.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No schedules for this day
+              </p>
+            )}
           </div>
         )}
       </CardContent>
