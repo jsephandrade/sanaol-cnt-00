@@ -1,5 +1,8 @@
 // Central API client configuration
-const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api';
+// Uses Vite env var when available; falls back to '/api' for dev proxy
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
+  ? import.meta.env.VITE_API_BASE_URL
+  : '/api';
 
 class ApiClient {
   constructor(baseURL = API_BASE_URL) {

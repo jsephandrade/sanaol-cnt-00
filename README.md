@@ -46,3 +46,15 @@ npm install
 # Run development server
 npm run dev
 ```
+
+---
+
+## 🔧 Environment & Backend Integration
+
+- Copy `.env.example` to `.env` and set values for your environment.
+  - `VITE_API_BASE_URL` → keep `/api` in development to use the Vite proxy.
+  - `VITE_DEV_PROXY_TARGET` → your backend URL in dev, e.g. `http://localhost:8000`.
+  - `VITE_WS_URL` (optional) → WebSocket endpoint if using real-time features.
+- Dev proxy: Vite is configured to forward `/api` requests to `VITE_DEV_PROXY_TARGET` to avoid CORS.
+- Production: Set `VITE_API_BASE_URL` to your public API origin (e.g. `https://api.example.com`).
+- The API client reads `VITE_API_BASE_URL` and falls back to `/api` if not set.
