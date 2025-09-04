@@ -1,29 +1,25 @@
 import React from 'react';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
+import { Clock } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-/**
- * StaffSummary
- *
- * Renders a summary of employees with their weekly scheduled hours
- * and hourly rate. Expects `employees` and `schedule` props.
- */
-const StaffSummary = ({ employees = [], schedule = [] }) => {
+export const StaffSummary = ({ employees, schedule }) => {
   const calculateWeeklyHours = (employeeId) => {
     const employeeSchedule = schedule.filter(
-      (entry) => entry.employeeId === employeeId
+      (s) => s.employeeId === employeeId
     );
+    
     return employeeSchedule.reduce((total, entry) => {
-      const start = new Date(`1970-01-01T${entry.startTime}`);
-      const end = new Date(`1970-01-01T${entry.endTime}`);
-      const diffHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      return total + diffHours;
+      const start = new Date(`2023-01-01 ${entry.startTime}`);
+      const end = new Date(`2023-01-01 ${entry.endTime}`);
+      const hours = (end - start) / (1000 * 60 * 60);
+      return total + hours;
     }, 0);
   };
 
@@ -40,26 +36,28 @@ const StaffSummary = ({ employees = [], schedule = [] }) => {
             return (
               <div
                 key={employee.id}
-                className="flex items-center justify-between rounded-lg border p-3"
+                className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                    {employee.name?.charAt(0) || '?'}
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {employee.name.charAt(0)}
+                    </span>
                   </div>
                   <div>
-                    <p className="font-medium leading-none">{employee.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">
+                    <p className="font-medium text-sm">{employee.name}</p>
+                    <p className="text-xs text-muted-foreground">
                       {employee.position}
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end text-right gap-1">
-                  <Badge variant="outline" className="py-0.5 px-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="h-3 w-3 mr-1" />
                     {weeklyHours.toFixed(1)}h/week
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    ₱{employee.hourlyRate}
-                    <span className="font-light">/hr</span>
+                    ${employee.hourlyRate}/hr
                   </span>
                 </div>
               </div>
@@ -70,6 +68,3 @@ const StaffSummary = ({ employees = [], schedule = [] }) => {
     </Card>
   );
 };
-
-export default StaffSummary;
-

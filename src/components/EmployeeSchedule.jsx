@@ -165,7 +165,10 @@ const EmployeeSchedule = () => {
         <ScheduleCalendar getSchedulesForDay={getSchedulesForDay} />
       </div>
 
-      <StaffSummary employees={employeeList} schedule={schedule} />
+      <StaffSummary 
+        employeeList={employeeList} 
+        calculateWeeklyHours={calculateWeeklyHours} 
+      />
 
       <EditScheduleModal
         editingSchedule={editingSchedule}

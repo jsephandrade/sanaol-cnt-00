@@ -1,43 +1,15 @@
 import React from 'react';
-import {
-  Check,
-  X,
-  ArrowDownUp,
-  Calendar,
-  Receipt,
-} from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Check, X, ArrowDownUp, Calendar, Receipt } from 'lucide-react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
 import { CustomBadge } from '@/components/ui/custom-badge';
-import { getStatusBadgeVariant } from './PaymentTable';
 
-/**
- * RecentTransactions
- *
- * Renders a card showing the five most recent payments. Status icons
- * are visually encoded with colours and icons based on the payment
- * status. When no transactions are present a placeholder message is
- * shown.
- *
- * Props:
- *  - sortedPayments: array of payment objects sorted by date
- */
-const RecentTransactions = ({ sortedPayments }) => {
-  // Helper to choose an icon and styling based on status
-  const renderStatusIcon = (status) => {
-    switch (status) {
-      case 'completed':
-        return <Check className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <X className="h-4 w-4 text-red-600" />;
-      case 'refunded':
-        return <ArrowDownUp className="h-4 w-4 text-amber-600" />;
-      case 'pending':
-        return <Calendar className="h-4 w-4 text-gray-600" />;
-      default:
-        return null;
-    }
-  };
-
+export const RecentTransactions = ({ payments, getStatusBadgeVariant }) => {
   return (
     <Card>
       <CardHeader>
@@ -45,9 +17,9 @@ const RecentTransactions = ({ sortedPayments }) => {
         <CardDescription>View latest payment activities</CardDescription>
       </CardHeader>
       <CardContent>
-        {sortedPayments.length > 0 ? (
+        {payments.length > 0 ? (
           <div className="space-y-4">
-            {sortedPayments.slice(0, 5).map((payment) => (
+            {payments.slice(0, 5).map((payment) => (
               <div
                 key={payment.id}
                 className="flex justify-between items-center border-b pb-2 last:border-0"
@@ -64,7 +36,18 @@ const RecentTransactions = ({ sortedPayments }) => {
                             : 'bg-gray-100'
                     }`}
                   >
-                    {renderStatusIcon(payment.status)}
+                    {payment.status === 'completed' && (
+                      <Check className="h-4 w-4 text-green-600" />
+                    )}
+                    {payment.status === 'failed' && (
+                      <X className="h-4 w-4 text-red-600" />
+                    )}
+                    {payment.status === 'refunded' && (
+                      <ArrowDownUp className="h-4 w-4 text-amber-600" />
+                    )}
+                    {payment.status === 'pending' && (
+                      <Calendar className="h-4 w-4 text-gray-600" />
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -82,7 +65,9 @@ const RecentTransactions = ({ sortedPayments }) => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-medium">₱{payment.amount.toFixed(2)}</div>
+                  <div className="font-medium">
+                    ₱{payment.amount.toFixed(2)}
+                  </div>
                   <div className="text-xs text-muted-foreground capitalize">
                     {payment.method}
                   </div>
@@ -102,5 +87,3 @@ const RecentTransactions = ({ sortedPayments }) => {
     </Card>
   );
 };
-
-export default RecentTransactions;

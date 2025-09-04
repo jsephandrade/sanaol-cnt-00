@@ -8,39 +8,55 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { CustomBadge } from '@/components/ui/custom-badge';
+import {
+  CreditCard,
+  Search,
+  Download,
+  Receipt,
+  ArrowUpDown,
+  MoreVertical,
+  Calendar,
+  Check,
+  X,
+  ArrowDownUp,
+  Banknote,
+  Smartphone,
+  CircleDollarSign,
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+// Removed Tabs imports since we no longer show Settings
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch'; // NEW
 
-import PaymentFilter from './payments/PaymentFilter';
-import PaymentTable from './payments/PaymentTable';
-import PaymentSummary from './payments/PaymentSummary';
-import RecentTransactions from './payments/RecentTransaction';
-import PaymentMethods from './payments/PaymentMethods';
-
-/**
- * Payments
- *
- * The top level container that manages state for all payment-related
- * UI. It holds the payments array, filter values and method
- * activation states. This component composes several smaller
- * components to render the search/filter controls, the payments
- * table, summary footer, recent transactions and method toggles.
- */
 const Payments = () => {
-  // Filter UI state
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateRange, setDateRange] = useState('7d');
 
-  // Payment method activation state
+  // Local state for payment method activation
   const [methodActive, setMethodActive] = useState({
     cash: true,
     card: true,
     mobile: true,
   });
 
-  // Demo payments data. In a real application this would come
-  // from an API or database.
-  const [payments] = useState([
+  const [payments, setPayments] = useState([
     {
       id: '1',
       orderId: 'ORD-2581',
@@ -57,7 +73,6 @@ const Payments = () => {
       date: '2025-04-17 11:15:22',
       method: 'cash',
       status: 'completed',
-      customer: undefined,
     },
     {
       id: '3',
@@ -93,7 +108,6 @@ const Payments = () => {
       date: '2025-04-17 15:45:12',
       method: 'cash',
       status: 'completed',
-      customer: undefined,
     },
     {
       id: '7',
@@ -106,55 +120,65 @@ const Payments = () => {
     },
   ]);
 
-  /**
-   * compute filtered payments according to search text, selected status
-   * and method activation flags. Filtering by dateRange is not
-   * implemented; the state is retained for future enhancement.
-   */
+  const getPaymentMethodIcon = (method) => {
+    switch (method) {
+      case 'cash':
+        return <Banknote className="h-4 w-4" />;
+      case 'card':
+        return <CreditCard className="h-4 w-4" />;
+      case 'mobile':
+        return <Smartphone className="h-4 w-4" />;
+      default:
+        return <CircleDollarSign className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'completed':
+        return 'success';
+      case 'pending':
+        return 'secondary';
+      case 'failed':
+        return 'destructive';
+      case 'refunded':
+        return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
+  const getTotalAmount = (status = 'all') => {
+    return payments
+      .filter((payment) => status === 'all' || payment.status === status)
+      .reduce((total, payment) => {
+        if (payment.status === 'refunded') return total;
+        return total + payment.amount;
+      }, 0)
+      .toFixed(2);
+  };
+
   const filteredPayments = payments.filter((payment) => {
-    // Search by order ID or customer name
     const matchesSearch =
       payment.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (payment.customer &&
         payment.customer.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Status filter
-    const matchesStatus = selectedStatus === 'all' || payment.status === selectedStatus;
+    const matchesStatus =
+      selectedStatus === 'all' || payment.status === selectedStatus;
 
-    // Hide inactive methods if toggled off
+    // Optional: if you want inactive methods to be hidden from lists
     const methodIsActive = methodActive[payment.method] ?? true;
 
     return matchesSearch && matchesStatus && methodIsActive;
   });
 
-  // Sort payments by date descending
   const sortedPayments = [...filteredPayments].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
-
-  // Total amount helper. Refunded transactions are excluded from totals.
-  const getTotalAmount = (status = 'all') => {
-    return payments
-      .filter((p) => status === 'all' || p.status === status)
-      .reduce((total, p) => {
-        if (p.status === 'refunded') return total;
-        return total + p.amount;
-      }, 0)
-      .toFixed(2);
-  };
-
-  // Event handlers for row actions. These could be extended to call
-  // API endpoints to actually process refunds or retries.
-  const handleProcessRefund = (payment) => {
-    console.log('Process refund for', payment);
-  };
-  const handleRetryPayment = (payment) => {
-    console.log('Retry payment for', payment);
-  };
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {/* Left column: filters and table */}
       <div className="md:col-span-2 space-y-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -163,40 +187,340 @@ const Payments = () => {
               <CardDescription>Track and process payments</CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+              >
                 <Download className="h-4 w-4 mr-1" /> Export
               </Button>
-              {/* Additional action buttons could be added here */}
+              {/* Filter button removed */}
             </div>
           </CardHeader>
+
           <CardContent className="space-y-4">
-            <PaymentFilter
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-            />
-            <PaymentTable
-              sortedPayments={sortedPayments}
-              onProcessRefund={handleProcessRefund}
-              onRetryPayment={handleRetryPayment}
-            />
+            <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by order ID or customer..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Date Range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="7d">Last 7 Days</SelectItem>
+                  <SelectItem value="30d">Last 30 Days</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-md border">
+              <div className="relative w-full overflow-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Order ID <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Date <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        Method
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Amount <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        Status
+                      </th>
+                      <th className="h-10 px-4 text-right font-medium">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedPayments.length > 0 ? (
+                      sortedPayments.map((payment) => (
+                        <tr
+                          key={payment.id}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <td className="p-4 align-middle font-medium">
+                            {payment.orderId}
+                          </td>
+                          <td className="p-4 align-middle whitespace-nowrap">
+                            {payment.date.split(' ')[0]}
+                          </td>
+                          <td className="p-4 align-middle">
+                            <div className="flex items-center gap-2">
+                              {getPaymentMethodIcon(payment.method)}
+                              <span className="capitalize">
+                                {payment.method}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-4 align-middle">
+                            ₱{payment.amount.toFixed(2)}
+                          </td>
+                          <td className="p-4 align-middle">
+                            <CustomBadge
+                              variant={getStatusBadgeVariant(payment.status)}
+                              className="capitalize"
+                            >
+                              {payment.status}
+                            </CustomBadge>
+                          </td>
+                          <td className="p-4 align-middle text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem>
+                                  <Download className="mr-2 h-4 w-4" /> Download
+                                  Invoice
+                                </DropdownMenuItem>
+                                {payment.status === 'completed' && (
+                                  <DropdownMenuItem>
+                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                    Process Refund
+                                  </DropdownMenuItem>
+                                )}
+                                {payment.status === 'failed' && (
+                                  <DropdownMenuItem>
+                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                    Retry Payment
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="h-24 text-center">
+                          No transactions match your search criteria
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </CardContent>
-          <CardFooter>
-            <PaymentSummary
-              totalVisible={sortedPayments.length}
-              totalCount={payments.length}
-              totalAmount={getTotalAmount(selectedStatus)}
-            />
+
+          <CardFooter className="border-t py-3 flex justify-between">
+            <div className="text-xs text-muted-foreground">
+              Showing {sortedPayments.length} of {payments.length} transactions
+            </div>
+            <div className="text-sm">
+              Total:{' '}
+              <span className="font-semibold">
+                ₱{getTotalAmount(selectedStatus)}
+              </span>
+            </div>
           </CardFooter>
         </Card>
       </div>
-      {/* Right column: recent transactions and method toggles */}
+
       <div className="space-y-4">
-        <RecentTransactions sortedPayments={sortedPayments} />
-        <PaymentMethods methodActive={methodActive} setMethodActive={setMethodActive} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+            <CardDescription>View latest payment activities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {sortedPayments.length > 0 ? (
+              <div className="space-y-4">
+                {sortedPayments.slice(0, 5).map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex justify-between items-center border-b pb-2 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`rounded-full p-1 ${
+                          payment.status === 'completed'
+                            ? 'bg-green-100'
+                            : payment.status === 'failed'
+                              ? 'bg-red-100'
+                              : payment.status === 'refunded'
+                                ? 'bg-amber-100'
+                                : 'bg-gray-100'
+                        }`}
+                      >
+                        {payment.status === 'completed' && (
+                          <Check className="h-4 w-4 text-green-600" />
+                        )}
+                        {payment.status === 'failed' && (
+                          <X className="h-4 w-4 text-red-600" />
+                        )}
+                        {payment.status === 'refunded' && (
+                          <ArrowDownUp className="h-4 w-4 text-amber-600" />
+                        )}
+                        {payment.status === 'pending' && (
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{payment.orderId}</span>
+                          <CustomBadge
+                            variant={getStatusBadgeVariant(payment.status)}
+                            className="capitalize text-xs"
+                          >
+                            {payment.status}
+                          </CustomBadge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {payment.customer
+                            ? payment.customer
+                            : 'Walk-in Customer'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        ₱{payment.amount.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground capitalize">
+                        {payment.method}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Receipt className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-muted-foreground">
+                  No recent transactions to display
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Methods</CardTitle>
+            <CardDescription>Configure accepted payment types</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Removed Tabs & Settings. Show direct list with switches */}
+            <div className="space-y-4">
+              {/* Cash */}
+              <div className="flex justify-between items-center border p-3 rounded-md">
+                <div className="flex items-center gap-3">
+                  <Banknote className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="font-medium">Cash</p>
+                    <p className="text-xs text-muted-foreground">
+                      Physical currency
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {methodActive.cash ? 'Active' : 'Inactive'}
+                  </span>
+                  <Switch
+                    checked={methodActive.cash}
+                    onCheckedChange={(v) =>
+                      setMethodActive((prev) => ({ ...prev, cash: v }))
+                    }
+                    aria-label="Toggle cash method"
+                  />
+                </div>
+              </div>
+
+              {/* Card */}
+              <div className="flex justify-between items-center border p-3 rounded-md">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium">Credit/Debit Cards</p>
+                    <p className="text-xs text-muted-foreground">
+                      Visa, Mastercard, Amex
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {methodActive.card ? 'Active' : 'Inactive'}
+                  </span>
+                  <Switch
+                    checked={methodActive.card}
+                    onCheckedChange={(v) =>
+                      setMethodActive((prev) => ({ ...prev, card: v }))
+                    }
+                    aria-label="Toggle card method"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile */}
+              <div className="flex justify-between items-center border p-3 rounded-md">
+                <div className="flex items-center gap-3">
+                  <Smartphone className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="font-medium">Mobile Payments</p>
+                    <p className="text-xs text-muted-foreground">
+                      Apple Pay, Google Pay
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {methodActive.mobile ? 'Active' : 'Inactive'}
+                  </span>
+                  <Switch
+                    checked={methodActive.mobile}
+                    onCheckedChange={(v) =>
+                      setMethodActive((prev) => ({ ...prev, mobile: v }))
+                    }
+                    aria-label="Toggle mobile method"
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
