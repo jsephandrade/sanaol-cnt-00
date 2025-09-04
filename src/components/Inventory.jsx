@@ -40,6 +40,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import AddItemModal from '@/components/inventory/AddItemModal';
 import EditItemModal from '@/components/inventory/EditItemModal';
+import InventoryHeader from '@/components/inventory/InventoryHeader';
+import InventoryFilters from '@/components/inventory/InventoryFilters';
+import InventoryTabs from '@/components/inventory/InventoryTabs';
+import InventoryFooter from '@/components/inventory/InventoryFooter';
+import InventoryModals from '@/components/inventory/InventoryModals';
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -243,288 +248,29 @@ const Inventory = () => {
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle>Raw Materials Inventory</CardTitle>
-              <CardDescription>
-                Track and manage inventory items
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              className="flex gap-1"
-              onClick={() => setShowAddModal(true)}
-            >
-              <PlusCircle className="h-4 w-4 mr-1" /> Add Item
-            </Button>
-          </CardHeader>
+          <InventoryHeader onAddItem={() => setShowAddModal(true)} />
           <CardContent className="space-y-4">
-            <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search inventory..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <InventoryFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              categories={categories}
+            />
 
-              <Select
-                value={selectedCategory}
-                onValueChange={setSelectedCategory}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Tabs defaultValue="list" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="list">List View</TabsTrigger>
-                <TabsTrigger value="grid">Grid View</TabsTrigger>
-              </TabsList>
-              <TabsContent value="list">
-                <div className="rounded-md border">
-                  <div className="relative w-full overflow-auto">
-                    <table className="w-full caption-bottom text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="h-10 px-4 text-left font-medium">
-                            <div className="flex items-center gap-1">
-                              Name <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </th>
-                          <th className="h-10 px-4 text-left font-medium">
-                            Category
-                          </th>
-                          <th className="h-10 px-4 text-left font-medium">
-                            Stock Level
-                          </th>
-                          <th className="h-10 px-4 text-left font-medium hidden md:table-cell">
-                            Supplier
-                          </th>
-                          <th className="h-10 px-4 text-right font-medium">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredItems.length > 0 ? (
-                          filteredItems.map((item) => (
-                            <tr
-                              key={item.id}
-                              className={`border-b transition-colors hover:bg-muted/50 ${
-                                item.disabled ? 'opacity-50' : ''
-                              }`}
-                            >
-                              <td className="p-4 align-middle font-medium">
-                                <div className="flex items-center gap-2">
-                                  {item.name}
-                                  {item.disabled && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs"
-                                    >
-                                      Disabled
-                                    </Badge>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-4 align-middle">
-                                <Badge variant="outline">{item.category}</Badge>
-                              </td>
-                              <td className="p-4 align-middle">
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex justify-between text-xs">
-                                    <span>
-                                      {item.currentStock} {item.unit}
-                                    </span>
-                                    <CustomBadge
-                                      variant={getStockBadgeVariant(
-                                        item.currentStock,
-                                        item.minThreshold
-                                      )}
-                                    >
-                                      {getStockStatusText(
-                                        item.currentStock,
-                                        item.minThreshold
-                                      )}
-                                    </CustomBadge>
-                                  </div>
-                                  <Progress
-                                    value={getStockPercentage(
-                                      item.currentStock,
-                                      item.minThreshold
-                                    )}
-                                    className={`h-2 ${
-                                      item.currentStock < item.minThreshold
-                                        ? 'bg-red-200'
-                                        : 'bg-green-200'
-                                    }`}
-                                  />
-                                </div>
-                              </td>
-                              <td className="p-4 align-middle hidden md:table-cell">
-                                {item.supplier}
-                              </td>
-                              <td className="p-4 align-middle text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>
-                                      Actions
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => handleEditItem(item)}
-                                    >
-                                      <PenSquare className="mr-2 h-4 w-4" />{' '}
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        handleDisableItem(item.id, item.name)
-                                      }
-                                      className={
-                                        item.disabled
-                                          ? 'text-green-600'
-                                          : 'text-destructive'
-                                      }
-                                    >
-                                      <Ban className="mr-2 h-4 w-4" />
-                                      {item.disabled ? 'Enable' : 'Disable'}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={5} className="h-24 text-center">
-                              No inventory items found
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="grid">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
-                  {filteredItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`border rounded-lg p-4 ${
-                        item.disabled ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{item.name}</h3>
-                            {item.disabled && (
-                              <Badge variant="secondary" className="text-xs">
-                                Disabled
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {item.category}
-                          </p>
-                        </div>
-                        <CustomBadge
-                          variant={getStockBadgeVariant(
-                            item.currentStock,
-                            item.minThreshold
-                          )}
-                        >
-                          {getStockStatusText(
-                            item.currentStock,
-                            item.minThreshold
-                          )}
-                        </CustomBadge>
-                      </div>
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>
-                            Current: {item.currentStock} {item.unit}
-                          </span>
-                          <span>
-                            Min: {item.minThreshold} {item.unit}
-                          </span>
-                        </div>
-                        <Progress
-                          value={getStockPercentage(
-                            item.currentStock,
-                            item.minThreshold
-                          )}
-                          className="h-2"
-                        />
-                      </div>
-                      <div className="mt-3 flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">
-                          Supplier: {item.supplier}
-                        </span>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleEditItem(item)}
-                            >
-                              <PenSquare className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleDisableItem(item.id, item.name)
-                              }
-                              className={
-                                item.disabled
-                                  ? 'text-green-600'
-                                  : 'text-destructive'
-                              }
-                            >
-                              <Ban className="mr-2 h-4 w-4" />
-                              {item.disabled ? 'Enable' : 'Disable'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </TabsContent>
-            </Tabs>
+            <InventoryTabs
+              filteredItems={filteredItems}
+              onEditItem={handleEditItem}
+              onDisableItem={handleDisableItem}
+              getStockPercentage={getStockPercentage}
+              getStockBadgeVariant={getStockBadgeVariant}
+              getStockStatusText={getStockStatusText}
+            />
           </CardContent>
-          <CardFooter className="border-t py-3">
-            <div className="text-xs text-muted-foreground">
-              Showing {filteredItems.length} of {inventoryItems.length} items
-            </div>
-          </CardFooter>
+          <InventoryFooter
+            filteredCount={filteredItems.length}
+            totalCount={inventoryItems.length}
+          />
         </Card>
       </div>
 
@@ -567,16 +313,13 @@ const Inventory = () => {
         </Card>
       </div>
 
-      <AddItemModal
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
+      <InventoryModals
+        showAddModal={showAddModal}
+        setShowAddModal={setShowAddModal}
+        showEditModal={showEditModal}
+        setShowEditModal={setShowEditModal}
+        editingItem={editingItem}
         onAddItem={handleAddItem}
-      />
-
-      <EditItemModal
-        open={showEditModal}
-        onOpenChange={setShowEditModal}
-        item={editingItem}
         onEditItem={handleUpdateItem}
       />
     </div>
