@@ -1,237 +1,126 @@
-import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import userService from '@/api/services/userService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+// Normalize params to stable queryKey
+const normalizeParams = (params) => {
+  const def = { page: 1, limit: 20, search: '', role: '', status: '', sortBy: 'name', sortDir: 'asc' };
+  return { ...def, ...(params || {}) };
+};
 
 export const useUserManagement = (params = {}) => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const qp = normalizeParams(params);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await userService.getUsers(params);
-      
-      if (response.success) {
-        setUsers(response.data);
-        setPagination(response.pagination);
-      } else {
-        throw new Error('Failed to fetch users');
-      }
-    } catch (error) {
-      setError(error.message);
-      toast({
-        title: 'Error Loading Users',
-        description: 'Failed to load users. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const usersQuery = useQuery({
+    queryKey: ['users', qp],
+    queryFn: async () => {
+      const res = await userService.getUsers(qp);
+      if (!res?.success) throw new Error('Failed to load users');
+      return res; // { success, data, pagination }
+    },
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    keepPreviousData: true,
+    refetchOnWindowFocus: false,
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [JSON.stringify(params)]);
+  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] });
 
-  const createUser = async (userData) => {
-    try {
-      const response = await userService.createUser(userData);
-      
-      if (response.success) {
-        setUsers(prev => [...prev, response.data]);
-        toast({
-          title: 'User Created',
-          description: `${userData.name} has been added successfully.`,
-        });
-        return response.data;
-      } else {
-        throw new Error('Failed to create user');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Creating User',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+  const createUser = useMutation({
+    mutationFn: (userData) => userService.createUser(userData),
+    onSuccess: () => {
+      invalidateUsers();
+      toast({ title: 'User Created', description: 'User added successfully.' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Creating User', description: err?.message || 'Failed to create user', variant: 'destructive' });
+    },
+  });
 
-  const updateUser = async (userId, updates) => {
-    try {
-      const response = await userService.updateUser(userId, updates);
-      
-      if (response.success) {
-        setUsers(prev => 
-          prev.map(user => 
-            user.id === userId ? { ...user, ...response.data } : user
-          )
-        );
-        toast({
-          title: 'User Updated',
-          description: 'User information has been updated successfully.',
-        });
-        return response.data;
-      } else {
-        throw new Error('Failed to update user');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Updating User',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+  const updateUser = useMutation({
+    mutationFn: ({ userId, updates }) => userService.updateUser(userId, updates),
+    onSuccess: () => {
+      invalidateUsers();
+      toast({ title: 'User Updated', description: 'User information has been updated.' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Updating User', description: err?.message || 'Failed to update user', variant: 'destructive' });
+    },
+  });
 
-  const deleteUser = async (userId) => {
-    try {
-      const response = await userService.deleteUser(userId);
-      
-      if (response.success) {
-        setUsers(prev => prev.filter(user => user.id !== userId));
-        toast({
-          title: 'User Deleted',
-          description: 'User has been removed from the system.',
-          variant: 'destructive',
-        });
-        return true;
-      } else {
-        throw new Error('Failed to delete user');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Deleting User',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+  const deleteUser = useMutation({
+    mutationFn: (userId) => userService.deleteUser(userId),
+    onSuccess: () => {
+      invalidateUsers();
+      toast({ title: 'User Deleted', description: 'User removed from the system.', variant: 'destructive' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Deleting User', description: err?.message || 'Failed to delete user', variant: 'destructive' });
+    },
+  });
 
-  const updateUserStatus = async (userId, status) => {
-    try {
-      const response = await userService.updateUserStatus(userId, status);
-      
-      if (response.success) {
-        setUsers(prev => 
-          prev.map(user => 
-            user.id === userId ? { ...user, status } : user
-          )
-        );
-        toast({
-          title: `User ${status === 'active' ? 'Activated' : 'Deactivated'}`,
-          description: `User status has been updated to ${status}.`,
-        });
-        return response.data;
-      } else {
-        throw new Error('Failed to update user status');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Updating Status',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+  const updateUserStatus = useMutation({
+    mutationFn: ({ userId, status }) => userService.updateUserStatus(userId, status),
+    onSuccess: (_, variables) => {
+      invalidateUsers();
+      const label = variables.status === 'active' ? 'Activated' : 'Deactivated';
+      toast({ title: `User ${label}`, description: `User status updated to ${variables.status}.` });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Updating Status', description: err?.message || 'Failed to update status', variant: 'destructive' });
+    },
+  });
 
-  const updateUserRole = async (userId, role) => {
-    try {
-      const response = await userService.updateUserRole(userId, role);
-      
-      if (response.success) {
-        setUsers(prev => 
-          prev.map(user => 
-            user.id === userId ? { ...user, role } : user
-          )
-        );
-        toast({
-          title: 'Role Updated',
-          description: `User role has been updated to ${role}.`,
-        });
-        return response.data;
-      } else {
-        throw new Error('Failed to update user role');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Updating Role',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const refetch = () => {
-    fetchUsers();
-  };
+  const updateUserRole = useMutation({
+    mutationFn: ({ userId, role }) => userService.updateUserRole(userId, role),
+    onSuccess: () => {
+      invalidateUsers();
+      toast({ title: 'Role Updated', description: 'User role has been updated.' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Updating Role', description: err?.message || 'Failed to update role', variant: 'destructive' });
+    },
+  });
 
   return {
-    users,
-    loading,
-    error,
-    pagination,
+    users: usersQuery.data?.data || [],
+    pagination: usersQuery.data?.pagination || { page: qp.page, limit: qp.limit, total: 0, totalPages: 0 },
+    loading: usersQuery.isLoading,
+    fetching: usersQuery.isFetching,
+    error: usersQuery.error?.message || null,
+    refetch: usersQuery.refetch,
     createUser,
     updateUser,
     deleteUser,
     updateUserStatus,
     updateUserRole,
-    refetch,
   };
 };
 
 export const useRoles = () => {
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { toast } = useToast();
+  const query = useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const res = await userService.getRoles();
+      if (!res?.success) throw new Error('Failed to load roles');
+      return res.data;
+    },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
+  });
 
-  const fetchRoles = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await userService.getRoles();
-      
-      if (response.success) {
-        setRoles(response.data);
-      } else {
-        throw new Error('Failed to fetch roles');
-      }
-    } catch (error) {
-      setError(error.message);
-      toast({
-        title: 'Error Loading Roles',
-        description: 'Failed to load user roles. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRoles();
-  }, []);
-
-  const refetch = () => {
-    fetchRoles();
-  };
+  if (query.error) {
+    toast({ title: 'Error Loading Roles', description: query.error.message, variant: 'destructive' });
+  }
 
   return {
-    roles,
-    loading,
-    error,
-    refetch,
+    roles: query.data || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
   };
 };
 

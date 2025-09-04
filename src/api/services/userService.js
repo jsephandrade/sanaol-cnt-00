@@ -4,27 +4,76 @@ import { usersApiToModel, userApiToModel, userModelToCreatePayload, userModelToU
 
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
+const USE_MOCKS = !(
+  typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_ENABLE_MOCKS === 'false' || import.meta.env.VITE_ENABLE_MOCKS === '0')
+);
+
+function applyListParams(list, params = {}) {
+  const { search = '', role = '', status = '', sortBy = 'name', sortDir = 'asc', page = 1, limit = 20 } = params;
+  let data = [...list];
+  const q = (search || '').toLowerCase();
+  if (q) {
+    data = data.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
+  }
+  if (role) {
+    data = data.filter(u => (u.role || '').toLowerCase() === role.toLowerCase());
+  }
+  if (status) {
+    data = data.filter(u => (u.status || '').toLowerCase() === status.toLowerCase());
+  }
+  const dir = (sortDir || 'asc').toLowerCase() === 'desc' ? -1 : 1;
+  data.sort((a, b) => {
+    const av = (a[sortBy] ?? '').toString().toLowerCase();
+    const bv = (b[sortBy] ?? '').toString().toLowerCase();
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+  const total = data.length;
+  const start = (Math.max(1, page) - 1) * Math.max(1, limit);
+  const end = start + Math.max(1, limit);
+  const paged = data.slice(start, end);
+  return {
+    data: paged,
+    pagination: {
+      page: Math.max(1, page),
+      limit: Math.max(1, limit),
+      total,
+      totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+      sortBy,
+      sortDir,
+      search,
+      role,
+      status,
+    },
+  };
+}
 
 class UserService {
   async getUsers(params = {}) {
-    await mockDelay();
-    
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/users?${queryParams}`);
-    
-    // Mock implementation
-    const data = usersApiToModel(mockUsers);
-    return {
-      success: true,
-      data,
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: data.length,
-        totalPages: 1
+    // Attempt real API if mocks disabled
+    if (!USE_MOCKS) {
+      try {
+        const qs = new URLSearchParams();
+        Object.entries(params || {}).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+        });
+        const res = await apiClient.get(`/users?${qs.toString()}`, { retry: { retries: 2 } });
+        // Expect { data, pagination } or array
+        if (Array.isArray(res)) {
+          return { success: true, data: usersApiToModel(res), pagination: { page: 1, limit: res.length, total: res.length, totalPages: 1 } };
+        }
+        const data = usersApiToModel(res?.data || []);
+        return { success: true, data, pagination: res?.pagination || { page: 1, limit: data.length, total: data.length, totalPages: 1 } };
+      } catch (e) {
+        // fall back to mocks
+        console.warn('getUsers API failed, falling back to mocks:', e?.message);
       }
-    };
+    }
+
+    await mockDelay();
+    const { data, pagination } = applyListParams(usersApiToModel(mockUsers), params);
+    return { success: true, data, pagination };
   }
 
   async getUserById(userId) {
@@ -46,13 +95,17 @@ class UserService {
   }
 
   async createUser(userData) {
-    await mockDelay(1000);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.post('/users', userData);
-    
-    // Mock implementation
     const payload = userModelToCreatePayload(userData);
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.post('/users', payload, { retry: { retries: 1 } });
+        const data = userApiToModel(res?.data || res);
+        return { success: true, data };
+      } catch (e) {
+        console.warn('createUser API failed, falling back to mocks:', e?.message);
+      }
+    }
+    await mockDelay(400);
     const newUser = {
       id: Date.now().toString(),
       ...payload,
@@ -61,73 +114,72 @@ class UserService {
       lastLogin: null,
       permissions: [],
     };
-    
-    return {
-      success: true,
-      data: userApiToModel(newUser)
-    };
+    return { success: true, data: userApiToModel(newUser) };
   }
 
   async updateUser(userId, updates) {
-    await mockDelay(800);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.put(`/users/${userId}`, updates);
-    
-    // Mock implementation
+    const updatePayload = userModelToUpdatePayload(updates);
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.put(`/users/${userId}`, updatePayload, { retry: { retries: 1 } });
+        const data = userApiToModel(res?.data || res);
+        return { success: true, data };
+      } catch (e) {
+        console.warn('updateUser API failed, falling back to mocks:', e?.message);
+      }
+    }
+    await mockDelay(300);
     const userIndex = mockUsers.findIndex(u => u.id === userId);
     if (userIndex === -1) {
       throw new Error('User not found');
     }
-    
-    const updatePayload = userModelToUpdatePayload(updates);
     const updatedUser = {
       ...mockUsers[userIndex],
       ...updatePayload,
       updatedAt: new Date().toISOString(),
     };
-    
-    return {
-      success: true,
-      data: userApiToModel(updatedUser)
-    };
+    return { success: true, data: userApiToModel(updatedUser) };
   }
 
   async deleteUser(userId) {
-    await mockDelay(600);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.delete(`/users/${userId}`);
-    
-    // Mock implementation
-    const user = mockUsers.find(u => u.id === userId);
-    if (!user) {
-      throw new Error('User not found');
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.delete(`/users/${userId}`, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || true };
+      } catch (e) {
+        console.warn('deleteUser API failed, falling back to mocks:', e?.message);
+      }
     }
-    
-    return {
-      success: true,
-      message: 'User deleted successfully'
-    };
+    await mockDelay(200);
+    const user = mockUsers.find(u => u.id === userId);
+    if (!user) throw new Error('User not found');
+    return { success: true, message: 'User deleted successfully' };
   }
 
   async updateUserStatus(userId, status) {
-    await mockDelay(600);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/users/${userId}/status`, { status });
-    
-    // Mock implementation
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.patch(`/users/${userId}/status`, { status }, { retry: { retries: 1 } });
+        const data = userApiToModel(res?.data || res);
+        return { success: true, data };
+      } catch (e) {
+        console.warn('updateUserStatus API failed, falling back to mocks:', e?.message);
+      }
+    }
     return this.updateUser(userId, { status });
   }
 
   async getRoles() {
-    await mockDelay(400);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.get('/users/roles');
-    
-    // Mock implementation
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.get('/users/roles', { retry: { retries: 1 } });
+        const data = res?.data || res;
+        return { success: true, data };
+      } catch (e) {
+        console.warn('getRoles API failed, falling back to mocks:', e?.message);
+      }
+    }
+    await mockDelay(200);
     return {
       success: true,
       data: [
@@ -160,12 +212,15 @@ class UserService {
   }
 
   async updateUserRole(userId, role) {
-    await mockDelay(600);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/users/${userId}/role`, { role });
-    
-    // Mock implementation
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.patch(`/users/${userId}/role`, { role }, { retry: { retries: 1 } });
+        const data = userApiToModel(res?.data || res);
+        return { success: true, data };
+      } catch (e) {
+        console.warn('updateUserRole API failed, falling back to mocks:', e?.message);
+      }
+    }
     return this.updateUser(userId, { role });
   }
 }

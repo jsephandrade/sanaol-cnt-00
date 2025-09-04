@@ -10,6 +10,7 @@ import { ActiveUsersList } from './users/ActiveUsersList';
 import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
 import { UsersFooter } from './users/UsersFooter';
+import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
 
 const Users = () => {
   const { toast } = useToast();
@@ -20,72 +21,10 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const [users, setUsers] = useState([
-    {
-      id: '1',
-      name: 'Admin User',
-      email: 'admin@canteen.com',
-      role: 'admin',
-      status: 'active',
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      email: 'sarah@canteen.com',
-      role: 'manager',
-      status: 'active',
-    },
-    {
-      id: '3',
-      name: 'Miguel Rodriguez',
-      email: 'miguel@canteen.com',
-      role: 'staff',
-      status: 'active',
-    },
-    {
-      id: '4',
-      name: 'Aisha Patel',
-      email: 'aisha@canteen.com',
-      role: 'cashier',
-      status: 'active',
-    },
-    {
-      id: '5',
-      name: 'David Chen',
-      email: 'david@canteen.com',
-      role: 'staff',
-      status: 'active',
-    },
-  ]);
+  const { users, pagination, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: searchTerm });
+  const { roles } = useRoles();
 
-  const [roles] = useState([
-    {
-      label: 'Admin',
-      value: 'admin',
-      description: 'Full access to all settings and functions',
-    },
-    {
-      label: 'Manager',
-      value: 'manager',
-      description: 'Can manage most settings and view reports',
-    },
-    {
-      label: 'Staff',
-      value: 'staff',
-      description: 'Kitchen and service staff access',
-    },
-    {
-      label: 'Cashier',
-      value: 'cashier',
-      description: 'POS and payment access only',
-    },
-  ]);
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Data is fetched with search term via hook; no local filtering needed
 
   const getRoleBadgeVariant = (role) => {
     switch (role) {
@@ -110,59 +49,23 @@ const Users = () => {
       .toUpperCase();
   };
 
-  const handleAddUser = (newUser) => {
-    const user = {
-      ...newUser,
-      id: (users.length + 1).toString(),
-      status: 'active',
-    };
-    setUsers([...users, user]);
-    toast({
-      title: 'User Added',
-      description: `${user.name} has been added successfully.`,
-    });
+  const handleAddUser = async (newUser) => {
+    await createUser.mutateAsync(newUser);
   };
 
-  const handleUpdateUser = (updatedUser) => {
-    setUsers(
-      users.map((user) =>
-        user.id === updatedUser.id ? { ...user, ...updatedUser } : user
-      )
-    );
-    toast({
-      title: 'User Updated',
-      description: `${updatedUser.name}'s information has been updated.`,
-    });
+  const handleUpdateUser = async (updatedUser) => {
+    await updateUser.mutateAsync({ userId: updatedUser.id, updates: updatedUser });
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
+    await deleteUser.mutateAsync(userId);
+  };
+
+  const handleDeactivateUser = async (userId) => {
     const user = users.find((u) => u.id === userId);
-    setUsers(users.filter((u) => u.id !== userId));
-    toast({
-      title: 'User Deleted',
-      description: `${user?.name} has been removed from the system.`,
-      variant: 'destructive',
-    });
-  };
-
-  const handleDeactivateUser = (userId) => {
-    const user = users.find((u) => u.id === userId);
-    if (user) {
-      setUsers(
-        users.map((u) =>
-          u.id === userId
-            ? { ...u, status: u.status === 'active' ? 'deactivated' : 'active' }
-            : u
-        )
-      );
-      const newStatus = user.status === 'active' ? 'deactivated' : 'activated';
-      toast({
-        title: `User ${
-          newStatus === 'deactivated' ? 'Deactivated' : 'Activated'
-        }`,
-        description: `${user.name} has been ${newStatus}.`,
-      });
-    }
+    if (!user) return;
+    const status = user.status === 'active' ? 'deactivated' : 'active';
+    await updateUserStatus.mutateAsync({ userId, status });
   };
 
   const handleConfigureRole = (role) => {
@@ -189,7 +92,7 @@ const Users = () => {
             />
 
             <UserTable
-              users={filteredUsers}
+              users={users}
               onEditUser={(user) => {
                 setSelectedUser(user);
                 setShowEditModal(true);
@@ -200,7 +103,7 @@ const Users = () => {
               getInitials={getInitials}
             />
           </CardContent>
-          <UsersFooter showing={filteredUsers.length} total={users.length} />
+          <UsersFooter showing={users.length} total={pagination?.total || users.length} />
         </Card>
       </div>
 
