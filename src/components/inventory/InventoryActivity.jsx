@@ -8,7 +8,7 @@ import {
   CardTitle 
 } from '@/components/ui/card';
 
-export const InventoryActivity = ({ activities }) => {
+export const InventoryActivity = ({ activities = [] }) => {
   return (
     <Card>
       <CardHeader>
