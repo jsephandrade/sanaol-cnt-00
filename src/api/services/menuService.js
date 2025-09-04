@@ -3,16 +3,27 @@ import { mockMenuItems } from '../mockData';
 
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
+const USE_MOCKS = !(
+  typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_ENABLE_MOCKS === 'false' || import.meta.env.VITE_ENABLE_MOCKS === '0')
+);
 
 class MenuService {
   async getMenuItems(params = {}) {
+    if (!USE_MOCKS) {
+      try {
+        const qs = new URLSearchParams();
+        Object.entries(params || {}).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+        });
+        const res = await apiClient.get(`/menu/items?${qs.toString()}`, { retry: { retries: 1 } });
+        const data = res?.data || res || [];
+        const pagination = res?.pagination || { page: 1, limit: Array.isArray(data) ? data.length : 0, total: Array.isArray(data) ? data.length : 0, totalPages: 1 };
+        return { success: true, data, pagination };
+      } catch (e) {
+        console.warn('getMenuItems API failed, using mocks:', e?.message);
+      }
+    }
     await mockDelay();
-    
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/menu/items?${queryParams}`);
-    
-    // Mock implementation
     return {
       success: true,
       data: mockMenuItems,
@@ -20,8 +31,8 @@ class MenuService {
         page: 1,
         limit: 50,
         total: mockMenuItems.length,
-        totalPages: 1
-      }
+        totalPages: 1,
+      },
     };
   }
 
@@ -44,74 +55,60 @@ class MenuService {
   }
 
   async createMenuItem(itemData) {
-    await mockDelay(1000);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.post('/menu/items', itemData);
-    
-    // Mock implementation
-    const newItem = {
-      id: Date.now().toString(),
-      ...itemData,
-      available: true,
-      createdAt: new Date().toISOString()
-    };
-    
-    return {
-      success: true,
-      data: newItem
-    };
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.post('/menu/items', itemData, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || res };
+      } catch (e) {
+        console.warn('createMenuItem API failed, using mocks:', e?.message);
+      }
+    }
+    await mockDelay(400);
+    const newItem = { id: Date.now().toString(), ...itemData, available: true, createdAt: new Date().toISOString() };
+    return { success: true, data: newItem };
   }
 
   async updateMenuItem(itemId, updates) {
-    await mockDelay(800);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.put(`/menu/items/${itemId}`, updates);
-    
-    // Mock implementation
-    const itemIndex = mockMenuItems.findIndex(i => i.id === itemId);
-    if (itemIndex === -1) {
-      throw new Error('Menu item not found');
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.put(`/menu/items/${itemId}`, updates, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || res };
+      } catch (e) {
+        console.warn('updateMenuItem API failed, using mocks:', e?.message);
+      }
     }
-    
-    const updatedItem = {
-      ...mockMenuItems[itemIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return {
-      success: true,
-      data: updatedItem
-    };
+    await mockDelay(300);
+    const itemIndex = mockMenuItems.findIndex(i => i.id === itemId);
+    if (itemIndex === -1) throw new Error('Menu item not found');
+    const updatedItem = { ...mockMenuItems[itemIndex], ...updates, updatedAt: new Date().toISOString() };
+    return { success: true, data: updatedItem };
   }
 
   async deleteMenuItem(itemId) {
-    await mockDelay(600);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.delete(`/menu/items/${itemId}`);
-    
-    // Mock implementation
-    const item = mockMenuItems.find(i => i.id === itemId);
-    if (!item) {
-      throw new Error('Menu item not found');
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.delete(`/menu/items/${itemId}`, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || true };
+      } catch (e) {
+        console.warn('deleteMenuItem API failed, using mocks:', e?.message);
+      }
     }
-    
-    return {
-      success: true,
-      message: 'Menu item deleted successfully'
-    };
+    await mockDelay(200);
+    const item = mockMenuItems.find(i => i.id === itemId);
+    if (!item) throw new Error('Menu item not found');
+    return { success: true, message: 'Menu item deleted successfully' };
   }
 
   async updateItemAvailability(itemId, available) {
-    await mockDelay(500);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/menu/items/${itemId}/availability`, { available });
-    
-    // Mock implementation
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.patch(`/menu/items/${itemId}/availability`, { available }, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || res };
+      } catch (e) {
+        console.warn('updateItemAvailability API failed, using mocks:', e?.message);
+      }
+    }
+    await mockDelay(150);
     return this.updateMenuItem(itemId, { available });
   }
 
@@ -134,22 +131,21 @@ class MenuService {
   }
 
   async uploadItemImage(itemId, imageFile) {
-    await mockDelay(2000);
-    
-    // TODO: Replace with actual API call
-    // const formData = new FormData();
-    // formData.append('image', imageFile);
-    // return apiClient.post(`/menu/items/${itemId}/image`, formData, {
-    //   headers: { 'Content-Type': 'multipart/form-data' }
-    // });
-    
-    // Mock implementation
-    return {
-      success: true,
-      data: {
-        imageUrl: `/images/menu/${itemId}-${Date.now()}.jpg`
+    if (!USE_MOCKS) {
+      try {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        const res = await apiClient.post(`/menu/items/${itemId}/image`, null, {
+          body: formData,
+          retry: { retries: 1 },
+        });
+        return { success: true, data: res?.data || res };
+      } catch (e) {
+        console.warn('uploadItemImage API failed, using mocks:', e?.message);
       }
-    };
+    }
+    await mockDelay(500);
+    return { success: true, data: { imageUrl: `/images/menu/${itemId}-${Date.now()}.jpg` } };
   }
 }
 

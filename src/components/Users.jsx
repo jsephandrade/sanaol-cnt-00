@@ -11,6 +11,7 @@ import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
 import { UsersFooter } from './users/UsersFooter';
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
+import { useDebouncedValue } from '@/hooks/useDebounce';
 import TableSkeleton from '@/components/shared/TableSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
 
@@ -23,7 +24,8 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const { users, pagination, loading, fetching, error, refetch, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: searchTerm });
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
+  const { users, pagination, loading, fetching, error, refetch, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: debouncedSearch });
   const { roles, loading: rolesLoading, error: rolesError, updateRoleConfig } = useRoles();
 
   // Data is fetched with search term via hook; no local filtering needed
