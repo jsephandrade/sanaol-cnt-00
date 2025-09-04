@@ -1,5 +1,6 @@
 import apiClient from '../client';
 import { mockUsers } from '../mockData';
+import { usersApiToModel, userApiToModel, userModelToCreatePayload, userModelToUpdatePayload } from '@/api/mappers';
 
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
@@ -13,13 +14,14 @@ class UserService {
     // return apiClient.get(`/users?${queryParams}`);
     
     // Mock implementation
+    const data = usersApiToModel(mockUsers);
     return {
       success: true,
-      data: mockUsers,
+      data,
       pagination: {
         page: 1,
         limit: 20,
-        total: mockUsers.length,
+        total: data.length,
         totalPages: 1
       }
     };
@@ -39,7 +41,7 @@ class UserService {
     
     return {
       success: true,
-      data: user
+      data: userApiToModel(user)
     };
   }
 
@@ -50,17 +52,19 @@ class UserService {
     // return apiClient.post('/users', userData);
     
     // Mock implementation
+    const payload = userModelToCreatePayload(userData);
     const newUser = {
       id: Date.now().toString(),
-      ...userData,
+      ...payload,
       status: 'active',
       createdAt: new Date().toISOString(),
-      lastLogin: null
+      lastLogin: null,
+      permissions: [],
     };
     
     return {
       success: true,
-      data: newUser
+      data: userApiToModel(newUser)
     };
   }
 
@@ -76,15 +80,16 @@ class UserService {
       throw new Error('User not found');
     }
     
+    const updatePayload = userModelToUpdatePayload(updates);
     const updatedUser = {
       ...mockUsers[userIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
+      ...updatePayload,
+      updatedAt: new Date().toISOString(),
     };
     
     return {
       success: true,
-      data: updatedUser
+      data: userApiToModel(updatedUser)
     };
   }
 

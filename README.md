@@ -58,3 +58,9 @@ npm run dev
 - Dev proxy: Vite is configured to forward `/api` requests to `VITE_DEV_PROXY_TARGET` to avoid CORS.
 - Production: Set `VITE_API_BASE_URL` to your public API origin (e.g. `https://api.example.com`).
 - The API client reads `VITE_API_BASE_URL` and falls back to `/api` if not set.
+
+### 📐 Data Contracts with Zod
+- Schemas live in `src/api/schemas/*` (User, Role, MenuItem, InventoryItem, Order, Payment, Feedback, Catering, Dashboard).
+- Use `validate(schema, data)` to assert API responses/requests.
+- DTO mappers live in `src/api/mappers/*` (e.g., `userApiToModel`, `userModelToCreatePayload`).
+- Services should validate and normalize fields (e.g., role/status casing) before returning to UI.
