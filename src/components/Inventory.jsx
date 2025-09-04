@@ -19,7 +19,13 @@ import { InventoryActivity } from '@/components/inventory/InventoryActivity';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
 import { InventoryGrid } from '@/components/inventory/InventoryGrid';
 import { useInventoryData } from '@/hooks/useInventoryData';
-import { filterInventoryItems, getLowStockItems } from '@/utils/inventoryUtils';
+import {
+  filterInventoryItems,
+  getLowStockItems,
+  getStockPercentage,
+  getStockBadgeVariant,
+  getStockStatusText,
+} from '@/utils/inventoryUtils';
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,16 +114,22 @@ const Inventory = () => {
               </TabsList>
               <TabsContent value="list">
                 <InventoryTable
-                  filteredItems={filteredItems}
+                  items={filteredItems}
                   onEditItem={handleEditItem}
                   onDisableItem={handleDisableItem}
+                  getStockPercentage={getStockPercentage}
+                  getStockBadgeVariant={getStockBadgeVariant}
+                  getStockStatusText={getStockStatusText}
                 />
               </TabsContent>
               <TabsContent value="grid">
                 <InventoryGrid
-                  filteredItems={filteredItems}
+                  items={filteredItems}
                   onEditItem={handleEditItem}
                   onDisableItem={handleDisableItem}
+                  getStockPercentage={getStockPercentage}
+                  getStockBadgeVariant={getStockBadgeVariant}
+                  getStockStatusText={getStockStatusText}
                 />
               </TabsContent>
             </Tabs>
@@ -136,7 +148,7 @@ const Inventory = () => {
           totalItems={inventoryItems.length} 
         />
         
-        <InventoryActivity recentActivities={recentActivities} />
+        <InventoryActivity activities={recentActivities} />
       </div>
 
       <AddItemModal

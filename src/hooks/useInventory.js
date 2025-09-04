@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { inventoryService } from '@/services/inventoryService';
+import { inventoryService } from '@/api/services/inventoryService';
 import { toast } from 'sonner';
 
 export const useInventory = () => {
@@ -11,8 +11,15 @@ export const useInventory = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await inventoryService.getInventoryItems();
-      setItems(data);
+      const response = await inventoryService.getInventoryItems();
+      if (response?.success) {
+        setItems(response.data || []);
+      } else if (Array.isArray(response)) {
+        // Fallback in case service returns raw array
+        setItems(response);
+      } else {
+        throw new Error('Failed to fetch inventory');
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch inventory';
@@ -25,7 +32,8 @@ export const useInventory = () => {
 
   const addInventoryItem = async (item) => {
     try {
-      const newItem = await inventoryService.createInventoryItem(item);
+      const response = await inventoryService.createInventoryItem(item);
+      const newItem = response?.data ?? response;
       setItems((prev) => [...prev, newItem]);
       toast.success('Inventory item added successfully');
       return newItem;
@@ -39,10 +47,8 @@ export const useInventory = () => {
 
   const updateInventoryItem = async (id, updates) => {
     try {
-      const updatedItem = await inventoryService.updateInventoryItem(
-        id,
-        updates
-      );
+      const res = await inventoryService.updateInventoryItem(id, updates);
+      const updatedItem = res?.data ?? res;
       setItems((prev) =>
         prev.map((item) => (item.id === id ? updatedItem : item))
       );
@@ -58,8 +64,12 @@ export const useInventory = () => {
 
   const deleteInventoryItem = async (id) => {
     try {
-      await inventoryService.deleteInventoryItem(id);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      const response = await inventoryService.deleteInventoryItem(id);
+      if (response?.success !== false) {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        throw new Error('Failed to delete inventory item');
+      }
       toast.success('Inventory item deleted successfully');
     } catch (err) {
       const errorMessage =
@@ -93,8 +103,14 @@ export const useInventoryActivities = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await inventoryService.getInventoryActivities();
-      setActivities(data);
+      const response = await inventoryService.getInventoryActivities();
+      if (response?.success) {
+        setActivities(response.data || []);
+      } else if (Array.isArray(response)) {
+        setActivities(response);
+      } else {
+        throw new Error('Failed to fetch inventory activities');
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error
