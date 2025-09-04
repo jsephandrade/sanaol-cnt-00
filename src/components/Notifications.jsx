@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { createRealtime } from '@/lib/realtime';
 const Notifications = () => {
   const [notifications, setNotifications] = useState([
     {
@@ -55,6 +56,49 @@ const Notifications = () => {
     orderAlerts: true,
     paymentAlerts: true,
   });
+
+  // Realtime notifications with fallback
+  const pollRef = useRef(null);
+  useEffect(() => {
+    const enableRealtime = Boolean(import.meta?.env?.VITE_WS_URL);
+    const startPolling = () => {
+      if (pollRef.current) return;
+      // Placeholder: in real API, fetch latest notifications here
+      pollRef.current = setInterval(() => {
+        // no-op polling fallback
+      }, 15000);
+    };
+    const stopPolling = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+
+    let rt;
+    if (enableRealtime) {
+      rt = createRealtime({
+        path: '/notifications',
+        onMessage: (msg) => {
+          if (msg?.type === 'notification' && msg?.data) {
+            setNotifications((prev) => [{ ...msg.data, read: false }, ...prev].slice(0, 100));
+          }
+        },
+        onStatusChange: (status) => {
+          if (status === 'open') stopPolling();
+          if (status === 'reconnecting' || status === 'error' || status === 'closed') startPolling();
+        },
+      });
+      startPolling();
+    } else {
+      startPolling();
+    }
+
+    return () => {
+      stopPolling();
+      rt?.close?.();
+    };
+  }, []);
   const markAllAsRead = () => {
     setNotifications((prev) =>
       prev.map((notification) => ({ ...notification, read: true }))

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { AddUserModal } from './users/AddUserModal';
 import { EditUserModal } from './users/EditUserModal';
@@ -11,6 +11,8 @@ import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
 import { UsersFooter } from './users/UsersFooter';
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
+import TableSkeleton from '@/components/shared/TableSkeleton';
+import ErrorState from '@/components/shared/ErrorState';
 
 const Users = () => {
   const { toast } = useToast();
@@ -21,8 +23,8 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState(null);
 
-  const { users, pagination, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: searchTerm });
-  const { roles, updateRoleConfig } = useRoles();
+  const { users, pagination, loading, fetching, error, refetch, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: searchTerm });
+  const { roles, loading: rolesLoading, error: rolesError, updateRoleConfig } = useRoles();
 
   // Data is fetched with search term via hook; no local filtering needed
 
@@ -88,26 +90,82 @@ const Users = () => {
               onChange={(value) => setSearchTerm(value)}
             />
 
-            <UserTable
-              users={users}
-              onEditUser={(user) => {
-                setSelectedUser(user);
-                setShowEditModal(true);
-              }}
-              onDeactivateUser={handleDeactivateUser}
-              onDeleteUser={handleDeleteUser}
-              getRoleBadgeVariant={getRoleBadgeVariant}
-              getInitials={getInitials}
-            />
+            {loading || fetching ? (
+              <TableSkeleton headers={["User", "Role", "Status", "Actions"]} rows={5} />
+            ) : error ? (
+              <ErrorState message={error} onRetry={refetch} />
+            ) : (
+              <UserTable
+                users={users}
+                onEditUser={(user) => {
+                  setSelectedUser(user);
+                  setShowEditModal(true);
+                }}
+                onDeactivateUser={handleDeactivateUser}
+                onDeleteUser={handleDeleteUser}
+                getRoleBadgeVariant={getRoleBadgeVariant}
+                getInitials={getInitials}
+              />
+            )}
           </CardContent>
           <UsersFooter showing={users.length} total={pagination?.total || users.length} />
         </Card>
       </div>
 
       <div className="space-y-4">
-        <RoleManagement roles={roles} onConfigureRole={handleConfigureRole} />
+        {rolesLoading ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Management</CardTitle>
+              <CardDescription>Configure user roles and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="w-full">
+                      <div className="h-4 w-40 bg-muted rounded mb-2" />
+                      <div className="h-3 w-60 bg-muted rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : rolesError ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Role Management</CardTitle>
+              <CardDescription>Configure user roles and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ErrorState message={rolesError} />
+            </CardContent>
+          </Card>
+        ) : (
+          <RoleManagement roles={roles} onConfigureRole={handleConfigureRole} />
+        )}
 
-        <ActiveUsersList users={users} getInitials={getInitials} />
+        {loading ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Active Users</CardTitle>
+              <CardDescription>Currently active system users</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <div className="h-6 w-6 rounded-full bg-muted" />
+                    <div className="h-4 w-16 bg-muted rounded" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <ActiveUsersList users={users} getInitials={getInitials} />
+        )}
       </div>
 
       <AddUserModal

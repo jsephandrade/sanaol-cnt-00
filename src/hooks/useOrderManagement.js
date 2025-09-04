@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import orderService from '@/api/services/orderService';
+import { createRealtime } from '@/lib/realtime';
 
 export const useOrderManagement = (params = {}) => {
   const [orders, setOrders] = useState([]);
@@ -182,6 +183,8 @@ export const useOrderQueue = (params = {}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { toast } = useToast();
+  const pollRef = useRef(null);
+  const rtRef = useRef(null);
 
   const fetchOrderQueue = async () => {
     setLoading(true);
@@ -209,6 +212,51 @@ export const useOrderQueue = (params = {}) => {
 
   useEffect(() => {
     fetchOrderQueue();
+
+    const enableRealtime = Boolean(import.meta?.env?.VITE_WS_URL);
+    const startPolling = () => {
+      if (pollRef.current) return;
+      pollRef.current = setInterval(fetchOrderQueue, 5000);
+    };
+    const stopPolling = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+
+    if (enableRealtime) {
+      rtRef.current = createRealtime({
+        path: '/orders',
+        onMessage: (msg) => {
+          // Expecting { type, data }
+          const t = msg?.type || '';
+          if (t === 'order_queue_update') {
+            if (Array.isArray(msg.data)) setOrderQueue(msg.data);
+          } else if (t === 'order_update') {
+            const o = msg.data;
+            if (!o?.id) return;
+            setOrderQueue((prev) => prev.map((x) => (x.id === o.id ? { ...x, ...o } : x)));
+          }
+        },
+        onStatusChange: (status) => {
+          if (status === 'open') {
+            stopPolling();
+          } else if (status === 'reconnecting' || status === 'error' || status === 'closed') {
+            startPolling();
+          }
+        },
+      });
+      // While connecting, start a short-lived polling to keep data fresh
+      startPolling();
+    } else {
+      startPolling();
+    }
+
+    return () => {
+      stopPolling();
+      rtRef.current?.close?.();
+    };
   }, [JSON.stringify(params)]);
 
   const updateOrderStatus = async (orderId, status) => {

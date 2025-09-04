@@ -6,9 +6,11 @@ import CategoryChart from "./dashboard/CategoryChart"
 import PopularItems from "./dashboard/PopularItems"
 import RecentSales from "./dashboard/RecentSales"
 import { useDashboard } from "@/hooks/useDashboard"
+import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton"
+import ErrorState from "@/components/shared/ErrorState"
 
 const Dashboard = () => {
-  const { stats } = useDashboard('today')
+  const { stats, loading, error, refetch } = useDashboard('today')
 
   const salesTimeData = (stats?.salesByTime || []).map(item => ({
     name: item.time,
@@ -19,6 +21,14 @@ const Dashboard = () => {
     name: item.category,
     amount: item.amount
   }))
+
+  if (loading) {
+    return <DashboardSkeleton />
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={refetch} />
+  }
 
   return (
     <div className="space-y-4 animate-fade-in">
