@@ -1,19 +1,21 @@
 import React from "react"
-import { dashboardStats, salesData } from "@/utils/mockData"
 import { TrendingUp, Users, ShoppingBag, DollarSign } from "lucide-react"
 import StatsCard from "./dashboard/StatsCard"
 import SalesChart from "./dashboard/SalesChart"
 import CategoryChart from "./dashboard/CategoryChart"
 import PopularItems from "./dashboard/PopularItems"
 import RecentSales from "./dashboard/RecentSales"
+import { useDashboard } from "@/hooks/useDashboard"
 
 const Dashboard = () => {
-  const salesTimeData = dashboardStats.salesByTime.map(item => ({
+  const { stats } = useDashboard('today')
+
+  const salesTimeData = (stats?.salesByTime || []).map(item => ({
     name: item.time,
     amount: item.amount
   }))
 
-  const categorySalesData = dashboardStats.salesByCategory.map(item => ({
+  const categorySalesData = (stats?.salesByCategory || []).map(item => ({
     name: item.category,
     amount: item.amount
   }))
@@ -26,27 +28,27 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatsCard
           title="Today's Sales"
-          value={dashboardStats.dailySales}
+          value={stats?.dailySales || 0}
           change="+15% from yesterday"
           icon={DollarSign}
           formatter={(value) => `₱${value.toFixed(2)}`}
         />
         <StatsCard
           title="Monthly Sales"
-          value={dashboardStats.monthlySales}
+          value={stats?.monthlySales || 0}
           change="+8% from last month"
           icon={TrendingUp}
           formatter={(value) => `₱${value.toFixed(2)}`}
         />
         <StatsCard
           title="Customers Today"
-          value={dashboardStats.customerCount}
+          value={stats?.customerCount || 0}
           change="+5% from yesterday"
           icon={Users}
         />
         <StatsCard
           title="Orders Today"
-          value={salesData.length}
+          value={stats?.orderCount ?? (stats?.recentSales?.length || 0)}
           change="+12% from yesterday"
           icon={ShoppingBag}
         />
@@ -68,8 +70,8 @@ const Dashboard = () => {
 
       {/* Popular Items & Recent Sales */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PopularItems items={dashboardStats.popularItems} />
-        <RecentSales sales={dashboardStats.recentSales} />
+        <PopularItems items={stats?.popularItems || []} />
+        <RecentSales sales={stats?.recentSales || []} />
       </div>
     </div>
   )

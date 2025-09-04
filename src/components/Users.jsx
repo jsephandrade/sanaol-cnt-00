@@ -22,7 +22,7 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const { users, pagination, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: searchTerm });
-  const { roles } = useRoles();
+  const { roles, updateRoleConfig } = useRoles();
 
   // Data is fetched with search term via hook; no local filtering needed
 
@@ -73,11 +73,8 @@ const Users = () => {
     setShowRoleModal(true);
   };
 
-  const handleUpdateRole = (updatedRole) => {
-    toast({
-      title: 'Role Updated',
-      description: `${updatedRole.label} role configuration has been updated.`,
-    });
+  const handleUpdateRole = async (updatedRole) => {
+    await updateRoleConfig.mutateAsync(updatedRole);
   };
 
   return (

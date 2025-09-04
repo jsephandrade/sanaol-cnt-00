@@ -101,6 +101,7 @@ export const useUserManagement = (params = {}) => {
 
 export const useRoles = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
@@ -112,6 +113,17 @@ export const useRoles = () => {
     refetchOnWindowFocus: false,
   });
 
+  const updateRoleConfig = useMutation({
+    mutationFn: (roleConfig) => userService.updateRoleConfig(roleConfig),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      toast({ title: 'Role Updated', description: 'Role configuration has been saved.' });
+    },
+    onError: (err) => {
+      toast({ title: 'Error Updating Role', description: err?.message || 'Failed to update role configuration', variant: 'destructive' });
+    },
+  });
+
   if (query.error) {
     toast({ title: 'Error Loading Roles', description: query.error.message, variant: 'destructive' });
   }
@@ -121,6 +133,7 @@ export const useRoles = () => {
     loading: query.isLoading,
     error: query.error?.message || null,
     refetch: query.refetch,
+    updateRoleConfig,
   };
 };
 

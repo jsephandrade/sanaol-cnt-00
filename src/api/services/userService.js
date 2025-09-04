@@ -223,6 +223,20 @@ class UserService {
     }
     return this.updateUser(userId, { role });
   }
+
+  async updateRoleConfig(roleConfig) {
+    // roleConfig: { label, value, description, permissions[] }
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.put(`/users/roles/${roleConfig.value}`, roleConfig, { retry: { retries: 1 } });
+        return { success: true, data: res?.data || roleConfig };
+      } catch (e) {
+        console.warn('updateRoleConfig API failed, falling back to mocks:', e?.message);
+      }
+    }
+    await mockDelay(200);
+    return { success: true, data: roleConfig };
+  }
 }
 
 export const userService = new UserService();

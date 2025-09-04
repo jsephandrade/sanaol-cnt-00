@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { feedbackService } from '@/services/feedbackService';
+import { feedbackService } from '@/api/services/feedbackService';
 import { toast } from 'sonner';
 
 export const useFeedback = () => {

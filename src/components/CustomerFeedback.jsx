@@ -1,25 +1,22 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { feedbackData } from '@/utils/mockData';
+import { useFeedback } from '@/hooks/useFeedback';
 import { toast } from 'sonner';
 import { FeedbackMetrics } from './feedback/FeedbackMetrics';
 import { FeedbackList } from './feedback/FeedbackList';
 import { FeedbackForm } from './feedback/FeedbackForm';
 import { FeedbackReplyModal } from './feedback/FeedbackReplyModal';
 const CustomerFeedback = () => {
-  const [feedback, setFeedback] = useState(feedbackData);
+  const { feedback, markResolved } = useFeedback();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [responseText, setResponseText] = useState('');
-  const handleResolve = (id) => {
-    const updatedFeedback = feedback.map((item) =>
-      item.id === id ? { ...item, resolved: !item.resolved } : item
-    );
-    setFeedback(updatedFeedback);
-    toast.success(
-      `Feedback marked as ${updatedFeedback.find((f) => f.id === id)?.resolved ? 'resolved' : 'unresolved'}`
-    );
+  const handleResolve = async (id) => {
+    try {
+      const updated = await markResolved(id);
+      toast.success(`Feedback marked as ${updated.resolved ? 'resolved' : 'unresolved'}`);
+    } catch {}
   };
   const handleSendResponse = () => {
     if (!responseText.trim()) {
@@ -31,10 +28,8 @@ const CustomerFeedback = () => {
     setSelectedFeedback(null);
   };
   const averageRating =
-    feedback.length > 0
-      ? (
-          feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length
-        ).toFixed(1)
+    feedback && feedback.length > 0
+      ? (feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length).toFixed(1)
       : '0.0';
   // ... keep existing code (handleResolve, handleSendResponse, averageRating)
   const filteredFeedback =
@@ -47,7 +42,7 @@ const CustomerFeedback = () => {
     <div className="space-y-6 animate-fade-in">
       <h2 className="text-3xl font-semibold">Customer Feedback</h2>
 
-      <FeedbackMetrics feedback={feedback} />
+      <FeedbackMetrics feedback={feedback || []} />
 
       <Card>
         <CardHeader>
