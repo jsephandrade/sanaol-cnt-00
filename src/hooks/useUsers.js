@@ -94,7 +94,7 @@ export const useUserLogs = (params) => {
       setLogs(data);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to fetch user logs';
+        err instanceof Error ? err.message : 'Failed to fetch activity logs';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

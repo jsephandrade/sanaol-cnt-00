@@ -85,7 +85,7 @@ const AppRoutes = () => {
         '/inventory': 'Inventory',
         '/payments': 'Payments',
         '/users': 'User Management',
-        '/logs': 'User Logs',
+        '/logs': 'Activity Logs',
         '/notifications': 'Notifications',
         '/settings': 'Settings',
         '/help': 'Help',
@@ -247,7 +247,7 @@ const AppRoutes = () => {
             path="/logs"
             element={
               <ProtectedRoute>
-                <MainLayout title="User Logs">
+                <MainLayout title="Activity Logs">
                   <UserLogs />
                 </MainLayout>
               </ProtectedRoute>
