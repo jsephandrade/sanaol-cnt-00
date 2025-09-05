@@ -1,6 +1,12 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { UserPlus, XCircle, ArrowLeft } from 'lucide-react';
@@ -25,10 +31,18 @@ const FaceRegistrationPage = () => {
 
   const capturePositions = [
     { name: 'Center', instruction: 'Look straight at the camera', angle: 0 },
-    { name: 'Left', instruction: 'Turn your head slightly to the left', angle: -15 },
-    { name: 'Right', instruction: 'Turn your head slightly to the right', angle: 15 },
+    {
+      name: 'Left',
+      instruction: 'Turn your head slightly to the left',
+      angle: -15,
+    },
+    {
+      name: 'Right',
+      instruction: 'Turn your head slightly to the right',
+      angle: 15,
+    },
     { name: 'Up', instruction: 'Tilt your head slightly up', angle: 0 },
-    { name: 'Smile', instruction: 'Smile naturally at the camera', angle: 0 }
+    { name: 'Smile', instruction: 'Smile naturally at the camera', angle: 0 },
   ];
 
   const startRegistration = async () => {
@@ -39,14 +53,14 @@ const FaceRegistrationPage = () => {
       setProgress(0);
 
       // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: 640, 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 640,
           height: 480,
-          facingMode: 'user'
-        } 
+          facingMode: 'user',
+        },
       });
-      
+
       const videoElement = cameraRef.current?.getVideoRef();
       if (videoElement) {
         videoElement.srcObject = stream;
@@ -54,11 +68,11 @@ const FaceRegistrationPage = () => {
 
       // Capture multiple face angles
       for (let i = 0; i < capturePositions.length; i++) {
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
           setTimeout(() => {
             const imageData = cameraRef.current?.captureImage(i);
             if (imageData) {
-              setCapturedImages(prev => [...prev, imageData]);
+              setCapturedImages((prev) => [...prev, imageData]);
             }
             setProgress(((i + 1) / capturePositions.length) * 100);
             resolve();
@@ -67,10 +81,10 @@ const FaceRegistrationPage = () => {
       }
 
       // Stop camera
-      stream.getTracks().forEach(track => track.stop());
-      
+      stream.getTracks().forEach((track) => track.stop());
+
       setStep('processing');
-      
+
       // Simulate processing
       setTimeout(() => {
         // TODO: Replace with actual backend API call
@@ -78,13 +92,13 @@ const FaceRegistrationPage = () => {
         // for face encoding and storage
         processFaceData();
       }, 2000);
-
     } catch (err) {
-      setError('Unable to access camera. Please ensure camera permissions are granted.');
+      setError(
+        'Unable to access camera. Please ensure camera permissions are granted.'
+      );
       setStep('error');
     }
   };
-
 
   const processFaceData = async () => {
     try {
@@ -99,15 +113,15 @@ const FaceRegistrationPage = () => {
       //     metadata: { device: navigator.userAgent }
       //   })
       // });
-      
+
       // Simulate successful processing
       const success = Math.random() > 0.2; // 80% success rate for demo
-      
+
       if (success) {
         setStep('complete');
         toast({
-          title: "Face registered successfully!",
-          description: "You can now use face scan to log in.",
+          title: 'Face registered successfully!',
+          description: 'You can now use face scan to log in.',
         });
       } else {
         throw new Error('Processing failed');
@@ -126,17 +140,21 @@ const FaceRegistrationPage = () => {
     setShowPreview(false);
   };
 
-  const currentPosition = capturePositions[Math.floor((progress / 100) * capturePositions.length)];
+  const currentPosition =
+    capturePositions[Math.floor((progress / 100) * capturePositions.length)];
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted">
         <Header />
-        
+
         <div className="flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md space-y-6">
             {/* Back button */}
-            <Link to="/settings" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              to="/settings"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Settings
             </Link>
@@ -151,7 +169,7 @@ const FaceRegistrationPage = () => {
                   Set up face recognition for secure login
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="space-y-6">
                 {/* Progress indicator */}
                 {(step === 'scanning' || step === 'processing') && (

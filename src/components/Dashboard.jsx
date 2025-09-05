@@ -1,33 +1,33 @@
-import React from "react"
-import { TrendingUp, Users, ShoppingBag, DollarSign } from "lucide-react"
-import StatsCard from "./dashboard/StatsCard"
-import SalesChart from "./dashboard/SalesChart"
-import CategoryChart from "./dashboard/CategoryChart"
-import PopularItems from "./dashboard/PopularItems"
-import RecentSales from "./dashboard/RecentSales"
-import { useDashboard } from "@/hooks/useDashboard"
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton"
-import ErrorState from "@/components/shared/ErrorState"
+import React from 'react';
+import { TrendingUp, Users, ShoppingBag, DollarSign } from 'lucide-react';
+import StatsCard from './dashboard/StatsCard';
+import SalesChart from './dashboard/SalesChart';
+import CategoryChart from './dashboard/CategoryChart';
+import PopularItems from './dashboard/PopularItems';
+import RecentSales from './dashboard/RecentSales';
+import { useDashboard } from '@/hooks/useDashboard';
+import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
+import ErrorState from '@/components/shared/ErrorState';
 
 const Dashboard = () => {
-  const { stats, loading, error, refetch } = useDashboard('today')
+  const { stats, loading, error, refetch } = useDashboard('today');
 
-  const salesTimeData = (stats?.salesByTime || []).map(item => ({
+  const salesTimeData = (stats?.salesByTime || []).map((item) => ({
     name: item.time,
-    amount: item.amount
-  }))
+    amount: item.amount,
+  }));
 
-  const categorySalesData = (stats?.salesByCategory || []).map(item => ({
+  const categorySalesData = (stats?.salesByCategory || []).map((item) => ({
     name: item.category,
-    amount: item.amount
-  }))
+    amount: item.amount,
+  }));
 
   if (loading) {
-    return <DashboardSkeleton />
+    return <DashboardSkeleton />;
   }
 
   if (error) {
-    return <ErrorState message={error} onRetry={refetch} />
+    return <ErrorState message={error} onRetry={refetch} />;
   }
 
   return (
@@ -41,14 +41,24 @@ const Dashboard = () => {
           value={stats?.dailySales || 0}
           change="+15% from yesterday"
           icon={DollarSign}
-          formatter={(value) => `₱${value.toFixed(2)}`}
+          formatter={(value) =>
+            new Intl.NumberFormat('en-PH', {
+              style: 'currency',
+              currency: 'PHP',
+            }).format(value)
+          }
         />
         <StatsCard
           title="Monthly Sales"
           value={stats?.monthlySales || 0}
           change="+8% from last month"
           icon={TrendingUp}
-          formatter={(value) => `₱${value.toFixed(2)}`}
+          formatter={(value) =>
+            new Intl.NumberFormat('en-PH', {
+              style: 'currency',
+              currency: 'PHP',
+            }).format(value)
+          }
         />
         <StatsCard
           title="Customers Today"
@@ -84,7 +94,7 @@ const Dashboard = () => {
         <RecentSales sales={stats?.recentSales || []} />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

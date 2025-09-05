@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import dashboardService from '@/api/services/dashboardService';
 
@@ -8,13 +8,13 @@ export const useDashboard = (timeRange = 'today') => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await dashboardService.getDashboardStats(timeRange);
-      
+
       if (response.success) {
         setStats(response.data);
       } else {
@@ -30,11 +30,11 @@ export const useDashboard = (timeRange = 'today') => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, toast]);
 
   useEffect(() => {
     fetchDashboardStats();
-  }, [timeRange]);
+  }, [fetchDashboardStats]);
 
   const refetch = () => {
     fetchDashboardStats();
@@ -54,13 +54,13 @@ export const useSalesData = (params = {}) => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchSalesData = async () => {
+  const fetchSalesData = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await dashboardService.getSalesData(params);
-      
+
       if (response.success) {
         setSalesData(response.data);
       } else {
@@ -76,11 +76,11 @@ export const useSalesData = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchSalesData();
-  }, [JSON.stringify(params)]);
+  }, [fetchSalesData]);
 
   const refetch = () => {
     fetchSalesData();
@@ -101,13 +101,13 @@ export const useRecentActivity = (limit = 10) => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchRecentActivity = async () => {
+  const fetchRecentActivity = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await dashboardService.getRecentActivity(limit);
-      
+
       if (response.success) {
         setActivities(response.data);
       } else {
@@ -123,11 +123,11 @@ export const useRecentActivity = (limit = 10) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, toast]);
 
   useEffect(() => {
     fetchRecentActivity();
-  }, [limit]);
+  }, [fetchRecentActivity]);
 
   const refetch = () => {
     fetchRecentActivity();
@@ -147,13 +147,13 @@ export const usePopularItems = (timeRange = 'week') => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchPopularItems = async () => {
+  const fetchPopularItems = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await dashboardService.getPopularItems(timeRange);
-      
+
       if (response.success) {
         setPopularItems(response.data);
       } else {
@@ -169,11 +169,11 @@ export const usePopularItems = (timeRange = 'week') => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeRange, toast]);
 
   useEffect(() => {
     fetchPopularItems();
-  }, [timeRange]);
+  }, [fetchPopularItems]);
 
   const refetch = () => {
     fetchPopularItems();

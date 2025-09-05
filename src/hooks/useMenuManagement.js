@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import menuService from '@/api/services/menuService';
 
@@ -9,13 +9,13 @@ export const useMenuManagement = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
-  const fetchMenuItems = async () => {
+  const fetchMenuItems = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await menuService.getMenuItems(params);
-      
+
       if (response.success) {
         setItems(response.data);
         setPagination(response.pagination);
@@ -32,18 +32,18 @@ export const useMenuManagement = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchMenuItems();
-  }, [JSON.stringify(params)]);
+  }, [fetchMenuItems]);
 
   const createMenuItem = async (itemData) => {
     try {
       const response = await menuService.createMenuItem(itemData);
-      
+
       if (response.success) {
-        setItems(prev => [...prev, response.data]);
+        setItems((prev) => [...prev, response.data]);
         toast({
           title: 'Menu Item Created',
           description: `${itemData.name} has been added to the menu.`,
@@ -65,10 +65,10 @@ export const useMenuManagement = (params = {}) => {
   const updateMenuItem = async (itemId, updates) => {
     try {
       const response = await menuService.updateMenuItem(itemId, updates);
-      
+
       if (response.success) {
-        setItems(prev => 
-          prev.map(item => 
+        setItems((prev) =>
+          prev.map((item) =>
             item.id === itemId ? { ...item, ...response.data } : item
           )
         );
@@ -93,9 +93,9 @@ export const useMenuManagement = (params = {}) => {
   const deleteMenuItem = async (itemId) => {
     try {
       const response = await menuService.deleteMenuItem(itemId);
-      
+
       if (response.success) {
-        setItems(prev => prev.filter(item => item.id !== itemId));
+        setItems((prev) => prev.filter((item) => item.id !== itemId));
         toast({
           title: 'Menu Item Deleted',
           description: 'Menu item has been removed from the menu.',
@@ -117,11 +117,14 @@ export const useMenuManagement = (params = {}) => {
 
   const updateItemAvailability = async (itemId, available) => {
     try {
-      const response = await menuService.updateItemAvailability(itemId, available);
-      
+      const response = await menuService.updateItemAvailability(
+        itemId,
+        available
+      );
+
       if (response.success) {
-        setItems(prev => 
-          prev.map(item => 
+        setItems((prev) =>
+          prev.map((item) =>
             item.id === itemId ? { ...item, available } : item
           )
         );
@@ -146,11 +149,13 @@ export const useMenuManagement = (params = {}) => {
   const uploadItemImage = async (itemId, imageFile) => {
     try {
       const response = await menuService.uploadItemImage(itemId, imageFile);
-      
+
       if (response.success) {
-        setItems(prev => 
-          prev.map(item => 
-            item.id === itemId ? { ...item, image: response.data.imageUrl } : item
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === itemId
+              ? { ...item, image: response.data.imageUrl }
+              : item
           )
         );
         toast({
@@ -195,13 +200,13 @@ export const useMenuCategories = () => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await menuService.getCategories();
-      
+
       if (response.success) {
         setCategories(response.data);
       } else {
@@ -217,11 +222,11 @@ export const useMenuCategories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   const refetch = () => {
     fetchCategories();

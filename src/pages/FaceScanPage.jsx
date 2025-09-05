@@ -1,10 +1,23 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Scan, Camera, CheckCircle, XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import {
+  Scan,
+  Camera,
+  CheckCircle,
+  XCircle,
+  ArrowLeft,
+  RefreshCw,
+} from 'lucide-react';
 import Header from '@/components/auth/Header';
 import PageTransition from '@/components/PageTransition';
 
@@ -23,14 +36,14 @@ const FaceScanPage = () => {
       setScanResult(null);
 
       // Request camera access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: 640, 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: 640,
           height: 480,
-          facingMode: 'user'
-        } 
+          facingMode: 'user',
+        },
       });
-      
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
@@ -38,11 +51,11 @@ const FaceScanPage = () => {
       // Simulate face scan processing
       setTimeout(async () => {
         // Stop camera
-        stream.getTracks().forEach(track => track.stop());
-        
+        stream.getTracks().forEach((track) => track.stop());
+
         // Simulate scan result
         const success = Math.random() > 0.3; // 70% success rate for demo
-        
+
         if (success) {
           setScanResult('success');
           // Attempt login
@@ -53,12 +66,13 @@ const FaceScanPage = () => {
         } else {
           setScanResult('failed');
         }
-        
+
         setIsScanning(false);
       }, 3000);
-
     } catch (err) {
-      setError('Unable to access camera. Please ensure camera permissions are granted.');
+      setError(
+        'Unable to access camera. Please ensure camera permissions are granted.'
+      );
       setIsScanning(false);
     }
   };
@@ -72,10 +86,13 @@ const FaceScanPage = () => {
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted">
         <Header />
-        
+
         <div className="flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md space-y-6">
-            <Link to="/login" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              to="/login"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Login
             </Link>
@@ -90,7 +107,7 @@ const FaceScanPage = () => {
                   Use your face to securely log into your account
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="space-y-6">
                 {/* Camera viewport */}
                 <div className="relative">
@@ -101,7 +118,7 @@ const FaceScanPage = () => {
                         <p className="text-sm">Camera will appear here</p>
                       </div>
                     )}
-                    
+
                     {isScanning && (
                       <div className="relative w-full h-full">
                         <video
@@ -121,20 +138,24 @@ const FaceScanPage = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {scanResult === 'success' && (
                       <div className="text-center text-green-600">
                         <CheckCircle className="w-16 h-16 mx-auto mb-2" />
                         <p className="font-medium">Face recognized!</p>
-                        <p className="text-sm text-muted-foreground">Logging you in...</p>
+                        <p className="text-sm text-muted-foreground">
+                          Logging you in...
+                        </p>
                       </div>
                     )}
-                    
+
                     {scanResult === 'failed' && (
                       <div className="text-center text-destructive">
                         <XCircle className="w-16 h-16 mx-auto mb-2" />
                         <p className="font-medium">Face not recognized</p>
-                        <p className="text-sm text-muted-foreground">Please try again</p>
+                        <p className="text-sm text-muted-foreground">
+                          Please try again
+                        </p>
                       </div>
                     )}
                   </div>
@@ -160,8 +181,8 @@ const FaceScanPage = () => {
                 {/* Action buttons */}
                 <div className="space-y-3">
                   {!isScanning && !scanResult && (
-                    <Button 
-                      onClick={startFaceScan} 
+                    <Button
+                      onClick={startFaceScan}
                       className="w-full"
                       size="lg"
                     >
@@ -169,10 +190,10 @@ const FaceScanPage = () => {
                       Start Face Scan
                     </Button>
                   )}
-                  
+
                   {scanResult === 'failed' && (
-                    <Button 
-                      onClick={resetScan} 
+                    <Button
+                      onClick={resetScan}
                       className="w-full"
                       variant="outline"
                     >
@@ -180,10 +201,10 @@ const FaceScanPage = () => {
                       Try Again
                     </Button>
                   )}
-                  
+
                   {error && (
-                    <Button 
-                      onClick={resetScan} 
+                    <Button
+                      onClick={resetScan}
                       className="w-full"
                       variant="outline"
                     >
@@ -195,8 +216,8 @@ const FaceScanPage = () => {
 
                 {/* Alternative login */}
                 <div className="text-center">
-                  <Link 
-                    to="/login" 
+                  <Link
+                    to="/login"
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Use password instead

@@ -1,5 +1,11 @@
 // AuthContext.jsx
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import authService from '@/api/services/authService';
 import apiClient from '@/api/client';
 
@@ -45,18 +51,32 @@ export function AuthProvider({ children }) {
     tokenRef.current = token;
   }, [token]);
 
+  // Keep a ref for refresh function to avoid exhaustive-deps churn
+  const refreshRef = useRef(null);
+
   // Configure apiClient once
   useEffect(() => {
     // Dynamic token provider and 401 handler
     apiClient.setAuthTokenProvider(() => tokenRef.current);
-    apiClient.onUnauthorized = () => {
-      // Clear auth state on 401 to trigger ProtectedRoute redirect
-      setUser(null);
-      setToken(null);
+    let refreshing = false;
+    apiClient.onUnauthorized = async () => {
+      if (refreshing) return;
+      refreshing = true;
       try {
-        localStorage.removeItem('user');
-        localStorage.removeItem('auth_token');
-      } catch {}
+        const ok = await (refreshRef.current
+          ? refreshRef.current()
+          : Promise.resolve(false));
+        if (!ok) {
+          setUser(null);
+          setToken(null);
+          try {
+            localStorage.removeItem('user');
+            localStorage.removeItem('auth_token');
+          } catch {}
+        }
+      } finally {
+        refreshing = false;
+      }
     };
   }, []);
 
@@ -116,7 +136,9 @@ export function AuthProvider({ children }) {
       const res = await authService.refreshToken();
       if (res?.success && res?.token) {
         setToken(res.token);
-        try { localStorage.setItem('auth_token', res.token); } catch {}
+        try {
+          localStorage.setItem('auth_token', res.token);
+        } catch {}
         return true;
       }
       return false;
@@ -126,13 +148,21 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // keep latest refresh function in a ref for onUnauthorized
+  useEffect(() => {
+    refreshRef.current = refreshToken;
+  }, [refreshToken]);
+
   // Role/permission helpers
-  const hasRole = (role) => (user?.role || '').toLowerCase() === (role || '').toLowerCase();
+  const hasRole = (role) =>
+    (user?.role || '').toLowerCase() === (role || '').toLowerCase();
   const hasAnyRole = (roles = []) => roles.some((r) => hasRole(r));
   const can = (permission) => {
     if (!permission) return true;
     const perms = user?.permissions || [];
-    return perms.includes(permission) || perms.includes('*') || hasRole('admin');
+    return (
+      perms.includes(permission) || perms.includes('*') || hasRole('admin')
+    );
   };
 
   return (

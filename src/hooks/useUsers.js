@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { userService } from '@/services/userService';
+import { useState, useEffect, useCallback } from 'react';
+import { userService } from '@/api/services/userService';
 import { toast } from 'sonner';
 
 export const useUsers = () => {
@@ -7,7 +7,7 @@ export const useUsers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -21,7 +21,7 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const addUser = async (user) => {
     try {
@@ -68,7 +68,7 @@ export const useUsers = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   return {
     users,
@@ -86,7 +86,7 @@ export const useUserLogs = (params) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -100,11 +100,11 @@ export const useUserLogs = (params) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params]);
 
   useEffect(() => {
     fetchLogs();
-  }, [params?.type, params?.timeRange]);
+  }, [fetchLogs]);
 
   return {
     logs,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import inventoryService from '@/api/services/inventoryService';
 
@@ -9,13 +9,13 @@ export const useInventoryManagement = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
-  const fetchInventoryItems = async () => {
+  const fetchInventoryItems = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await inventoryService.getInventoryItems(params);
-      
+
       if (response.success) {
         setItems(response.data);
         setPagination(response.pagination);
@@ -32,18 +32,18 @@ export const useInventoryManagement = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchInventoryItems();
-  }, [JSON.stringify(params)]);
+  }, [fetchInventoryItems]);
 
   const createInventoryItem = async (itemData) => {
     try {
       const response = await inventoryService.createInventoryItem(itemData);
-      
+
       if (response.success) {
-        setItems(prev => [...prev, response.data]);
+        setItems((prev) => [...prev, response.data]);
         toast({
           title: 'Inventory Item Created',
           description: `${itemData.name} has been added to inventory.`,
@@ -64,11 +64,14 @@ export const useInventoryManagement = (params = {}) => {
 
   const updateInventoryItem = async (itemId, updates) => {
     try {
-      const response = await inventoryService.updateInventoryItem(itemId, updates);
-      
+      const response = await inventoryService.updateInventoryItem(
+        itemId,
+        updates
+      );
+
       if (response.success) {
-        setItems(prev => 
-          prev.map(item => 
+        setItems((prev) =>
+          prev.map((item) =>
             item.id === itemId ? { ...item, ...response.data } : item
           )
         );
@@ -93,9 +96,9 @@ export const useInventoryManagement = (params = {}) => {
   const deleteInventoryItem = async (itemId) => {
     try {
       const response = await inventoryService.deleteInventoryItem(itemId);
-      
+
       if (response.success) {
-        setItems(prev => prev.filter(item => item.id !== itemId));
+        setItems((prev) => prev.filter((item) => item.id !== itemId));
         toast({
           title: 'Inventory Item Deleted',
           description: 'Inventory item has been removed.',
@@ -117,21 +120,25 @@ export const useInventoryManagement = (params = {}) => {
 
   const updateStock = async (itemId, quantity, operation = 'set') => {
     try {
-      const response = await inventoryService.updateStock(itemId, quantity, operation);
-      
+      const response = await inventoryService.updateStock(
+        itemId,
+        quantity,
+        operation
+      );
+
       if (response.success) {
-        setItems(prev => 
-          prev.map(item => 
+        setItems((prev) =>
+          prev.map((item) =>
             item.id === itemId ? { ...item, ...response.data } : item
           )
         );
-        
+
         const operationText = {
-          'add': 'restocked',
-          'subtract': 'reduced',
-          'set': 'updated'
+          add: 'restocked',
+          subtract: 'reduced',
+          set: 'updated',
         }[operation];
-        
+
         toast({
           title: 'Stock Updated',
           description: `Stock has been ${operationText} successfully.`,
@@ -173,13 +180,13 @@ export const useLowStockItems = (threshold) => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchLowStockItems = async () => {
+  const fetchLowStockItems = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await inventoryService.getLowStockItems(threshold);
-      
+
       if (response.success) {
         setLowStockItems(response.data);
       } else {
@@ -195,13 +202,13 @@ export const useLowStockItems = (threshold) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [threshold, toast]);
 
   useEffect(() => {
     if (threshold !== undefined) {
       fetchLowStockItems();
     }
-  }, [threshold]);
+  }, [fetchLowStockItems, threshold]);
 
   const refetch = () => {
     fetchLowStockItems();
@@ -221,13 +228,13 @@ export const useInventoryActivities = (params = {}) => {
   const [error, setError] = useState(null);
   const { toast } = useToast();
 
-  const fetchInventoryActivities = async () => {
+  const fetchInventoryActivities = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await inventoryService.getInventoryActivities(params);
-      
+
       if (response.success) {
         setActivities(response.data);
       } else {
@@ -243,11 +250,11 @@ export const useInventoryActivities = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchInventoryActivities();
-  }, [JSON.stringify(params)]);
+  }, [fetchInventoryActivities]);
 
   const refetch = () => {
     fetchInventoryActivities();

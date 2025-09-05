@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { salesService } from '@/services/salesService';
 import { toast } from 'sonner';
 
@@ -7,7 +7,7 @@ export const useSales = (params) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -21,7 +21,7 @@ export const useSales = (params) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params]);
 
   const createSale = async (sale) => {
     try {
@@ -39,7 +39,7 @@ export const useSales = (params) => {
 
   useEffect(() => {
     fetchSales();
-  }, [params?.startDate, params?.endDate, params?.employeeId]);
+  }, [fetchSales]);
 
   return {
     sales,
@@ -55,7 +55,7 @@ export const useDashboardStats = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -69,11 +69,11 @@ export const useDashboardStats = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   return {
     stats,

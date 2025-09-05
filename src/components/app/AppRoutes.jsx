@@ -1,5 +1,11 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
 // Lazy load pages for better performance
@@ -8,9 +14,11 @@ const LoginPage = lazy(() => import('../../pages/LoginPage'));
 const SignupPage = lazy(() => import('../../pages/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('../../pages/ForgotPasswordPage'));
 const FaceScanPage = lazy(() => import('../../pages/FaceScanPage'));
-const FaceRegistrationPage = lazy(() => import('../../pages/FaceRegistrationPage'));
+const FaceRegistrationPage = lazy(
+  () => import('../../pages/FaceRegistrationPage')
+);
 const NotFound = lazy(() => import('../../pages/NotFound'));
-const HelpPage = lazy(() => import('../../pages/HelpPage'));
+import HelpPage from '../../pages/HelpPage';
 const SettingsPage = lazy(() => import('../../pages/SettingsPage'));
 
 // Lazy load components
@@ -37,29 +45,61 @@ const LoadingSpinner = () => (
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   return children;
 };
 
 // Public route wrapper (redirects to dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { user } = useAuth();
-  
+
   if (user) {
     return <Navigate to="/" replace />;
   }
-  
+
   return children;
 };
 
 // App routes component
 const AppRoutes = () => {
+  const TitleSetter = () => {
+    const location = useLocation();
+    useEffect(() => {
+      const map = {
+        '/': 'Dashboard',
+        '/login': 'Login',
+        '/signup': 'Sign Up',
+        '/forgot-password': 'Forgot Password',
+        '/face-scan': 'Face Scan',
+        '/face-registration': 'Face Registration',
+        '/menu': 'Menu Management',
+        '/sales': 'Sales Analytics',
+        '/employees': 'Employee Schedule',
+        '/feedback': 'Customer Feedback',
+        '/pos': 'Point of Sale',
+        '/catering': 'Catering',
+        '/inventory': 'Inventory',
+        '/payments': 'Payments',
+        '/users': 'User Management',
+        '/logs': 'User Logs',
+        '/notifications': 'Notifications',
+        '/settings': 'Settings',
+        '/help': 'Help',
+      };
+      const base = 'TechnoMart';
+      const key = location.pathname;
+      const title = map[key] ? `${map[key]} - ${base}` : base;
+      document.title = title;
+    }, [location.pathname]);
+    return null;
+  };
   return (
     <BrowserRouter>
+      <TitleSetter />
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           {/* Public routes */}

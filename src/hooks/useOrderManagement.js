@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import orderService from '@/api/services/orderService';
 import { createRealtime } from '@/lib/realtime';
@@ -10,13 +10,13 @@ export const useOrderManagement = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await orderService.getOrders(params);
-      
+
       if (response.success) {
         setOrders(response.data);
         setPagination(response.pagination);
@@ -33,18 +33,18 @@ export const useOrderManagement = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchOrders();
-  }, [JSON.stringify(params)]);
+  }, [fetchOrders]);
 
   const createOrder = async (orderData) => {
     try {
       const response = await orderService.createOrder(orderData);
-      
+
       if (response.success) {
-        setOrders(prev => [...prev, response.data]);
+        setOrders((prev) => [...prev, response.data]);
         toast({
           title: 'Order Created',
           description: `Order ${response.data.orderNumber} has been created successfully.`,
@@ -66,22 +66,22 @@ export const useOrderManagement = (params = {}) => {
   const updateOrderStatus = async (orderId, status) => {
     try {
       const response = await orderService.updateOrderStatus(orderId, status);
-      
+
       if (response.success) {
-        setOrders(prev => 
-          prev.map(order => 
+        setOrders((prev) =>
+          prev.map((order) =>
             order.id === orderId ? { ...order, ...response.data } : order
           )
         );
-        
+
         const statusText = {
-          'pending': 'pending',
-          'preparing': 'preparing',
-          'ready': 'ready for pickup',
-          'completed': 'completed',
-          'cancelled': 'cancelled'
+          pending: 'pending',
+          preparing: 'preparing',
+          ready: 'ready for pickup',
+          completed: 'completed',
+          cancelled: 'cancelled',
         }[status];
-        
+
         toast({
           title: 'Order Status Updated',
           description: `Order is now ${statusText}.`,
@@ -103,10 +103,10 @@ export const useOrderManagement = (params = {}) => {
   const cancelOrder = async (orderId, reason) => {
     try {
       const response = await orderService.cancelOrder(orderId, reason);
-      
+
       if (response.success) {
-        setOrders(prev => 
-          prev.map(order => 
+        setOrders((prev) =>
+          prev.map((order) =>
             order.id === orderId ? { ...order, status: 'cancelled' } : order
           )
         );
@@ -132,15 +132,18 @@ export const useOrderManagement = (params = {}) => {
   const processPayment = async (orderId, paymentData) => {
     try {
       const response = await orderService.processPayment(orderId, paymentData);
-      
+
       if (response.success) {
-        setOrders(prev => 
-          prev.map(order => 
-            order.id === orderId ? { 
-              ...order, 
-              paymentMethod: paymentData.method,
-              status: order.status === 'pending' ? 'preparing' : order.status
-            } : order
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId
+              ? {
+                  ...order,
+                  paymentMethod: paymentData.method,
+                  status:
+                    order.status === 'pending' ? 'preparing' : order.status,
+                }
+              : order
           )
         );
         toast({
@@ -186,13 +189,13 @@ export const useOrderQueue = (params = {}) => {
   const pollRef = useRef(null);
   const rtRef = useRef(null);
 
-  const fetchOrderQueue = async () => {
+  const fetchOrderQueue = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await orderService.getOrderQueue(params);
-      
+
       if (response.success) {
         setOrderQueue(response.data);
       } else {
@@ -208,7 +211,7 @@ export const useOrderQueue = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchOrderQueue();
@@ -236,13 +239,19 @@ export const useOrderQueue = (params = {}) => {
           } else if (t === 'order_update') {
             const o = msg.data;
             if (!o?.id) return;
-            setOrderQueue((prev) => prev.map((x) => (x.id === o.id ? { ...x, ...o } : x)));
+            setOrderQueue((prev) =>
+              prev.map((x) => (x.id === o.id ? { ...x, ...o } : x))
+            );
           }
         },
         onStatusChange: (status) => {
           if (status === 'open') {
             stopPolling();
-          } else if (status === 'reconnecting' || status === 'error' || status === 'closed') {
+          } else if (
+            status === 'reconnecting' ||
+            status === 'error' ||
+            status === 'closed'
+          ) {
             startPolling();
           }
         },
@@ -257,15 +266,15 @@ export const useOrderQueue = (params = {}) => {
       stopPolling();
       rtRef.current?.close?.();
     };
-  }, [JSON.stringify(params)]);
+  }, [params, fetchOrderQueue]);
 
   const updateOrderStatus = async (orderId, status) => {
     try {
       const response = await orderService.updateOrderStatus(orderId, status);
-      
+
       if (response.success) {
-        setOrderQueue(prev => 
-          prev.map(order => 
+        setOrderQueue((prev) =>
+          prev.map((order) =>
             order.id === orderId ? { ...order, ...response.data } : order
           )
         );
@@ -303,13 +312,13 @@ export const useOrderHistory = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
-  const fetchOrderHistory = async () => {
+  const fetchOrderHistory = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await orderService.getOrderHistory(params);
-      
+
       if (response.success) {
         setOrderHistory(response.data);
         setPagination(response.pagination);
@@ -326,11 +335,11 @@ export const useOrderHistory = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [params, toast]);
 
   useEffect(() => {
     fetchOrderHistory();
-  }, [JSON.stringify(params)]);
+  }, [fetchOrderHistory]);
 
   const refetch = () => {
     fetchOrderHistory();

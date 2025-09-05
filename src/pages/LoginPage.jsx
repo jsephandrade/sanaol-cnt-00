@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/auth/Header';
@@ -98,41 +98,41 @@ const LoginPage = () => {
         <Header />
 
         <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
-        <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-          <AuthCard title="Login">
-            <LoginForm
-              email={email}
-              password={password}
-              pending={pending}
-              error={error}
-              emailError={emailError}
-              passwordError={passwordError}
-              remember={remember}
-              onEmailChange={setEmail}
-              onPasswordChange={setPassword}
-              onRememberChange={setRemember}
-              onForgotPassword={handleForgotPassword}
-              onSubmit={handleSubmit}
-            />
+          <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
+            <AuthCard title="Login">
+              <LoginForm
+                email={email}
+                password={password}
+                pending={pending}
+                error={error}
+                emailError={emailError}
+                passwordError={passwordError}
+                remember={remember}
+                onEmailChange={setEmail}
+                onPasswordChange={setPassword}
+                onRememberChange={setRemember}
+                onForgotPassword={handleForgotPassword}
+                onSubmit={handleSubmit}
+              />
 
-            <SocialProviders onSocial={handleSocial} pending={pending} />
+              <SocialProviders onSocial={handleSocial} pending={pending} />
 
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => navigate('/signup')}
-                className="text-primary hover:text-primary-dark text-sm font-medium disabled:opacity-60"
-                type="button"
-                disabled={pending}
-              >
-                Create New Account
-              </button>
-            </div>
-          </AuthCard>
-        </div>
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => navigate('/signup')}
+                  className="text-primary hover:text-primary-dark text-sm font-medium disabled:opacity-60"
+                  type="button"
+                  disabled={pending}
+                >
+                  Create New Account
+                </button>
+              </div>
+            </AuthCard>
+          </div>
 
-        {/* Ensure HeroImage includes meaningful alt text in its component */}
-        <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />
-      </main>
+          {/* Ensure HeroImage includes meaningful alt text in its component */}
+          <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />
+        </main>
 
         <footer className="py-6 text-gray-500 text-xs text-center border-t border-gray-100">
           &copy; {new Date().getFullYear()} TechnoMart Canteen System
