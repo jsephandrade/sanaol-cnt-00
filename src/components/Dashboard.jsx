@@ -39,7 +39,6 @@ const Dashboard = () => {
         <StatsCard
           title="Today's Sales"
           value={stats?.dailySales || 0}
-          change="+15% from yesterday"
           icon={DollarSign}
           formatter={(value) =>
             new Intl.NumberFormat('en-PH', {
@@ -51,7 +50,6 @@ const Dashboard = () => {
         <StatsCard
           title="Monthly Sales"
           value={stats?.monthlySales || 0}
-          change="+8% from last month"
           icon={TrendingUp}
           formatter={(value) =>
             new Intl.NumberFormat('en-PH', {
@@ -63,13 +61,11 @@ const Dashboard = () => {
         <StatsCard
           title="Customers Today"
           value={stats?.customerCount || 0}
-          change="+5% from yesterday"
           icon={Users}
         />
         <StatsCard
           title="Orders Today"
           value={stats?.orderCount ?? (stats?.recentSales?.length || 0)}
-          change="+12% from yesterday"
           icon={ShoppingBag}
         />
       </div>

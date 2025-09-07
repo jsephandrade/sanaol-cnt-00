@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 
-const ItemList = ({ items, onEdit, onDelete, showCategory = false }) => {
+const ItemList = ({ items, onEdit, onDelete = false }) => {
   if (!items || items.length === 0) {
     return (
       <div className="text-center py-8 text-sm text-muted-foreground">
@@ -42,14 +42,6 @@ const ItemList = ({ items, onEdit, onDelete, showCategory = false }) => {
                 >
                   {item.available ? 'Available' : 'Unavailable'}
                 </Badge>
-                {showCategory && (
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] px-1.5 py-0.5"
-                  >
-                    {item.category}
-                  </Badge>
-                )}
               </div>
               <p className="text-xs text-muted-foreground truncate">
                 {item.description}
