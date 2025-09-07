@@ -69,11 +69,13 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
         </Button>
         <Button
           variant="destructive"
-          size="sm"
-          className="h-8 px-2 text-xs"
+          size="icon"
+          className="h-8 w-8"
           onClick={() => onDelete(item.id)}
+          aria-label={`Delete ${item.name}`}
+          title={`Delete ${item.name}`}
         >
-          <Trash2 className="h-3 w-3 mr-1" /> Delete
+          <Trash2 className="h-4 w-4" />
         </Button>
       </CardFooter>
     </Card>
