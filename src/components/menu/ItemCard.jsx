@@ -24,10 +24,10 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             <img
               src={imageSrc}
               alt={item.name}
-              className="w-full h-24 object-cover rounded-sm border"
+              className="w-full h-24 sm:h-28 md:h-32 lg:h-36 object-cover rounded-sm border"
             />
           ) : (
-            <div className="w-full h-24 flex items-center justify-center rounded-sm border bg-muted text-muted-foreground">
+            <div className="w-full h-24 sm:h-28 md:h-32 lg:h-36 flex items-center justify-center rounded-sm border bg-muted text-muted-foreground">
               <ImageIcon className="w-6 h-6" />
               <span className="ml-2 text-xs">No Image</span>
             </div>
