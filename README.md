@@ -69,9 +69,9 @@ Open http://localhost:8080
 ### Security & Compliance
 
 - CSRF: If your backend uses cookie-based auth, enable credentials and set CSRF names in `.env`.
-  - `VITE_SEND_CREDENTIALS=true`
-  - `VITE_CSRF_COOKIE_NAME=csrftoken` and `VITE_CSRF_HEADER_NAME=X-CSRFToken` (or your backend values)
-  - The API client auto-adds the CSRF header for unsafe methods (POST/PUT/PATCH/DELETE).
+  - `VITE_SEND_CREDENTIALS=true` turns on cookie sending and automatically enables CSRF in the API client.
+  - `VITE_CSRF_COOKIE_NAME=csrftoken` and `VITE_CSRF_HEADER_NAME=X-CSRFToken` (or your backend values).
+  - The client auto-adds the CSRF header for unsafe methods (POST/PUT/PATCH/DELETE) only when credentials are enabled.
 - CORS: In dev, requests go through the Vite proxy. In prod, ensure backend CORS allows the frontend origin and credentials if you use cookies.
 - Input sanitization: Renders user-supplied text as plain text (React escapes it). Avoid injecting HTML; if needed, sanitize on the server.
 - PII safety: Avoid logging tokens or user PII.

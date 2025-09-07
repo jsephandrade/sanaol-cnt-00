@@ -14,16 +14,20 @@ const ImagePreview = ({ capturedImages, showPreview, setShowPreview }) => {
           size="sm"
           onClick={() => setShowPreview(!showPreview)}
         >
-          {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {showPreview ? (
+            <EyeOff className="w-4 h-4" />
+          ) : (
+            <Eye className="w-4 h-4" />
+          )}
         </Button>
       </div>
-      
+
       {showPreview && (
         <div className="grid grid-cols-5 gap-2">
-          {capturedImages.map((img, index) => (
+          {capturedImages.map((img) => (
             <div key={img.id} className="relative">
-              <img 
-                src={img.data} 
+              <img
+                src={img.data}
                 alt={`Face capture ${img.position}`}
                 className="w-full h-12 object-cover rounded border"
               />

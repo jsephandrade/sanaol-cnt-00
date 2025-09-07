@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFeedback } from '@/hooks/useFeedback';
 import ErrorState from '@/components/shared/ErrorState';
@@ -17,7 +23,9 @@ const CustomerFeedback = () => {
   const handleResolve = async (id) => {
     try {
       const updated = await markResolved(id);
-      toast.success(`Feedback marked as ${updated.resolved ? 'resolved' : 'unresolved'}`);
+      toast.success(
+        `Feedback marked as ${updated.resolved ? 'resolved' : 'unresolved'}`
+      );
     } catch {}
   };
   const handleSendResponse = () => {
@@ -29,11 +37,7 @@ const CustomerFeedback = () => {
     setResponseText('');
     setSelectedFeedback(null);
   };
-  const averageRating =
-    feedback && feedback.length > 0
-      ? (feedback.reduce((sum, item) => sum + item.rating, 0) / feedback.length).toFixed(1)
-      : '0.0';
-  // ... keep existing code (handleResolve, handleSendResponse, averageRating)
+  // ... keep existing code (handleResolve, handleSendResponse)
   const filteredFeedback =
     activeTab === 'all'
       ? feedback
@@ -47,7 +51,9 @@ const CustomerFeedback = () => {
         <Card>
           <CardHeader>
             <CardTitle>Customer Comments</CardTitle>
-            <CardDescription>Review and manage customer feedback</CardDescription>
+            <CardDescription>
+              Review and manage customer feedback
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -73,7 +79,7 @@ const CustomerFeedback = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-3xl font-semibold">Customer Feedback</h2>
+      <h2 className="text-2xl font-semibold">Customer Feedback</h2>
 
       <FeedbackMetrics feedback={feedback || []} />
 
@@ -95,7 +101,9 @@ const CustomerFeedback = () => {
         </CardHeader>
         <CardContent>
           {filteredFeedback.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">No feedback to display</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              No feedback to display
+            </div>
           ) : (
             <FeedbackList
               feedback={filteredFeedback}

@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  useCallback,
 } from 'react';
 import authService from '@/api/services/authService';
 import apiClient from '@/api/client';
@@ -85,7 +86,7 @@ export function AuthProvider({ children }) {
     apiClient.setAuthToken(token);
   }, [token]);
 
-  const persistAuth = (nextUser, nextToken) => {
+  const persistAuth = useCallback((nextUser, nextToken) => {
     setUser(nextUser);
     setToken(nextToken);
     try {
@@ -96,42 +97,48 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('auth_token');
       }
     } catch {}
-  };
+  }, []);
 
-  const login = async (email, password, options = {}) => {
-    try {
-      const res = await authService.login(email, password, options);
-      if (res?.success) {
-        persistAuth(res.user, res.token || null);
-        return true;
+  const login = useCallback(
+    async (email, password, options = {}) => {
+      try {
+        const res = await authService.login(email, password, options);
+        if (res?.success) {
+          persistAuth(res.user, res.token || null);
+          return true;
+        }
+        return false;
+      } catch (err) {
+        return false;
       }
-      return false;
-    } catch (err) {
-      return false;
-    }
-  };
+    },
+    [persistAuth]
+  );
 
-  const socialLogin = async (provider) => {
-    try {
-      const res = await authService.socialLogin(provider);
-      if (res?.success) {
-        persistAuth(res.user, res.token || null);
-        return true;
+  const socialLogin = useCallback(
+    async (provider) => {
+      try {
+        const res = await authService.socialLogin(provider);
+        if (res?.success) {
+          persistAuth(res.user, res.token || null);
+          return true;
+        }
+        return false;
+      } catch (err) {
+        return false;
       }
-      return false;
-    } catch (err) {
-      return false;
-    }
-  };
+    },
+    [persistAuth]
+  );
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authService.logout();
     } catch {}
     persistAuth(null, null);
-  };
+  }, [persistAuth]);
 
-  const refreshToken = async () => {
+  const refreshToken = useCallback(async () => {
     try {
       const res = await authService.refreshToken();
       if (res?.success && res?.token) {
@@ -146,7 +153,7 @@ export function AuthProvider({ children }) {
       await logout();
       return false;
     }
-  };
+  }, [logout]);
 
   // keep latest refresh function in a ref for onUnauthorized
   useEffect(() => {

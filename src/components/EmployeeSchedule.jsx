@@ -1,35 +1,6 @@
 import React, { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
 import { employees, scheduleData } from '@/utils/mockData';
-import { Edit, Plus, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import ManageEmployeesDialog from '@/components/employee-schedule/ManageEmployeesDialog';
 import AddScheduleDialog from '@/components/employee-schedule/AddScheduleDialog';
 import WeeklyScheduleCard from '@/components/employee-schedule/WeeklyScheduleCard';
@@ -151,7 +122,7 @@ const EmployeeSchedule = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-semibold">Employee Schedule</h2>
+        <h2 className="text-2xl font-semibold">Employee Schedule</h2>
         <div className="flex gap-2">
           <ManageEmployeesDialog
             open={employeeDialogOpen}

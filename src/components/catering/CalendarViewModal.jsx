@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, Clock, Users, MapPin, X } from 'lucide-react';
+import { CalendarDays, Clock, Users, MapPin } from 'lucide-react';
 import { format, isSameDay, parseISO } from 'date-fns';
 
 export const CalendarViewModal = ({ open, onOpenChange, events }) => {

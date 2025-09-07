@@ -3,12 +3,7 @@ import { useState, useEffect } from 'react';
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
 
-const actionTypes = Object.freeze({
-  ADD_TOAST: 'ADD_TOAST',
-  UPDATE_TOAST: 'UPDATE_TOAST',
-  DISMISS_TOAST: 'DISMISS_TOAST',
-  REMOVE_TOAST: 'REMOVE_TOAST',
-});
+// Action type constants are inlined where used to keep the util minimal.
 
 let count = 0;
 

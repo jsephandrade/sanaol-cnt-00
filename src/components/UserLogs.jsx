@@ -14,7 +14,7 @@ const UserLogs = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const [logs, setLogs] = useState([
+  const [logs, _setLogs] = useState([
     {
       id: '1',
       action: 'User Login',

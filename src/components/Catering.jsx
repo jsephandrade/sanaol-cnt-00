@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils, CalendarDays, Map, Users, Phone, User, Banknote, ChevronRight, Clock } from 'lucide-react';
+import { PlusCircle, Utensils } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NewEventModal } from './catering/NewEventModal';
 import { CalendarViewModal } from './catering/CalendarViewModal';
@@ -13,8 +19,7 @@ import { EventSearchAndFilters } from './catering/EventSearchAndFilters';
 import { EventDetailsCard } from './catering/EventDetailsCard';
 import { CateringSidebar } from './catering/CateringSidebar';
 import { toast } from 'sonner';
-import { CustomBadge } from './ui/custom-badge';
-import { Avatar, AvatarFallback } from './ui/avatar';
+// Removed unused imports to simplify the module
 
 const Catering = () => {
   const navigate = useNavigate();
@@ -83,7 +88,8 @@ const Catering = () => {
       name: 'Gourmet Sandwich Platter',
       category: 'Platters',
       price: 75.0,
-      description: 'Assortment of premium sandwiches with artisan breads and fillings',
+      description:
+        'Assortment of premium sandwiches with artisan breads and fillings',
       popular: true,
       available: true,
     },
@@ -134,66 +140,67 @@ const Catering = () => {
     },
   ]);
 
-  const handleCreateEvent = (newEvent) => {
+  const handleCreateEvent = useCallback((newEvent) => {
     setEvents((prev) => [...prev, newEvent]);
     toast.success('Event created successfully!');
-  };
+  }, []);
 
-  const handleViewDetails = (event) => {
+  const handleViewDetails = useCallback((event) => {
     setSelectedEvent(event);
     setShowEventDetailsModal(true);
-  };
+  }, []);
 
-  const handleMenuItems = (event) => {
+  const handleMenuItems = useCallback((event) => {
     setSelectedEvent(event);
     setShowMenuItemsModal(true);
-  };
+  }, []);
 
-  const handleCancelEvent = (event) => {
+  const handleCancelEvent = useCallback((event) => {
     setEvents((prev) =>
-      prev.map((e) =>
-        e.id === event.id ? { ...e, status: 'cancelled' } : e
-      )
+      prev.map((e) => (e.id === event.id ? { ...e, status: 'cancelled' } : e))
     );
     toast.success(`Event "${event.name}" has been cancelled.`);
-  };
+  }, []);
 
-  const handleUpdateMenuItems = (eventId, menuItems) => {
+  const handleUpdateMenuItems = useCallback((_eventId, _menuItems) => {
     toast.success('Menu items updated successfully!');
-  };
+  }, []);
 
-  const handleViewFullMenu = () => {
+  const handleViewFullMenu = useCallback(() => {
     navigate('/pos');
-  };
+  }, [navigate]);
 
   const getStatusBadgeVariant = (status) => {
     switch (status) {
-      case 'scheduled': return 'outline';
-      case 'in-progress': return 'default';
-      case 'completed': return 'success';
-      case 'cancelled': return 'destructive';
-      default: return 'outline';
+      case 'scheduled':
+        return 'outline';
+      case 'in-progress':
+        return 'default';
+      case 'completed':
+        return 'success';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
-  const filteredEvents = events.filter((event) => {
-    const matchesSearch =
-      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.client.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredEvents = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return events.filter(
+      (event) =>
+        event.name.toLowerCase().includes(term) ||
+        event.client.toLowerCase().includes(term)
+    );
+  }, [events, searchTerm]);
 
-  const sortedEvents = [...filteredEvents].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const sortedEvents = useMemo(() => {
+    return [...filteredEvents].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [filteredEvents]);
 
-    const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-  };
+  // getInitials was unused; removed to reduce noise
 
   return (
     <>
@@ -203,7 +210,9 @@ const Catering = () => {
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle>Catering Management</CardTitle>
-                <CardDescription>Handle catering orders and events</CardDescription>
+                <CardDescription>
+                  Handle catering orders and events
+                </CardDescription>
               </div>
               <Button onClick={() => setShowNewEventModal(true)}>
                 <PlusCircle className="h-4 w-4 mr-1" /> New Event
@@ -233,8 +242,15 @@ const Catering = () => {
                   ) : (
                     <div className="text-center py-10">
                       <Utensils className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
-                      <p className="text-muted-foreground">No upcoming catering events found</p>
-                      <Button className="mt-4" variant="outline" size="sm" onClick={() => setShowNewEventModal(true)}>
+                      <p className="text-muted-foreground">
+                        No upcoming catering events found
+                      </p>
+                      <Button
+                        className="mt-4"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowNewEventModal(true)}
+                      >
                         Create New Event
                       </Button>
                     </div>
@@ -242,12 +258,16 @@ const Catering = () => {
                 </TabsContent>
                 <TabsContent value="past" className="pt-2">
                   <div className="text-center py-10">
-                    <p className="text-muted-foreground">No past catering events to display</p>
+                    <p className="text-muted-foreground">
+                      No past catering events to display
+                    </p>
                   </div>
                 </TabsContent>
                 <TabsContent value="cancelled" className="pt-2">
                   <div className="text-center py-10">
-                    <p className="text-muted-foreground">No cancelled events to display</p>
+                    <p className="text-muted-foreground">
+                      No cancelled events to display
+                    </p>
                   </div>
                 </TabsContent>
               </Tabs>

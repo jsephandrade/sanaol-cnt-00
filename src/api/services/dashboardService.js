@@ -1,60 +1,61 @@
-import apiClient from '../client';
+// import apiClient from '../client';
 import { mockDashboardStats } from '../mockData';
 
 // Mock delay for realistic API simulation
-const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
+const mockDelay = (ms = 800) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 class DashboardService {
-  async getDashboardStats(timeRange = 'today') {
+  async getDashboardStats(_timeRange = 'today') {
     await mockDelay();
-    
+
     // TODO: Replace with actual API call
     // return apiClient.get(`/dashboard/stats?timeRange=${timeRange}`);
-    
+
     // Mock implementation
     return {
       success: true,
-      data: mockDashboardStats
+      data: mockDashboardStats,
     };
   }
 
-  async getSalesData(params = {}) {
+  async getSalesData(_params = {}) {
     await mockDelay();
-    
+
     // TODO: Replace with actual API call
     // const queryParams = new URLSearchParams(params).toString();
     // return apiClient.get(`/dashboard/sales?${queryParams}`);
-    
+
     // Mock implementation
     return {
       success: true,
-      data: mockDashboardStats.salesByTime
+      data: mockDashboardStats.salesByTime,
     };
   }
 
   async getRecentActivity(limit = 10) {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.get(`/dashboard/recent-activity?limit=${limit}`);
-    
+
     // Mock implementation
     return {
       success: true,
-      data: mockDashboardStats.recentSales.slice(0, limit)
+      data: mockDashboardStats.recentSales.slice(0, limit),
     };
   }
 
-  async getPopularItems(timeRange = 'week') {
+  async getPopularItems(_timeRange = 'week') {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.get(`/dashboard/popular-items?timeRange=${timeRange}`);
-    
+
     // Mock implementation
     return {
       success: true,
-      data: mockDashboardStats.popularItems
+      data: mockDashboardStats.popularItems,
     };
   }
 }

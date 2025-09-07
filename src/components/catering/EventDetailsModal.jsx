@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import {
@@ -15,7 +14,6 @@ import {
   User,
   Phone,
   Banknote,
-  X,
 } from 'lucide-react';
 
 export const EventDetailsModal = ({ open, onOpenChange, event }) => {

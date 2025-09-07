@@ -14,12 +14,12 @@ import { X, Delete } from 'lucide-react';
 const PaymentModal = ({
   isOpen,
   onClose,
-  currentOrder,
-  discount,
   onProcessPayment,
-  calculateSubtotal,
-  calculateDiscountAmount,
   calculateTotal,
+  currentOrder: _currentOrder,
+  discount: _discount,
+  calculateSubtotal: _calculateSubtotal,
+  calculateDiscountAmount: _calculateDiscountAmount,
 }) => {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [change, setChange] = useState(0);

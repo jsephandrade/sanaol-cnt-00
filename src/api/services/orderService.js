@@ -1,17 +1,18 @@
-import apiClient from '../client';
+// import apiClient from '../client';
 import { mockOrders } from '../mockData';
 
 // Mock delay for realistic API simulation
-const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
+const mockDelay = (ms = 800) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 class OrderService {
-  async getOrders(params = {}) {
+  async getOrders(_params = {}) {
     await mockDelay();
-    
+
     // TODO: Replace with actual API call
     // const queryParams = new URLSearchParams(params).toString();
     // return apiClient.get(`/orders?${queryParams}`);
-    
+
     // Mock implementation
     return {
       success: true,
@@ -20,35 +21,35 @@ class OrderService {
         page: 1,
         limit: 50,
         total: mockOrders.length,
-        totalPages: 1
-      }
+        totalPages: 1,
+      },
     };
   }
 
   async getOrderById(orderId) {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.get(`/orders/${orderId}`);
-    
+
     // Mock implementation
-    const order = mockOrders.find(o => o.id === orderId);
+    const order = mockOrders.find((o) => o.id === orderId);
     if (!order) {
       throw new Error('Order not found');
     }
-    
+
     return {
       success: true,
-      data: order
+      data: order,
     };
   }
 
   async createOrder(orderData) {
     await mockDelay(1000);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.post('/orders', orderData);
-    
+
     // Mock implementation
     const newOrder = {
       id: Date.now().toString(),
@@ -56,80 +57,80 @@ class OrderService {
       ...orderData,
       status: 'pending',
       timeReceived: new Date().toISOString(),
-      timeCompleted: null
+      timeCompleted: null,
     };
-    
+
     return {
       success: true,
-      data: newOrder
+      data: newOrder,
     };
   }
 
   async updateOrderStatus(orderId, status) {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.patch(`/orders/${orderId}/status`, { status });
-    
+
     // Mock implementation
-    const orderIndex = mockOrders.findIndex(o => o.id === orderId);
+    const orderIndex = mockOrders.findIndex((o) => o.id === orderId);
     if (orderIndex === -1) {
       throw new Error('Order not found');
     }
-    
+
     const updatedOrder = {
       ...mockOrders[orderIndex],
       status,
       timeCompleted: status === 'completed' ? new Date().toISOString() : null,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    
+
     return {
       success: true,
-      data: updatedOrder
+      data: updatedOrder,
     };
   }
 
-  async cancelOrder(orderId, reason) {
+  async cancelOrder(orderId, _reason) {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.patch(`/orders/${orderId}/cancel`, { reason });
-    
+
     // Mock implementation
     return this.updateOrderStatus(orderId, 'cancelled');
   }
 
-  async getOrderQueue(params = {}) {
+  async getOrderQueue(_params = {}) {
     await mockDelay(600);
-    
+
     // TODO: Replace with actual API call
     // const queryParams = new URLSearchParams(params).toString();
     // return apiClient.get(`/orders/queue?${queryParams}`);
-    
+
     // Mock implementation
-    const queueOrders = mockOrders.filter(order => 
+    const queueOrders = mockOrders.filter((order) =>
       ['pending', 'preparing', 'ready'].includes(order.status)
     );
-    
+
     return {
       success: true,
-      data: queueOrders
+      data: queueOrders,
     };
   }
 
-  async getOrderHistory(params = {}) {
+  async getOrderHistory(_params = {}) {
     await mockDelay(800);
-    
+
     // TODO: Replace with actual API call
     // const queryParams = new URLSearchParams(params).toString();
     // return apiClient.get(`/orders/history?${queryParams}`);
-    
+
     // Mock implementation
-    const historyOrders = mockOrders.filter(order => 
+    const historyOrders = mockOrders.filter((order) =>
       ['completed', 'cancelled'].includes(order.status)
     );
-    
+
     return {
       success: true,
       data: historyOrders,
@@ -137,17 +138,17 @@ class OrderService {
         page: 1,
         limit: 20,
         total: historyOrders.length,
-        totalPages: 1
-      }
+        totalPages: 1,
+      },
     };
   }
 
   async processPayment(orderId, paymentData) {
     await mockDelay(1200);
-    
+
     // TODO: Replace with actual API call
     // return apiClient.post(`/orders/${orderId}/payment`, paymentData);
-    
+
     // Mock implementation
     return {
       success: true,
@@ -158,8 +159,8 @@ class OrderService {
         method: paymentData.method,
         status: 'completed',
         reference: paymentData.method === 'card' ? `TXN-${Date.now()}` : null,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 }

@@ -1,7 +1,9 @@
 // Central API client configuration
 // Uses Vite env var when available; falls back to '/api' for dev proxy
 const API_BASE_URL =
-  typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
+  typeof import.meta !== 'undefined' &&
+  import.meta.env &&
+  import.meta.env.VITE_API_BASE_URL
     ? import.meta.env.VITE_API_BASE_URL
     : '/api';
 
@@ -36,12 +38,24 @@ class ApiClient {
       retryMethods: ['GET', 'HEAD', 'OPTIONS'],
     };
     this.sendCredentials = Boolean(
-      typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_SEND_CREDENTIALS === 'true' || import.meta.env.VITE_SEND_CREDENTIALS === '1')
+      typeof import.meta !== 'undefined' &&
+        import.meta.env &&
+        (import.meta.env.VITE_SEND_CREDENTIALS === 'true' ||
+          import.meta.env.VITE_SEND_CREDENTIALS === '1')
     );
     this.csrf = {
-      enabled: true,
-      cookieName: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CSRF_COOKIE_NAME) || 'csrftoken',
-      headerName: (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_CSRF_HEADER_NAME) || 'X-CSRFToken',
+      // Right-size default: enable CSRF only when using cookie-based auth
+      enabled: this.sendCredentials,
+      cookieName:
+        (typeof import.meta !== 'undefined' &&
+          import.meta.env &&
+          import.meta.env.VITE_CSRF_COOKIE_NAME) ||
+        'csrftoken',
+      headerName:
+        (typeof import.meta !== 'undefined' &&
+          import.meta.env &&
+          import.meta.env.VITE_CSRF_HEADER_NAME) ||
+        'X-CSRFToken',
     };
   }
 
@@ -66,7 +80,12 @@ class ApiClient {
   }
 
   setCSRFConfig({ enabled, cookieName, headerName } = {}) {
-    this.csrf = { ...this.csrf, ...(enabled === undefined ? {} : { enabled }), ...(cookieName ? { cookieName } : {}), ...(headerName ? { headerName } : {}) };
+    this.csrf = {
+      ...this.csrf,
+      ...(enabled === undefined ? {} : { enabled }),
+      ...(cookieName ? { cookieName } : {}),
+      ...(headerName ? { headerName } : {}),
+    };
   }
 
   _sleep(ms) {
@@ -108,9 +127,7 @@ class ApiClient {
     const status = response?.status ?? null;
     const code = payload?.code || payload?.error?.code || null;
     const message =
-      payload?.message ||
-      payload?.error?.message ||
-      `HTTP error ${status}`;
+      payload?.message || payload?.error?.message || `HTTP error ${status}`;
     return new ApiError(message, {
       status,
       code,
@@ -154,7 +171,8 @@ class ApiClient {
 
     // Handle body and content type (FormData must not set Content-Type)
     let body = options.body;
-    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    const isFormData =
+      typeof FormData !== 'undefined' && body instanceof FormData;
     if (isFormData) {
       // Browser sets boundary automatically
       if (headers['Content-Type']) delete headers['Content-Type'];
@@ -184,7 +202,9 @@ class ApiClient {
         headers,
         body,
         signal,
-        credentials: options.credentials ?? (this.sendCredentials ? 'include' : 'same-origin'),
+        credentials:
+          options.credentials ??
+          (this.sendCredentials ? 'include' : 'same-origin'),
         // Ensure no unexpected keys leak into fetch
       };
 
@@ -197,8 +217,13 @@ class ApiClient {
       }
 
       // Unauthorized hook
-      if (response.status === 401 && typeof this.onUnauthorized === 'function') {
-        try { this.onUnauthorized(); } catch {}
+      if (
+        response.status === 401 &&
+        typeof this.onUnauthorized === 'function'
+      ) {
+        try {
+          this.onUnauthorized();
+        } catch {}
       }
 
       // Throw normalized error
@@ -206,7 +231,6 @@ class ApiClient {
     };
 
     let attempt = 0;
-    let lastError = null;
 
     const runWithRetry = async () => {
       while (true) {
@@ -225,7 +249,6 @@ class ApiClient {
           }
           return await exec();
         } catch (err) {
-          lastError = err;
           const canRetry = this._shouldRetry({
             attempt,
             error: err instanceof ApiError ? null : err,
@@ -235,7 +258,9 @@ class ApiClient {
           });
           if (!canRetry) throw err;
           attempt += 1;
-          const delay = retryConfig.delayMs * Math.pow(retryConfig.backoffFactor, attempt - 1);
+          const delay =
+            retryConfig.delayMs *
+            Math.pow(retryConfig.backoffFactor, attempt - 1);
           await this._sleep(delay);
         }
       }
@@ -247,7 +272,10 @@ class ApiClient {
       // Surface normalized errors
       if (error instanceof ApiError) throw error;
       // Wrap other errors (e.g., AbortError, network failure)
-      const message = error?.name === 'AbortError' ? 'Request aborted' : (error?.message || 'Network error');
+      const message =
+        error?.name === 'AbortError'
+          ? 'Request aborted'
+          : error?.message || 'Network error';
       throw new ApiError(message, { url, method, body });
     }
   }

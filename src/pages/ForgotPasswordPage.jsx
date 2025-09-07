@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 // import { useAuth } from '@/components/AuthContext'; // Uncomment if you have a real auth method
 
 const Spinner = () => (
@@ -27,7 +27,6 @@ const Spinner = () => (
 );
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate();
   // const { sendPasswordResetEmail } = useAuth(); // <-- if available
 
   const [email, setEmail] = useState('');

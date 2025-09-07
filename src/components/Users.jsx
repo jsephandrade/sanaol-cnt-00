@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { AddUserModal } from './users/AddUserModal';
 import { EditUserModal } from './users/EditUserModal';
 import { RoleConfigModal } from './users/RoleConfigModal';
@@ -16,7 +21,6 @@ import TableSkeleton from '@/components/shared/TableSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
 
 const Users = () => {
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -25,8 +29,24 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
-  const { users, pagination, loading, fetching, error, refetch, createUser, updateUser, deleteUser, updateUserStatus } = useUserManagement({ search: debouncedSearch });
-  const { roles, loading: rolesLoading, error: rolesError, updateRoleConfig } = useRoles();
+  const {
+    users,
+    pagination,
+    loading,
+    fetching,
+    error,
+    refetch,
+    createUser,
+    updateUser,
+    deleteUser,
+    updateUserStatus,
+  } = useUserManagement({ search: debouncedSearch });
+  const {
+    roles,
+    loading: rolesLoading,
+    error: rolesError,
+    updateRoleConfig,
+  } = useRoles();
 
   // Data is fetched with search term via hook; no local filtering needed
 
@@ -58,7 +78,10 @@ const Users = () => {
   };
 
   const handleUpdateUser = async (updatedUser) => {
-    await updateUser.mutateAsync({ userId: updatedUser.id, updates: updatedUser });
+    await updateUser.mutateAsync({
+      userId: updatedUser.id,
+      updates: updatedUser,
+    });
   };
 
   const handleDeleteUser = async (userId) => {
@@ -93,7 +116,10 @@ const Users = () => {
             />
 
             {loading || fetching ? (
-              <TableSkeleton headers={["User", "Role", "Status", "Actions"]} rows={5} />
+              <TableSkeleton
+                headers={['User', 'Role', 'Status', 'Actions']}
+                rows={5}
+              />
             ) : error ? (
               <ErrorState message={error} onRetry={refetch} />
             ) : (
@@ -110,7 +136,10 @@ const Users = () => {
               />
             )}
           </CardContent>
-          <UsersFooter showing={users.length} total={pagination?.total || users.length} />
+          <UsersFooter
+            showing={users.length}
+            total={pagination?.total || users.length}
+          />
         </Card>
       </div>
 
@@ -119,12 +148,17 @@ const Users = () => {
           <Card>
             <CardHeader>
               <CardTitle>Role Management</CardTitle>
-              <CardDescription>Configure user roles and permissions</CardDescription>
+              <CardDescription>
+                Configure user roles and permissions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <div className="w-full">
                       <div className="h-4 w-40 bg-muted rounded mb-2" />
                       <div className="h-3 w-60 bg-muted rounded" />
@@ -138,7 +172,9 @@ const Users = () => {
           <Card>
             <CardHeader>
               <CardTitle>Role Management</CardTitle>
-              <CardDescription>Configure user roles and permissions</CardDescription>
+              <CardDescription>
+                Configure user roles and permissions
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ErrorState message={rolesError} />

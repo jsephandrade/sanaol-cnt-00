@@ -7,14 +7,17 @@ import {
   getTopSellingItems,
   getLowestSellingItems,
 } from '@/utils/salesUtils';
-import { peakHoursData, monthlyComparison, mockPayments } from '@/data/salesMockData';
+import {
+  peakHoursData,
+  monthlyComparison,
+  mockPayments,
+} from '@/data/salesMockData';
 import FinancialReport from './sales/FinancialReport';
 import MenuReport from './sales/MenuReport';
 import PaymentReport from './sales/PaymentReport';
 
 const SalesAnalytics = () => {
-  const [dateRange, setDateRange] = useState('week');
-  const [payments, setPayments] = useState(mockPayments);
+  const [payments, _setPayments] = useState(mockPayments);
 
   // Process data for reports
   const dailySalesData = groupSalesByDate(salesData);
@@ -24,7 +27,7 @@ const SalesAnalytics = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-3xl font-semibold">Sales Analytics</h2>
+      <h2 className="text-2xl font-semibold">Sales Analytics</h2>
 
       <Tabs defaultValue="financial" className="w-full">
         <TabsList>

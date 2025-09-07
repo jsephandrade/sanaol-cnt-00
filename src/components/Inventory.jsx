@@ -1,45 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { CustomBadge } from '@/components/ui/custom-badge';
-import {
-  Search,
-  PlusCircle,
-  ArrowUpDown,
-  MoreVertical,
-  PenSquare,
-  Ban,
-  History,
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { History } from 'lucide-react';
 import { toast } from 'sonner';
-import AddItemModal from '@/components/inventory/AddItemModal';
-import EditItemModal from '@/components/inventory/EditItemModal';
+// Removed unused imports to keep the component lean
 import InventoryHeader from '@/components/inventory/InventoryHeader';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import InventoryTabs from '@/components/inventory/InventoryTabs';
@@ -171,22 +140,19 @@ const Inventory = () => {
     'Fruits',
   ];
 
-  const filteredItems = inventoryItems.filter((item) => {
-    // Filter by search term
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredItems = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return inventoryItems.filter((item) => {
+      const matchesSearch =
+        item.name.toLowerCase().includes(term) ||
+        item.supplier.toLowerCase().includes(term);
+      const matchesCategory =
+        selectedCategory === 'all' || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [inventoryItems, searchTerm, selectedCategory]);
 
-    // Filter by category
-    const matchesCategory =
-      selectedCategory === 'all' || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  // Items that are below threshold
-  const lowStockItems = inventoryItems.filter(
-    (item) => item.currentStock < item.minThreshold
-  );
+  // Note: lowStockItems was unused; removed to reduce noise
 
   // Calculate stock level percentage
   const getStockPercentage = (current, threshold) => {
@@ -208,41 +174,43 @@ const Inventory = () => {
     return 'Good';
   };
 
-  const handleAddItem = (newItem) => {
-    const item = {
-      ...newItem,
-      id: Date.now().toString(),
-      lastUpdated: new Date().toISOString().split('T')[0],
-      disabled: false,
-    };
-    setInventoryItems((prev) => [...prev, item]);
-  };
+  const handleAddItem = useCallback((newItem) => {
+    setInventoryItems((prev) => [
+      ...prev,
+      {
+        ...newItem,
+        id: Date.now().toString(),
+        lastUpdated: new Date().toISOString().split('T')[0],
+        disabled: false,
+      },
+    ]);
+  }, []);
 
-  const handleEditItem = (item) => {
+  const handleEditItem = useCallback((item) => {
     setEditingItem(item);
     setShowEditModal(true);
-  };
+  }, []);
 
-  const handleUpdateItem = (updatedItem) => {
+  const handleUpdateItem = useCallback((updatedItem) => {
     setInventoryItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
     );
-  };
+  }, []);
 
-  const handleDisableItem = (itemId, itemName) => {
-    setInventoryItems((prev) =>
-      prev.map((item) =>
-        item.id === itemId ? { ...item, disabled: !item.disabled } : item
-      )
-    );
-
-    const item = inventoryItems.find((item) => item.id === itemId);
-    if (item) {
-      toast.success(
-        `${itemName} has been ${item.disabled ? 'enabled' : 'disabled'}`
+  const handleDisableItem = useCallback((itemId, itemName) => {
+    setInventoryItems((prev) => {
+      const next = prev.map((it) =>
+        it.id === itemId ? { ...it, disabled: !it.disabled } : it
       );
-    }
-  };
+      const item = next.find((it) => it.id === itemId);
+      if (item) {
+        toast.success(
+          `${itemName} has been ${item.disabled ? 'disabled' : 'enabled'}`
+        );
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -262,9 +230,9 @@ const Inventory = () => {
               filteredItems={filteredItems}
               onEditItem={handleEditItem}
               onDisableItem={handleDisableItem}
-              getStockPercentage={getStockPercentage}
-              getStockBadgeVariant={getStockBadgeVariant}
-              getStockStatusText={getStockStatusText}
+              getStockPercentage={useCallback(getStockPercentage, [])}
+              getStockBadgeVariant={useCallback(getStockBadgeVariant, [])}
+              getStockStatusText={useCallback(getStockStatusText, [])}
             />
           </CardContent>
           <InventoryFooter

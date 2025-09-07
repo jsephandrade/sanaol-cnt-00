@@ -6,7 +6,7 @@ import {
   Navigate,
   useLocation,
 } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
+import { useAuth } from '@/components/AuthContext';
 
 // Lazy load pages for better performance
 const Index = lazy(() => import('../../pages/Index'));

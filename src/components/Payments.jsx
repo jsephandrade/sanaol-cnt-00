@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -11,12 +11,10 @@ import { Button } from '@/components/ui/button';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import {
   CreditCard,
-  Search,
   Download,
   Receipt,
   ArrowUpDown,
   MoreVertical,
-  Calendar,
   Check,
   X,
   ArrowDownUp,
@@ -24,14 +22,7 @@ import {
   Smartphone,
   CircleDollarSign,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Removed unused Input/Select imports (handled in child filters)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,7 +49,7 @@ const Payments = () => {
     mobile: true,
   });
 
-  const [payments, setPayments] = useState([
+  const [payments, _setPayments] = useState([
     {
       id: '1',
       orderId: 'ORD-2581',
@@ -150,34 +141,33 @@ const Payments = () => {
     }
   };
 
-  const getTotalAmount = (status = 'all') => {
-    return payments
-      .filter((payment) => status === 'all' || payment.status === status)
-      .reduce((total, payment) => {
-        if (payment.status === 'refunded') return total;
-        return total + payment.amount;
-      }, 0)
+  // total computed via totalForSelectedStatus (memoized)
+
+  const filteredPayments = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return payments.filter((payment) => {
+      const matchesSearch =
+        payment.orderId.toLowerCase().includes(term) ||
+        (payment.customer && payment.customer.toLowerCase().includes(term));
+      const matchesStatus =
+        selectedStatus === 'all' || payment.status === selectedStatus;
+      const methodIsActive = methodActive[payment.method] ?? true;
+      return matchesSearch && matchesStatus && methodIsActive;
+    });
+  }, [payments, searchTerm, selectedStatus, methodActive]);
+
+  const sortedPayments = useMemo(() => {
+    return [...filteredPayments].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [filteredPayments]);
+
+  const totalForSelectedStatus = useMemo(() => {
+    return filteredPayments
+      .filter((p) => p.status !== 'refunded')
+      .reduce((acc, cur) => acc + cur.amount, 0)
       .toFixed(2);
-  };
-
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (payment.customer &&
-        payment.customer.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesStatus =
-      selectedStatus === 'all' || payment.status === selectedStatus;
-
-    // Optional: if you want inactive methods to be hidden from lists
-    const methodIsActive = methodActive[payment.method] ?? true;
-
-    return matchesSearch && matchesStatus && methodIsActive;
-  });
-
-  const sortedPayments = [...filteredPayments].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  }, [filteredPayments]);
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
@@ -308,9 +298,7 @@ const Payments = () => {
             </div>
             <div className="text-sm">
               Total:{' '}
-              <span className="font-semibold">
-                ₱{getTotalAmount(selectedStatus)}
-              </span>
+              <span className="font-semibold">₱{totalForSelectedStatus}</span>
             </div>
           </CardFooter>
         </Card>

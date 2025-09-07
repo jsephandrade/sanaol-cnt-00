@@ -30,7 +30,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 
-const MainLayout = ({ children, title }) => {
+const MainLayout = ({ children, title: _title }) => {
   const isMobile = useIsMobile();
   const { user, logout } = useAuth();
 
@@ -70,7 +70,9 @@ const MainLayout = ({ children, title }) => {
                 </div>
                 <div>
                   <p className="font-semibold">{displayName}</p>
-                  <p className="text-sm text-sidebar-foreground/70">{displayEmail}</p>
+                  <p className="text-sm text-sidebar-foreground/70">
+                    {displayEmail}
+                  </p>
                 </div>
               </div>
             </div>
@@ -83,9 +85,6 @@ const MainLayout = ({ children, title }) => {
           <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
-              <h1 className="text-xl font-semibold">
-                {title || 'Canteen Management System'}
-              </h1>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="outline" asChild>
@@ -114,7 +113,8 @@ const MainLayout = ({ children, title }) => {
                       Are you sure you want to logout?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                      You’ll be signed out of your account and may need to log in again to continue.
+                      You’ll be signed out of your account and may need to log
+                      in again to continue.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -133,9 +133,7 @@ const MainLayout = ({ children, title }) => {
 
           {/* Content */}
           <main className="flex-1 overflow-y-auto p-6">
-            <PageTransition>
-              {children}
-            </PageTransition>
+            <PageTransition>{children}</PageTransition>
           </main>
         </SidebarInset>
       </div>
