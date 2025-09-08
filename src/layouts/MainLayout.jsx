@@ -35,7 +35,7 @@ const MainLayout = ({ children, title: _title }) => {
   const { user, logout } = useAuth();
 
   const displayName = user?.name || 'Admin';
-  const displayEmail = user?.email || 'admin@canteen.com';
+  const displayRole = user?.role || 'admin';
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
 
   return (
@@ -70,8 +70,8 @@ const MainLayout = ({ children, title: _title }) => {
                 </div>
                 <div>
                   <p className="font-semibold">{displayName}</p>
-                  <p className="text-sm text-sidebar-foreground/70">
-                    {displayEmail}
+                  <p className="text-sm text-sidebar-foreground/70 capitalize">
+                    {displayRole}
                   </p>
                 </div>
               </div>

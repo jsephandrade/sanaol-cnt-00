@@ -145,10 +145,12 @@ const Users = () => {
             total={pagination?.total || users.length}
           />
         </Card>
+
+        {/* Admin/Manager-only: show verification queue below the Users card */}
+        {showVerifyQueue && <PendingVerifications />}
       </div>
 
       <div className="space-y-4">
-        {showVerifyQueue && <PendingVerifications />}
         {rolesLoading ? (
           <Card>
             <CardHeader>

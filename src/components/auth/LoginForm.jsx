@@ -58,7 +58,7 @@ const LoginForm = ({
     <>
       {error && (
         <div
-          className="p-3 mb-4 bg-red-50 text-red-700 rounded-lg text-sm"
+          className="p-3 mb-4 bg-red-50 text-red-700 rounded-md text-sm"
           role="alert"
           tabIndex={-1}
           ref={alertRef}
@@ -88,7 +88,7 @@ const LoginForm = ({
             value={email}
             onChange={(e) => onEmailChange?.(e.target.value)}
             placeholder="Email"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'email-error' : undefined}
@@ -114,7 +114,7 @@ const LoginForm = ({
               value={password}
               onChange={(e) => onPasswordChange?.(e.target.value)}
               placeholder="Password"
-              className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+              className="w-full p-2 pr-9 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
               required
               autoComplete="current-password"
               aria-invalid={!!passwordError}
@@ -129,7 +129,7 @@ const LoginForm = ({
               disabled={pending}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {!showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              {!showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
 
@@ -165,11 +165,11 @@ const LoginForm = ({
         <button
           type="submit"
           disabled={pending}
-          className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-300 inline-flex items-center justify-center"
+          className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md text-sm transition-colors duration-300 inline-flex items-center justify-center"
         >
           {pending ? (
             <>
-              <Spinner /> Processing…
+              <Spinner /> Processing...
             </>
           ) : (
             'Login'
