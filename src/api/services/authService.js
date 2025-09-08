@@ -13,184 +13,166 @@ class AuthService {
     if (!credential || typeof credential !== 'string') {
       throw new Error('Missing Google credential');
     }
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post(
-          '/auth/google',
-          { credential },
-          { retry: { retries: 1 } }
-        );
-        const data = res?.data || res;
-        return {
-          success: Boolean(data?.success ?? true),
-          pending: Boolean(data?.pending ?? false),
-          user: data.user || data,
-          token: data.token || data.accessToken || null,
-          verifyToken: data.verifyToken || null,
-        };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return {
+        success: true,
+        pending: true,
+        user: {
+          id: 'g-' + Date.now().toString(),
+          name: 'Google User',
+          email: 'user@gmail.com',
+          role: 'staff',
+          status: 'pending',
+        },
+        token: null,
+        verifyToken: 'mock-verify-token-' + Date.now(),
+      };
     }
-    await mockDelay(400);
+    const res = await apiClient.post(
+      '/auth/google',
+      { credential },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
     return {
-      success: true,
-      pending: true,
-      user: {
-        id: 'g-' + Date.now().toString(),
-        name: 'Google User',
-        email: 'user@gmail.com',
-        role: 'staff',
-        status: 'pending',
-      },
-      token: null,
-      verifyToken: 'mock-verify-token-' + Date.now(),
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user: data.user || data,
+      token: data.token || data.accessToken || null,
+      verifyToken: data.verifyToken || null,
     };
   }
   async login(email, password, options = {}) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post(
-          '/auth/login',
-          { email, password, ...options },
-          { retry: { retries: 1 } }
-        );
-        const data = res?.data || res;
+    if (USE_MOCKS) {
+      await mockDelay();
+      if (email === 'admin@canteen.com' && password === '1234') {
         return {
           success: true,
-          user: data.user || {
-            id: data.userId || 'me',
-            name: data.name || email,
-            email,
-            role: (data.role || 'admin').toLowerCase(),
-          },
-          token: data.token || data.accessToken || null,
+          user: { id: '1', name: 'Admin User', email, role: 'admin' },
+          token: 'mock-jwt-token-12345',
         };
-      } catch (e) {
-        // fall back to mocks if desired
       }
+      throw new Error('Invalid credentials');
     }
-    await mockDelay();
-    if (email === 'admin@canteen.com' && password === '1234') {
-      return {
-        success: true,
-        user: { id: '1', name: 'Admin User', email, role: 'admin' },
-        token: 'mock-jwt-token-12345',
-      };
-    }
-    throw new Error('Invalid credentials');
+    const res = await apiClient.post(
+      '/auth/login',
+      { email, password, ...options },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
+    return {
+      success: true,
+      user: data.user || {
+        id: data.userId || 'me',
+        name: data.name || email,
+        email,
+        role: (data.role || 'admin').toLowerCase(),
+      },
+      token: data.token || data.accessToken || null,
+    };
   }
 
   async register(userData) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/register', userData, {
-          retry: { retries: 1 },
-        });
-        const data = res?.data || res;
-        return {
-          success: Boolean(data?.success ?? true),
-          pending: Boolean(data?.pending ?? false),
-          user: data.user || {
-            id: data.id || String(Date.now()),
-            ...userData,
-            role: (data.role || 'staff').toLowerCase(),
-            status: data.status || 'pending',
-          },
-          token: data.token || data.accessToken || null,
-          verifyToken: data.verifyToken || null,
-        };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay();
+      return {
+        success: true,
+        pending: true,
+        user: {
+          id: Date.now().toString(),
+          ...userData,
+          role: 'staff',
+          status: 'pending',
+        },
+        token: null,
+        verifyToken: 'mock-verify-token-' + Date.now(),
+      };
     }
-    await mockDelay();
+    const res = await apiClient.post('/auth/register', userData, {
+      retry: { retries: 1 },
+    });
+    const data = res?.data || res;
     return {
-      success: true,
-      pending: true,
-      user: {
-        id: Date.now().toString(),
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user: data.user || {
+        id: data.id || String(Date.now()),
         ...userData,
-        role: 'staff',
-        status: 'pending',
+        role: (data.role || 'staff').toLowerCase(),
+        status: data.status || 'pending',
       },
-      token: null,
-      verifyToken: 'mock-verify-token-' + Date.now(),
+      token: data.token || data.accessToken || null,
+      verifyToken: data.verifyToken || null,
     };
   }
 
   async logout() {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/logout', {});
-        return res?.data || { success: true };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
     }
-    await mockDelay(300);
-    return { success: true };
+    const res = await apiClient.post('/auth/logout', {});
+    return res?.data || { success: true };
   }
 
   async socialLogin(provider) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/social', { provider });
-        const data = res?.data || res;
-        return {
-          success: true,
-          user: data.user || {
-            id: '1',
-            name: data.name || 'Admin User',
-            email: data.email || 'admin@canteen.com',
-            role: (data.role || 'admin').toLowerCase(),
-          },
-          token: data.token || data.accessToken || null,
-        };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(500);
+      return {
+        success: true,
+        user: {
+          id: '1',
+          name: 'Admin User',
+          email: 'admin@canteen.com',
+          role: 'admin',
+        },
+        token: 'mock-social-token-' + Date.now(),
+      };
     }
-    await mockDelay(500);
+    const res = await apiClient.post('/auth/social', { provider });
+    const data = res?.data || res;
     return {
       success: true,
-      user: {
+      user: data.user || {
         id: '1',
-        name: 'Admin User',
-        email: 'admin@canteen.com',
-        role: 'admin',
+        name: data.name || 'Admin User',
+        email: data.email || 'admin@canteen.com',
+        role: (data.role || 'admin').toLowerCase(),
       },
-      token: 'mock-social-token-' + Date.now(),
+      token: data.token || data.accessToken || null,
     };
   }
 
   async forgotPassword(email) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/forgot-password', { email });
-        return res?.data || { success: true };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true, message: 'Password reset email sent' };
     }
-    await mockDelay(400);
-    return { success: true, message: 'Password reset email sent' };
+    const res = await apiClient.post('/auth/forgot-password', { email });
+    return res?.data || { success: true };
   }
 
   async resetPassword(token, newPassword) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/reset-password', {
-          token,
-          newPassword,
-        });
-        return res?.data || { success: true };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true, message: 'Password reset successful' };
     }
-    await mockDelay(400);
-    return { success: true, message: 'Password reset successful' };
+    const res = await apiClient.post('/auth/reset-password', {
+      token,
+      newPassword,
+    });
+    return res?.data || { success: true };
   }
 
   async refreshToken() {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/refresh-token', {});
-        const data = res?.data || res;
-        return { success: true, token: data.token || data.accessToken || null };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true, token: 'mock-refreshed-token-' + Date.now() };
     }
-    await mockDelay(300);
-    return { success: true, token: 'mock-refreshed-token-' + Date.now() };
+    const res = await apiClient.post('/auth/refresh-token', {});
+    const data = res?.data || res;
+    return { success: true, token: data.token || data.accessToken || null };
   }
 }
 
