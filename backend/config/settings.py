@@ -78,14 +78,64 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Configure an in-memory SQLite DB so Django can start without touching disk
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        # Use file DB by default to support migrations; override via DJANGO_DB_NAME if desired
-        "NAME": os.getenv("DJANGO_DB_NAME", str(BASE_DIR / "db.sqlite3")),
+# Database configuration (SQLite by default; supports MySQL/Postgres via env)
+
+def _env_bool(key: str, default: bool = False) -> bool:
+    val = os.getenv(key)
+    if val is None:
+        return default
+    return val in {"1", "true", "True", "yes", "on"}
+
+
+DB_ENGINE = (os.getenv("DJANGO_DB_ENGINE", "") or "").strip().lower()
+DB_NAME = os.getenv("DJANGO_DB_NAME", str(BASE_DIR / "db.sqlite3"))
+DB_USER = os.getenv("DJANGO_DB_USER", "")
+DB_PASSWORD = os.getenv("DJANGO_DB_PASSWORD", "")
+DB_HOST = os.getenv("DJANGO_DB_HOST", "")
+DB_PORT = os.getenv("DJANGO_DB_PORT", "")
+try:
+    DB_CONN_MAX_AGE = int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60"))
+except Exception:
+    DB_CONN_MAX_AGE = 60
+
+if DB_ENGINE in {"mysql", "mariadb"}:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST or "127.0.0.1",
+            "PORT": DB_PORT or "3306",
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
+            "OPTIONS": {
+                # Ensure utf8mb4 support for emoji and full Unicode
+                "charset": "utf8mb4",
+                # Safe strict mode; adjust if your server disallows it
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+elif DB_ENGINE in {"postgres", "postgresql", "psql"}:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST or "127.0.0.1",
+            "PORT": DB_PORT or "5432",
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
+        }
+    }
+else:
+    # Default to SQLite (file-based)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": DB_NAME,
+        }
+    }
 
 # Static files (optional for API-only)
 STATIC_URL = "/static/"
