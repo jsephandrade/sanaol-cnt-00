@@ -163,3 +163,43 @@ SOCIALACCOUNT_PROVIDERS = {
         "VERIFIED_EMAILS_ONLY": True,
     }
 }
+
+# Email configuration
+EMAIL_BACKEND = os.getenv(
+    "DJANGO_EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "no-reply@canteen.local")
+SERVER_EMAIL = os.getenv("DJANGO_SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+
+# Optional SMTP settings (used if EMAIL_BACKEND is SMTP)
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "localhost")
+try:
+    EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "25"))
+except Exception:
+    EMAIL_PORT = 25
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "0") in {"1", "true", "True"}
+EMAIL_USE_SSL = os.getenv("DJANGO_EMAIL_USE_SSL", "0") in {"1", "true", "True"}
+
+# Admin recipients (for mail_admins). Set DJANGO_ADMINS="Name <email>,Other <email>"
+def _parse_admins(raw: str):
+    out = []
+    if not raw:
+        return out
+    parts = [x.strip() for x in raw.split(",") if x.strip()]
+    for p in parts:
+        # Expect "Name <email>" or just email
+        if "<" in p and ">" in p:
+            name = p.split("<", 1)[0].strip()
+            email = p.split("<", 1)[1].split(">", 1)[0].strip()
+        else:
+            name = p
+            email = p
+        if email:
+            out.append((name or email, email))
+    return out
+
+ADMINS = _parse_admins(os.getenv("DJANGO_ADMINS", ""))
+EMAIL_SUBJECT_PREFIX = os.getenv("DJANGO_EMAIL_SUBJECT_PREFIX", "[Canteen]")

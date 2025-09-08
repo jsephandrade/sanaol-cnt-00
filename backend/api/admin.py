@@ -5,6 +5,10 @@ from django.http import FileResponse, Http404, HttpResponseForbidden
 from django import forms
 
 from .models import AppUser, AccessRequest
+from .emails import (
+    email_user_approved,
+    email_user_rejected,
+)
 
 
 APPROVE_ROLE_CHOICES = (
@@ -117,6 +121,10 @@ class AccessRequestAdmin(admin.ModelAdmin):
                 u.role = role
                 u.status = "active"
                 u.save(update_fields=["role", "status"])
+                try:
+                    email_user_approved(u)
+                except Exception:
+                    pass
                 count += 1
             except Exception:
                 continue
@@ -139,8 +147,11 @@ class AccessRequestAdmin(admin.ModelAdmin):
                 if (u.status or "").lower() != "active":
                     u.status = "pending"
                     u.save(update_fields=["status"])
+                try:
+                    email_user_rejected(u, note)
+                except Exception:
+                    pass
                 count += 1
             except Exception:
                 continue
         self.message_user(request, f"Rejected {count} request(s).", messages.WARNING)
-

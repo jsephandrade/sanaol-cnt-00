@@ -15,6 +15,12 @@ import jwt
 import base64
 import re
 from django.core.files.base import ContentFile
+from .emails import (
+    notify_admins_verification_submitted,
+    email_user_verification_received,
+    email_user_approved,
+    email_user_rejected,
+)
 
 # -----------------------------
 # Rate limit helpers (must be defined before decorator usage)
@@ -1064,6 +1070,12 @@ def verify_upload(request):
             u.status = "pending"
             u.save(update_fields=["status"]) 
         ar.save()
+        # Notify
+        try:
+            email_user_verification_received(u)
+            notify_admins_verification_submitted(u, ar)
+        except Exception:
+            pass
         return JsonResponse({"success": True, "status": ar.status})
     except Exception as e:
         return JsonResponse({"success": False, "message": "Upload failed"}, status=500)
@@ -1225,6 +1237,10 @@ def verify_approve(request):
         u.role = role
         u.status = "active"
         u.save(update_fields=["role", "status"])
+        try:
+            email_user_approved(u)
+        except Exception:
+            pass
         return JsonResponse({"success": True, "data": {"id": str(ar.id), "status": ar.status, "user": {"id": str(u.id), "role": u.role, "status": u.status}}})
     except Exception:
         return JsonResponse({"success": False, "message": "Failed to approve"}, status=500)
@@ -1267,6 +1283,10 @@ def verify_reject(request):
         if (u.status or "").lower() != "active":
             u.status = "pending"
             u.save(update_fields=["status"])
+        try:
+            email_user_rejected(u, note)
+        except Exception:
+            pass
         return JsonResponse({"success": True, "data": {"id": str(ar.id), "status": ar.status}})
     except Exception:
         return JsonResponse({"success": False, "message": "Failed to reject"}, status=500)
