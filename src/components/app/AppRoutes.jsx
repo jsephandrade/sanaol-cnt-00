@@ -17,6 +17,7 @@ const FaceScanPage = lazy(() => import('../../pages/FaceScanPage'));
 const FaceRegistrationPage = lazy(
   () => import('../../pages/FaceRegistrationPage')
 );
+const VerifyIdentityPage = lazy(() => import('../../pages/VerifyIdentityPage'));
 const NotFound = lazy(() => import('../../pages/NotFound'));
 import HelpPage from '../../pages/HelpPage';
 const SettingsPage = lazy(() => import('../../pages/SettingsPage'));
@@ -76,6 +77,7 @@ const AppRoutes = () => {
         '/forgot-password': 'Forgot Password',
         '/face-scan': 'Face Scan',
         '/face-registration': 'Face Registration',
+        '/verify': 'Verify Identity',
         '/menu': 'Menu Management',
         '/sales': 'Sales Analytics',
         '/employees': 'Employee Schedule',
@@ -141,6 +143,14 @@ const AppRoutes = () => {
               <ProtectedRoute>
                 <FaceRegistrationPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verify"
+            element={
+              <PublicRoute>
+                <VerifyIdentityPage />
+              </PublicRoute>
             }
           />
 

@@ -9,6 +9,42 @@ const USE_MOCKS = !(
 );
 
 class AuthService {
+  async loginWithGoogle(credential) {
+    if (!credential || typeof credential !== 'string') {
+      throw new Error('Missing Google credential');
+    }
+    if (!USE_MOCKS) {
+      try {
+        const res = await apiClient.post(
+          '/auth/google',
+          { credential },
+          { retry: { retries: 1 } }
+        );
+        const data = res?.data || res;
+        return {
+          success: Boolean(data?.success ?? true),
+          pending: Boolean(data?.pending ?? false),
+          user: data.user || data,
+          token: data.token || data.accessToken || null,
+          verifyToken: data.verifyToken || null,
+        };
+      } catch (e) {}
+    }
+    await mockDelay(400);
+    return {
+      success: true,
+      pending: true,
+      user: {
+        id: 'g-' + Date.now().toString(),
+        name: 'Google User',
+        email: 'user@gmail.com',
+        role: 'staff',
+        status: 'pending',
+      },
+      token: null,
+      verifyToken: 'mock-verify-token-' + Date.now(),
+    };
+  }
   async login(email, password, options = {}) {
     if (!USE_MOCKS) {
       try {
@@ -51,21 +87,31 @@ class AuthService {
         });
         const data = res?.data || res;
         return {
-          success: true,
+          success: Boolean(data?.success ?? true),
+          pending: Boolean(data?.pending ?? false),
           user: data.user || {
             id: data.id || String(Date.now()),
             ...userData,
             role: (data.role || 'staff').toLowerCase(),
+            status: data.status || 'pending',
           },
           token: data.token || data.accessToken || null,
+          verifyToken: data.verifyToken || null,
         };
       } catch (e) {}
     }
     await mockDelay();
     return {
       success: true,
-      user: { id: Date.now().toString(), ...userData, role: 'staff' },
-      token: 'mock-jwt-token-' + Date.now(),
+      pending: true,
+      user: {
+        id: Date.now().toString(),
+        ...userData,
+        role: 'staff',
+        status: 'pending',
+      },
+      token: null,
+      verifyToken: 'mock-verify-token-' + Date.now(),
     };
   }
 

@@ -16,9 +16,11 @@ import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
 import { UsersFooter } from './users/UsersFooter';
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
+import { PendingVerifications } from './users/PendingVerifications';
 import { useDebouncedValue } from '@/hooks/useDebounce';
 import TableSkeleton from '@/components/shared/TableSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
+import { useAuth } from '@/components/AuthContext';
 
 const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,6 +49,8 @@ const Users = () => {
     error: rolesError,
     updateRoleConfig,
   } = useRoles();
+  const { hasAnyRole } = useAuth();
+  const showVerifyQueue = hasAnyRole(['admin', 'manager']);
 
   // Data is fetched with search term via hook; no local filtering needed
 
@@ -144,6 +148,7 @@ const Users = () => {
       </div>
 
       <div className="space-y-4">
+        {showVerifyQueue && <PendingVerifications />}
         {rolesLoading ? (
           <Card>
             <CardHeader>

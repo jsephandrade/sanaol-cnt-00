@@ -4,11 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/auth/Header';
 import HeroImage from '@/components/auth/HeroImage';
 import SocialProviders from '@/components/auth/SocialProviders';
+import AuthCard from '@/components/auth/AuthCard';
 import { Eye, EyeOff } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
+import { signInWithGoogle } from '@/lib/google';
 
 const SignupPage = () => {
-  const { socialLogin } = useAuth();
+  const { socialLogin, register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,17 +39,29 @@ const SignupPage = () => {
     }
 
     setPending(true);
-
-    // Simulated signup - just pretend it worked
-    setTimeout(() => {
-      navigate('/login');
-      alert('Account created successfully! Please log in.');
-    }, 1000);
-
-    setPending(false);
+    try {
+      const name = `${firstName} ${lastName}`.trim();
+      const res = await register({ name, email, password, contactNumber });
+      if (res?.success && res?.pending) {
+        try {
+          sessionStorage.setItem('verify_token', res.verifyToken || '');
+          sessionStorage.setItem(
+            'pending_user',
+            JSON.stringify(res.user || {})
+          );
+        } catch {}
+        navigate('/verify');
+      } else if (res?.success) {
+        navigate('/');
+      } else {
+        setError(res?.error || 'Signup failed. Please try again.');
+      }
+    } finally {
+      setPending(false);
+    }
   };
 
-  const handleSocial = async (provider) => {
+  const handleSocial = async (provider, payload /* e or credential */) => {
     setPending(true);
 
     if (provider === 'facescan') {
@@ -62,6 +76,41 @@ const SignupPage = () => {
         }, 2000);
       } catch (error) {
         alert('Face scan authentication failed. Please try again.');
+      }
+    } else if (provider === 'google-credential') {
+      try {
+        const res = await loginWithGoogle(payload);
+        if (!res?.success) throw new Error('Google failed');
+        if (res?.pending) {
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+        }
+        navigate(res?.pending ? '/verify' : '/');
+      } catch (e) {
+        alert('Google authentication failed. Please try again.');
+      }
+    } else if (provider === 'google') {
+      try {
+        const credential = await signInWithGoogle();
+        const res = await loginWithGoogle(credential);
+        if (!res?.success) throw new Error('Google failed');
+        if (res?.pending) {
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+        }
+        navigate(res?.pending ? '/verify' : '/');
+      } catch (e) {
+        alert('Google authentication failed. Please try again.');
       }
     } else {
       await socialLogin(provider);
@@ -78,8 +127,7 @@ const SignupPage = () => {
         <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
           <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
             <div className="w-full max-w-md mx-auto md:mx-0">
-              <div className="bg-white p-6 rounded-xl shadow-lg">
-                <h3 className="text-xl font-semibold mb-4">Create Account</h3>
+              <AuthCard title="Create Account" compact>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -190,7 +238,7 @@ const SignupPage = () => {
                     Already have an account? Log in
                   </button>
                 </div>
-              </div>
+              </AuthCard>
             </div>
           </div>
           <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />

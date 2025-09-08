@@ -7,9 +7,10 @@ import AuthCard from '@/components/auth/AuthCard';
 import LoginForm from '@/components/auth/LoginForm';
 import SocialProviders from '@/components/auth/SocialProviders';
 import PageTransition from '@/components/PageTransition';
+import { signInWithGoogle } from '@/lib/google';
 
 const LoginPage = () => {
-  const { login, socialLogin } = useAuth();
+  const { login, socialLogin, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -72,12 +73,33 @@ const LoginPage = () => {
   };
 
   // SocialProviders now calls onSocial(provider, event).
-  const handleSocial = async (provider /* , e */) => {
+  const handleSocial = async (provider, payload /* e or credential */) => {
     if (pending) return;
     setPending(true);
     setError('');
     try {
-      await socialLogin(provider);
+      if (provider === 'google-credential') {
+        const res = await loginWithGoogle(payload);
+        if (!res?.success) throw new Error('Google login failed');
+        if (!res?.token) {
+          setError(
+            'Your Google account is not registered or not yet approved. Please sign up and complete identity verification.'
+          );
+          return; // Do not navigate; user can click Create Account
+        }
+      } else if (provider === 'google') {
+        const credential = await signInWithGoogle();
+        const res = await loginWithGoogle(credential);
+        if (!res?.success) throw new Error('Google login failed');
+        if (!res?.token) {
+          setError(
+            'Your Google account is not registered or not yet approved. Please sign up and complete identity verification.'
+          );
+          return;
+        }
+      } else {
+        await socialLogin(provider);
+      }
       // navigate("/dashboard");
       navigate('/');
     } catch (err) {
@@ -99,7 +121,7 @@ const LoginPage = () => {
 
         <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
           <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-            <AuthCard title="Login">
+            <AuthCard title="Login" compact>
               <LoginForm
                 email={email}
                 password={password}

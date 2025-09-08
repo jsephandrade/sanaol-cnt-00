@@ -17,6 +17,7 @@ const AuthContext = createContext({
   // actions
   login: async () => false,
   socialLogin: async () => false,
+  register: async () => false,
   logout: async () => {},
   refreshToken: async () => false,
   // role/permission helpers
@@ -131,6 +132,39 @@ export function AuthProvider({ children }) {
     [persistAuth]
   );
 
+  const loginWithGoogle = useCallback(
+    async (credential) => {
+      try {
+        const res = await authService.loginWithGoogle(credential);
+        if (!res?.success) return { success: false };
+        // Only persist when we actually have a token (approved users)
+        if (res.token) {
+          persistAuth(res.user, res.token);
+        }
+        return res; // { success, pending?, user, token?, verifyToken? }
+      } catch (err) {
+        return { success: false, error: err?.message || 'Login failed' };
+      }
+    },
+    [persistAuth]
+  );
+
+  const register = useCallback(
+    async (userData) => {
+      try {
+        const res = await authService.register(userData);
+        // Do not persist during pending; page will route to verify
+        if (res?.success && res?.token) {
+          persistAuth(res.user, res.token);
+        }
+        return res;
+      } catch (err) {
+        return { success: false, error: err?.message || 'Registration failed' };
+      }
+    },
+    [persistAuth]
+  );
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -179,6 +213,8 @@ export function AuthProvider({ children }) {
         token,
         login,
         socialLogin,
+        loginWithGoogle,
+        register,
         logout,
         refreshToken,
         hasRole,
