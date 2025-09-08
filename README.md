@@ -1,16 +1,18 @@
-# Technomart Canteen Management System
+﻿# TechnoMart Canteen Management System
 
-An intelligent canteen ordering system built for the CTU-MC Multipurpose Cooperative. This platform digitizes food ordering, payment processing, inventory tracking, and user analytics — optimized for speed, accessibility, and usability across devices.
+A modern canteen ordering and operations dashboard for the CTU-MC Multipurpose Cooperative. It digitizes food ordering, payments, inventory, user management, and analytics - optimized for speed, accessibility, and responsiveness across devices.
 
 ---
 
 ## Tech Stack
 
-- Vite: fast dev server and bundler
-- React: component-based UI
-- TypeScript: scalable, type-safe development
-- Tailwind CSS: utility-first styling
-- shadcn/ui + Radix: accessible, composable UI primitives
+- Vite + React (SWC) on port `8080`
+- React 18 with JSX (JavaScript; TypeScript tooling available)
+- Tailwind CSS + `tailwindcss-animate`
+- shadcn/ui built on Radix primitives + `lucide-react`
+- React Router 6, TanStack Query
+- Zod for API contracts and validation
+- Recharts, date-fns, embla carousel, Sonner toasts
 
 ---
 
@@ -22,26 +24,33 @@ An intelligent canteen ordering system built for the CTU-MC Multipurpose Coopera
 
 ## Features
 
-- Mobile-first UI for ordering meals
-- Multiple payments: cash, GCash, digital wallets
-- Inventory and supplier management
-- Admin analytics dashboard
-- Role-based access (Admin, Staff, Customer)
-- Pre-ordering, order tracking, realtime updates
+- POS with walk-in/online orders, discounts, live queue updates
+- Menu management: add/edit items, availability toggle, image uploads
+- Inventory tracking: grid/table views, filters, recent activity
+- Payments: methods, recent transactions, basic reports/exports
+- Dashboard analytics: KPIs, sales over time, category chart, popular items
+- Users and roles: RBAC, permissions, activity logs
+- Employee scheduling and staff overview
+- Catering events: menu selection and order tracking
+- Customer feedback: collection, metrics, reply workflow
+- Authentication (mock or real backend), social provider placeholders
+- Notifications and realtime channels (orders, notifications)
 
 ---
 
-## Installation
+## Quick Start
+
+Prerequisites: Node.js 18+ and npm.
 
 ```bash
 # Clone the repo
-git clone https://github.com/jsephandrade/technomart-canteen-management-system.git
-cd technomart-canteen-management-system
+git clone <repo-url>
+cd sanaol-cnt-00
 
 # Install dependencies
 npm install
 
-# Run development server
+# Start development server
 npm run dev
 ```
 
@@ -49,92 +58,114 @@ Open http://localhost:8080
 
 ---
 
+## Scripts
+
+- `npm run dev` - start Vite dev server
+- `npm run dev:force` - dev server with full rebuild
+- `npm run build` - production build to `dist/`
+- `npm run build:dev` - non-minified dev build
+- `npm run preview` - preview built app locally
+- `npm run lint` / `lint:fix` - ESLint (flat config)
+- `npm run format` - Prettier over the repo
+- `npm run clean:vite` - clear Vite cache
+
+Optional: `npm run prepare` to enable Husky hooks if you add them.
+
+---
+
 ## Environment & Backend Integration
 
-- Copy `.env.example` to `.env` and set values for your environment.
-  - `VITE_API_BASE_URL` — keep `/api` in development to use the Vite proxy.
-  - `VITE_DEV_PROXY_TARGET` — your backend URL in dev, e.g. `http://localhost:8000`.
-  - `VITE_WS_URL` (optional) — WebSocket endpoint for realtime features.
-- Dev proxy: Vite forwards `/api` requests to `VITE_DEV_PROXY_TARGET` to avoid CORS.
-- Production: Set `VITE_API_BASE_URL` to your public API origin (e.g. `https://api.example.com`).
-- The API client reads `VITE_API_BASE_URL` and falls back to `/api` if not set.
+Copy `.env.example` to `.env` and adjust for your setup:
 
-### Data Contracts with Zod
-
-- Schemas in `src/api/schemas/*` (User, Role, MenuItem, InventoryItem, Order, Payment, Feedback, Catering, Dashboard).
-- Use `validate(schema, data)` to assert API responses/requests.
-- DTO mappers in `src/api/mappers/*` (e.g., `userApiToModel`, `userModelToCreatePayload`).
-- Services validate and normalize fields (e.g., role/status casing) before returning to UI.
-
-### Security & Compliance
-
-- CSRF: If your backend uses cookie-based auth, enable credentials and set CSRF names in `.env`.
-  - `VITE_SEND_CREDENTIALS=true` turns on cookie sending and automatically enables CSRF in the API client.
-  - `VITE_CSRF_COOKIE_NAME=csrftoken` and `VITE_CSRF_HEADER_NAME=X-CSRFToken` (or your backend values).
-  - The client auto-adds the CSRF header for unsafe methods (POST/PUT/PATCH/DELETE) only when credentials are enabled.
-- CORS: In dev, requests go through the Vite proxy. In prod, ensure backend CORS allows the frontend origin and credentials if you use cookies.
-- Input sanitization: Renders user-supplied text as plain text (React escapes it). Avoid injecting HTML; if needed, sanitize on the server.
-- PII safety: Avoid logging tokens or user PII.
-
----
-
-## Environment Setup
-
-1. Copy the example env and adjust for your setup:
-
-```bash
-cp .env.example .env
-```
-
-2. Key variables (optional with sensible dev defaults):
-
-- `VITE_API_BASE_URL` — Base URL for API requests.
-  - Dev: keep `/api` to use the Vite proxy.
+- `VITE_API_BASE_URL` - base URL for API requests.
+  - Dev: keep `/api` to use the Vite dev proxy.
   - Prod: set to your public API (e.g., `https://api.example.com`).
-- `VITE_DEV_PROXY_TARGET` — Target backend for the dev proxy (e.g., `http://localhost:8000`).
-- `VITE_WS_URL` — WebSocket endpoint for realtime (e.g., `ws://localhost:8000/ws`).
-- `VITE_ENABLE_MOCKS` — `false` to use real APIs; `true` to use mock data.
-- `VITE_SEND_CREDENTIALS` — `true` to include cookies on requests (cookie-based auth).
-- `VITE_CSRF_COOKIE_NAME` / `VITE_CSRF_HEADER_NAME` — CSRF names for cookie-based auth.
+- `VITE_DEV_PROXY_TARGET` - backend origin the dev proxy forwards to (e.g., `http://localhost:8000`).
+- `VITE_WS_URL` - WebSocket base (e.g., `ws://localhost:8000/ws`).
+- `VITE_ENABLE_MOCKS` - `false` to prefer real APIs; services gracefully fall back to mocks on failure.
+- `VITE_SEND_CREDENTIALS` - `true` to send cookies (cookie-based auth).
+- `VITE_CSRF_COOKIE_NAME` / `VITE_CSRF_HEADER_NAME` - CSRF names when using cookies.
 
-3. Realtime:
+Dev proxy: requests to `/api/*` are forwarded to `VITE_DEV_PROXY_TARGET` (see `vite.config.ts`). In production, set `VITE_API_BASE_URL` to your API origin and ensure CORS is configured appropriately.
 
-- Set `VITE_WS_URL` (e.g., `ws://localhost:8000/ws`).
-- App connects to:
-  - Orders: `${VITE_WS_URL}/orders`
-  - Notifications: `${VITE_WS_URL}/notifications`
-  - Falls back to polling if the socket is down.
+Realtime: set `VITE_WS_URL` and the app connects to:
+
+- Orders: `${VITE_WS_URL}/orders` - expects `order_queue_update` and `order_update` events
+- Notifications: `${VITE_WS_URL}/notifications`
+
+If the socket is unavailable, UI gracefully degrades to polling or static state.
 
 ---
 
-## Smoke Test (5–10 minutes)
+## API Contracts (Zod) & Usage
 
-Prereqs: `npm install`, dev backend running at `VITE_DEV_PROXY_TARGET` or keep mocks enabled.
+- Schemas in `src/api/schemas/*` (User, Role, MenuItem, InventoryItem, Order, Payment, Feedback, Catering, Dashboard)
+- Use `validate(schema, data)` from `src/api/schemas/utils.js` to assert request/response shapes
+- DTO mappers in `src/api/mappers/*` normalize API <-> UI models
+- See `API_USAGE_GUIDE.md` for how to add new services/hooks and mock data
 
-1. Start the app: `npm run dev` → http://localhost:8080
+---
 
+## Pages & Routes (high-level)
+
+- `/` Dashboard
+- `/pos` POS
+- `/menu` Menu Management
+- `/inventory` Inventory
+- `/payments` Payments
+- `/users` User Management; `/logs` Activity Logs
+- `/sales` Sales Analytics; `/feedback` Customer Feedback
+- `/catering` Catering; `/employees` Employee Schedule
+- `/notifications` Notifications; `/settings` Settings; `/help` Help
+- `/login`, `/signup`, `/forgot-password`, `/face-scan`, `/face-registration`
+
+---
+
+## Project Structure (brief)
+
+- `src/api/` - `client.js`, `services/*`, `schemas/*`, `mockData.js`
+- `src/components/` - feature modules and `ui/*` (shadcn components)
+- `src/pages/` - route pages (lazy-loaded)
+- `src/hooks/` - domain hooks (inventory, users, POS, etc.)
+- `src/lib/` - helpers like `realtime.js`, `utils.js`
+- `public/` - static assets
+
+Path alias: `@` -> `./src` (see `vite.config.ts`).
+
+---
+
+## Smoke Test (5-10 minutes)
+
+Prereqs: `npm install`; backend at `VITE_DEV_PROXY_TARGET` (or let services fall back to mocks).
+
+1. Start the app: `npm run dev`, then open http://localhost:8080
 2. Login
-   - Mocks: `admin@canteen.com` / `1234`
+   - Mock: `admin@canteen.com` / `1234`
    - Real backend: any valid credentials
+3. Dashboard: 4 stat cards + 2 charts (API-backed if reachable)
+4. Users: search, add, edit, activate/deactivate, delete, manage roles
+5. Notifications: post a test WS message; it appears at the top
+6. POS queue: emit `order_queue_update`/`order_update`; list updates live
+7. Menu image upload: POST `/menu/items/:id/image` (multipart/form-data)
+8. Security: if using cookies, set `VITE_SEND_CREDENTIALS=true` and verify CSRF/CORS
 
-3. Dashboard
-   - See 4 stat cards and 2 charts.
-   - Wired to API = real values; otherwise mock values.
+---
 
-4. Users
-   - Search, Add, Edit, Activate/Deactivate, Delete, and manage Roles.
+## Build & Deploy
 
-5. Notifications (Realtime)
-   - Broadcast a test message on the server WS; it appears at the top.
+- `npm run build` -> outputs to `dist/`
+- `npm run preview` to verify locally
 
-6. POS Order Queue (Realtime)
-   - Send `order_queue_update` or `order_update` events; UI updates live.
+Serve `dist/` behind your preferred web server or static host. Ensure production `VITE_API_BASE_URL` points to your API and CORS is configured.
 
-7. Menu Image Upload
-   - Submit multipart/form-data to `/menu/items/:id/image`.
+---
 
-8. Security checks
-   - If using cookies: set `VITE_SEND_CREDENTIALS=true` and confirm sessions.
-   - Ensure CSRF names match your backend; confirm CORS in prod.
+## Troubleshooting
 
-If any step fails and you want this wired to your backend endpoints, tell me which endpoints and I’ll plug them in.
+- Port in use: change `server.port` in `vite.config.ts`
+- 401s with cookie auth: set `VITE_SEND_CREDENTIALS=true` and CSRF names to match your backend
+- Mixed content (WS/HTTP): use matching protocols (e.g., `wss://` with `https://`)
+
+---
+
+If you want this wired to a specific backend, share the endpoints and auth scheme and I can align the services and schemas accordingly.
