@@ -30,6 +30,16 @@ function initGoogleId(callback) {
       import.meta.env.VITE_GOOGLE_CLIENT_ID) ||
     '';
   if (!clientId) throw new Error('Missing VITE_GOOGLE_CLIENT_ID');
+  if (
+    !(
+      typeof window !== 'undefined' &&
+      window.google &&
+      window.google.accounts &&
+      window.google.accounts.id
+    )
+  ) {
+    throw new Error('Google Identity not available');
+  }
   // Initialize with callback that receives an ID token in response.credential
   window.google.accounts.id.initialize({ client_id: clientId, callback });
 }
@@ -61,6 +71,7 @@ export async function signInWithGoogle({ timeoutMs = 60000 } = {}) {
       initGoogleId(onCredential);
       // Trigger One Tap account chooser; may be suppressed by browser policy
       window.google.accounts.id.prompt((notification) => {
+        // If One Tap was dismissed or failed and no credential arrived, let the caller choose another flow
         if (settled) return;
         const type =
           notification &&
