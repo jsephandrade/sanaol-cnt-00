@@ -26,15 +26,43 @@ class VerificationService {
     return res?.data || res;
   }
 
-  async listRequests({
-    status = 'pending',
-    page = 1,
-    limit = 10,
-    search = '',
-  } = {}) {
-    const params = new URLSearchParams({ status, page, limit, search });
+  async list({ status = 'pending', page = 1, limit = 10, search = '' } = {}) {
+    const params = new URLSearchParams();
+    Object.entries({ status, page, limit, search }).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '')
+        params.append(k, String(v));
+    });
+
+    // apiClient automatically injects the Authorization header
+    // through AuthContext's token provider
     const res = await apiClient.get(`/verify/requests?${params.toString()}`);
-    return res?.data || res;
+    const data = (res?.data || []).map((r) => ({
+      id: r.id,
+      user: {
+        name: r?.user?.name || '',
+        email: r?.user?.email || '',
+        phone: r?.user?.phone || '',
+      },
+      createdAt: r.createdAt,
+      hasHeadshot: Boolean(r.hasHeadshot),
+    }));
+
+    return {
+      success: res?.success ?? true,
+      message: res?.message,
+      data,
+      pagination: res?.pagination || {
+        page: Number(page) || 1,
+        limit: Number(limit) || data.length,
+        total: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
+  // Backwards compatibility
+  async listRequests(options) {
+    return this.list(options);
   }
 
   async approve({ requestId, role = 'staff', note = '' }) {

@@ -16,10 +16,16 @@ export const useVerificationQueue = (params = {}) => {
   const query = useQuery({
     queryKey: ['verify-requests', qp],
     queryFn: async () => {
-      const res = await verificationService.listRequests(qp);
-      if (!res?.success)
-        throw new Error(res?.message || 'Failed to load verification requests');
-      return res;
+      try {
+        const res = await verificationService.list(qp);
+        if (!res?.success)
+          throw new Error(
+            res?.message || 'Failed to load verification requests'
+          );
+        return res;
+      } catch (err) {
+        throw new Error(err?.message || 'Failed to load verification requests');
+      }
     },
     staleTime: 15_000,
     gcTime: 5 * 60_000,
