@@ -45,4 +45,4 @@ venv/
 env/
 backend/.venv/
 
-backend/private_media
+backend/private_media/
