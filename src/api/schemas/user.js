@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ISODateTime } from './utils';
 import { RoleValue } from './role';
 
-export const UserStatus = z.enum(['active', 'deactivated']);
+export const UserStatus = z.enum(['active', 'deactivated', 'pending']);
 
 export const UserSchema = z
   .object({
@@ -13,7 +13,11 @@ export const UserSchema = z
     status: UserStatus,
     permissions: z.array(z.string()).optional().default([]),
     createdAt: ISODateTime,
-    lastLogin: ISODateTime,
+    // Accept null/empty string from API, otherwise validate ISO date
+    lastLogin: z.preprocess(
+      (v) => (v == null || v === '' ? null : v),
+      ISODateTime.nullable()
+    ),
   })
   .passthrough();
 
@@ -33,4 +37,3 @@ export const UserUpdateSchema = z
     status: UserStatus.optional(),
   })
   .strict();
-

@@ -38,7 +38,10 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
+
+  // Keep internal state as '' for “no filter” to keep the hook simple
   const [roleFilter, setRoleFilter] = useState('');
+
   const {
     users,
     pagination,
@@ -50,18 +53,22 @@ const Users = () => {
     updateUser,
     deleteUser,
     updateUserStatus,
-  } = useUserManagement({ search: debouncedSearch, role: roleFilter });
+  } = useUserManagement({
+    search: debouncedSearch,
+    // IMPORTANT: send '' (not a sentinel) to the hook/api
+    role: roleFilter,
+  });
+
   const {
     roles,
     loading: rolesLoading,
     error: rolesError,
     updateRoleConfig,
   } = useRoles();
+
   const { hasAnyRole } = useAuth();
   const showVerifyQueue = hasAnyRole(['admin', 'manager']);
   const isAdmin = hasAnyRole(['admin']);
-
-  // Data is fetched with search term via hook; no local filtering needed
 
   const getRoleBadgeVariant = (role) => {
     switch (role) {
@@ -87,7 +94,7 @@ const Users = () => {
   };
 
   const handleAddUser = async (newUser) => {
-    const res = await createUser.mutateAsync(newUser);
+    await createUser.mutateAsync(newUser);
     if (newUser?.sendInvite && newUser?.email) {
       try {
         const { authService } = await import('@/api/services/authService');
@@ -139,13 +146,20 @@ const Users = () => {
                   onChange={(value) => setSearchTerm(value)}
                 />
               </div>
+
+              {/* Role filter using a sentinel value "_all" for the "All" item */}
               <div className="w-full sm:w-[220px]">
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Select
+                  // Show "_all" when roleFilter is '' so the All item is selected
+                  value={roleFilter === '' ? '_all' : roleFilter}
+                  // Map "_all" back to '' so the hook gets a clean empty filter
+                  onValueChange={(v) => setRoleFilter(v === '_all' ? '' : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="_all">All Roles</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="staff">Staff</SelectItem>
@@ -177,6 +191,7 @@ const Users = () => {
               />
             )}
           </CardContent>
+
           <UsersFooter
             showing={users.length}
             total={pagination?.total || users.length}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardHeader,
@@ -42,8 +42,10 @@ const RoleSelect = ({ value, onChange }) => (
 );
 
 export const PendingVerifications = () => {
-  const { requests, loading, error, refetch, approve, reject } =
-    useVerificationQueue({ status: 'pending', limit: 10 });
+  const { requests, loading, error, approve, reject } = useVerificationQueue({
+    status: 'pending',
+    limit: 10,
+  });
   const [previewId, setPreviewId] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [actionId, setActionId] = useState(null);
