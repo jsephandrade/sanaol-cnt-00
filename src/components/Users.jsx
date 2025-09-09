@@ -70,6 +70,10 @@ const Users = () => {
   const showVerifyQueue = hasAnyRole(['admin', 'manager']);
   const isAdmin = hasAnyRole(['admin']);
 
+  const nonPendingUsers = Array.isArray(users)
+    ? users.filter((u) => u.status !== 'pending')
+    : [];
+
   const getRoleBadgeVariant = (role) => {
     switch (role) {
       case 'admin':
@@ -178,7 +182,7 @@ const Users = () => {
               <ErrorState message={error} onRetry={refetch} />
             ) : (
               <UserTable
-                users={users}
+                users={nonPendingUsers}
                 onEditUser={(user) => {
                   setSelectedUser(user);
                   setShowEditModal(true);
@@ -193,8 +197,8 @@ const Users = () => {
           </CardContent>
 
           <UsersFooter
-            showing={users.length}
-            total={pagination?.total || users.length}
+            showing={nonPendingUsers.length}
+            total={pagination?.total ?? nonPendingUsers.length}
           />
         </Card>
 
@@ -261,7 +265,10 @@ const Users = () => {
             </CardContent>
           </Card>
         ) : (
-          <ActiveUsersList users={users} getInitials={getInitials} />
+          <ActiveUsersList
+            users={nonPendingUsers.filter((u) => u.status === 'active')}
+            getInitials={getInitials}
+          />
         )}
       </div>
 
