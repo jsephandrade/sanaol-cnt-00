@@ -18,7 +18,7 @@ const UserLogs = () => {
     {
       id: '1',
       action: 'User Login',
-      user: 'admin@canteen.com',
+      user: 'user@example.com',
       timestamp: '2025-04-17 09:32:15',
       details: 'Successful login from IP 192.168.1.105',
       type: 'login',
@@ -26,7 +26,7 @@ const UserLogs = () => {
     {
       id: '2',
       action: 'Menu Item Added',
-      user: 'sarah@canteen.com',
+      user: 'sarah@example.com',
       timestamp: '2025-04-17 10:15:22',
       details: 'Added new menu item "Grilled Chicken Sandwich" to lunch menu',
       type: 'action',
@@ -34,7 +34,7 @@ const UserLogs = () => {
     {
       id: '3',
       action: 'Inventory Updated',
-      user: 'miguel@canteen.com',
+      user: 'miguel@example.com',
       timestamp: '2025-04-17 11:25:40',
       details: 'Updated stock levels for Rice (-5kg) and Tomatoes (-2kg)',
       type: 'action',
@@ -42,7 +42,7 @@ const UserLogs = () => {
     {
       id: '4',
       action: 'Payment Processed',
-      user: 'aisha@canteen.com',
+      user: 'aisha@example.com',
       timestamp: '2025-04-17 12:10:05',
       details: 'Processed card payment of $45.75 for order #1289',
       type: 'action',
@@ -52,8 +52,7 @@ const UserLogs = () => {
       action: 'Failed Login Attempt',
       user: 'unknown',
       timestamp: '2025-04-17 13:27:51',
-      details:
-        'Failed login attempt for admin@canteen.com from IP 203.45.67.89',
+      details: 'Failed login attempt for user@example.com from IP 203.45.67.89',
       type: 'security',
     },
     {
@@ -67,9 +66,9 @@ const UserLogs = () => {
     {
       id: '7',
       action: 'User Role Changed',
-      user: 'admin@canteen.com',
+      user: 'user@example.com',
       timestamp: '2025-04-17 14:55:12',
-      details: 'Changed role for david@canteen.com from Staff to Cashier',
+      details: 'Changed role for david@example.com from Staff to Cashier',
       type: 'security',
     },
   ]);

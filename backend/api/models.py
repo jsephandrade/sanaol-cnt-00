@@ -18,9 +18,11 @@ class AppUser(models.Model):
     permissions = models.JSONField(default=list, blank=True)
     password_hash = models.CharField(max_length=128, blank=True)
     avatar = models.URLField(blank=True, null=True)
+    phone = models.CharField(max_length=32, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_login = models.DateTimeField(blank=True, null=True)
+    email_verified = models.BooleanField(default=False)
 
     class Meta:
         db_table = "app_user"
@@ -93,3 +95,63 @@ class AccessRequest(models.Model):
         if note:
             self.notes = (self.notes or "") + ("\n" if self.notes else "") + note
         self.save(update_fields=["status", "verified_at", "verified_by", "notes"]) 
+
+
+class RefreshToken(models.Model):
+    """Persistent refresh token with rotation and revocation support.
+
+    The raw token is only shown to the client once and its SHA256 is stored.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="refresh_tokens")
+    token_hash = models.CharField(max_length=128, unique=True)
+    remember = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(blank=True, null=True)
+    rotated_from = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="rotated_to"
+    )
+    user_agent = models.CharField(max_length=256, blank=True)
+    ip_address = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = "refresh_token"
+        indexes = [
+            models.Index(fields=["user", "expires_at"]),
+        ]
+
+    @property
+    def is_active(self) -> bool:
+        if self.revoked_at:
+            return False
+        return timezone.now() < self.expires_at
+
+
+class ResetToken(models.Model):
+    """One-time password reset token with optional 6-digit code fallback."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="reset_tokens")
+    token_hash = models.CharField(max_length=128, unique=True)
+    code_hash = models.CharField(max_length=128, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(blank=True, null=True)
+    revoked_at = models.DateTimeField(blank=True, null=True)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "reset_token"
+        indexes = [
+            models.Index(fields=["user", "expires_at"]),
+        ]
+
+    @property
+    def is_active(self) -> bool:
+        if self.revoked_at or self.used_at:
+            return False
+        return timezone.now() < self.expires_at

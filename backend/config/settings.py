@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from .settings_components import get_database, get_cors, get_jwt, get_email
 try:
     from dotenv import load_dotenv  # type: ignore
 except Exception:
@@ -79,63 +80,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # Database configuration (SQLite by default; supports MySQL/Postgres via env)
-
-def _env_bool(key: str, default: bool = False) -> bool:
-    val = os.getenv(key)
-    if val is None:
-        return default
-    return val in {"1", "true", "True", "yes", "on"}
-
-
-DB_ENGINE = (os.getenv("DJANGO_DB_ENGINE", "") or "").strip().lower()
-DB_NAME = os.getenv("DJANGO_DB_NAME", str(BASE_DIR / "db.sqlite3"))
-DB_USER = os.getenv("DJANGO_DB_USER", "")
-DB_PASSWORD = os.getenv("DJANGO_DB_PASSWORD", "")
-DB_HOST = os.getenv("DJANGO_DB_HOST", "")
-DB_PORT = os.getenv("DJANGO_DB_PORT", "")
-try:
-    DB_CONN_MAX_AGE = int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60"))
-except Exception:
-    DB_CONN_MAX_AGE = 60
-
-if DB_ENGINE in {"mysql", "mariadb"}:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": DB_NAME,
-            "USER": DB_USER,
-            "PASSWORD": DB_PASSWORD,
-            "HOST": DB_HOST or "127.0.0.1",
-            "PORT": DB_PORT or "3306",
-            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
-            "OPTIONS": {
-                # Ensure utf8mb4 support for emoji and full Unicode
-                "charset": "utf8mb4",
-                # Safe strict mode; adjust if your server disallows it
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
-    }
-elif DB_ENGINE in {"postgres", "postgresql", "psql"}:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": DB_NAME,
-            "USER": DB_USER,
-            "PASSWORD": DB_PASSWORD,
-            "HOST": DB_HOST or "127.0.0.1",
-            "PORT": DB_PORT or "5432",
-            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
-        }
-    }
-else:
-    # Default to SQLite (file-based)
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": DB_NAME,
-        }
-    }
+DATABASES = get_database(BASE_DIR)
 
 # Static files (optional for API-only)
 STATIC_URL = "/static/"
@@ -146,32 +91,19 @@ TIME_ZONE = "UTC"
 USE_TZ = True
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
-CORS_ALLOW_HEADERS = list(set([
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]))
+CORS_ALLOWED_ORIGINS, CORS_ALLOW_HEADERS = get_cors()
 
 # Django defaults
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 # JWT settings
-JWT_SECRET = os.getenv("DJANGO_JWT_SECRET", SECRET_KEY)
-JWT_ALGORITHM = os.getenv("DJANGO_JWT_ALG", "HS256")
-try:
-    JWT_EXP_SECONDS = int(os.getenv("DJANGO_JWT_EXP_SECONDS", "3600"))
-except Exception:
-    JWT_EXP_SECONDS = 3600
+_jwt = get_jwt()
+JWT_SECRET = _jwt["JWT_SECRET"]
+JWT_ALGORITHM = _jwt["JWT_ALGORITHM"]
+JWT_EXP_SECONDS = _jwt["JWT_EXP_SECONDS"]
+JWT_REMEMBER_EXP_SECONDS = _jwt["JWT_REMEMBER_EXP_SECONDS"]
+JWT_REFRESH_EXP_SECONDS = _jwt["JWT_REFRESH_EXP_SECONDS"]
+JWT_REFRESH_REMEMBER_EXP_SECONDS = _jwt["JWT_REFRESH_REMEMBER_EXP_SECONDS"]
 
 # Google OAuth
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
@@ -197,9 +129,9 @@ AUTHENTICATION_BACKENDS = (
 )
 
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 
 SOCIALACCOUNT_AUTO_SIGNUP = True  # creation allowed, but we gate access until approved
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.SocialAdapter"
@@ -215,41 +147,18 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # Email configuration
-EMAIL_BACKEND = os.getenv(
-    "DJANGO_EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend",
-)
-DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "no-reply@canteen.local")
-SERVER_EMAIL = os.getenv("DJANGO_SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+_email = get_email()
+EMAIL_BACKEND = _email["EMAIL_BACKEND"]
+DEFAULT_FROM_EMAIL = _email["DEFAULT_FROM_EMAIL"]
+SERVER_EMAIL = _email["SERVER_EMAIL"]
+EMAIL_HOST = _email["EMAIL_HOST"]
+EMAIL_PORT = _email["EMAIL_PORT"]
+EMAIL_HOST_USER = _email["EMAIL_HOST_USER"]
+EMAIL_HOST_PASSWORD = _email["EMAIL_HOST_PASSWORD"]
+EMAIL_USE_TLS = _email["EMAIL_USE_TLS"]
+EMAIL_USE_SSL = _email["EMAIL_USE_SSL"]
+ADMINS = _email["ADMINS"]
+EMAIL_SUBJECT_PREFIX = _email["EMAIL_SUBJECT_PREFIX"]
 
-# Optional SMTP settings (used if EMAIL_BACKEND is SMTP)
-EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "localhost")
-try:
-    EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "25"))
-except Exception:
-    EMAIL_PORT = 25
-EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "0") in {"1", "true", "True"}
-EMAIL_USE_SSL = os.getenv("DJANGO_EMAIL_USE_SSL", "0") in {"1", "true", "True"}
-
-# Admin recipients (for mail_admins). Set DJANGO_ADMINS="Name <email>,Other <email>"
-def _parse_admins(raw: str):
-    out = []
-    if not raw:
-        return out
-    parts = [x.strip() for x in raw.split(",") if x.strip()]
-    for p in parts:
-        # Expect "Name <email>" or just email
-        if "<" in p and ">" in p:
-            name = p.split("<", 1)[0].strip()
-            email = p.split("<", 1)[1].split(">", 1)[0].strip()
-        else:
-            name = p
-            email = p
-        if email:
-            out.append((name or email, email))
-    return out
-
-ADMINS = _parse_admins(os.getenv("DJANGO_ADMINS", ""))
-EMAIL_SUBJECT_PREFIX = os.getenv("DJANGO_EMAIL_SUBJECT_PREFIX", "[Canteen]")
+# Frontend base URL for building links in emails (password reset, verification)
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:8080")

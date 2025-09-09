@@ -18,11 +18,16 @@ class PendingUserGateMiddleware:
         "/api/auth/login",
         "/api/auth/register",
         "/api/auth/google",
+        "/api/auth/verify-email",
+        "/api/auth/resend-verification",
         "/api/auth/forgot-password",
         "/api/auth/reset-password",
+        "/api/auth/reset-password-code",
+        "/api/auth/verify-reset-code",
         "/api/auth/refresh-token",
         "/api/verify/status",
         "/api/verify/upload",
+        "/api/verify/resend-token",
         "/accounts/",  # allow allauth endpoints
         "/admin/",     # allow admin UI
         "/static/",

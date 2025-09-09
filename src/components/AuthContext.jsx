@@ -46,6 +46,13 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+  const [refreshTokenValue, setRefreshTokenValue] = useState(() => {
+    try {
+      return localStorage.getItem('refresh_token') || null;
+    } catch {
+      return null;
+    }
+  });
 
   // Keep a ref for apiClient token provider to avoid stale closures
   const tokenRef = useRef(token);
@@ -87,30 +94,38 @@ export function AuthProvider({ children }) {
     apiClient.setAuthToken(token);
   }, [token]);
 
-  const persistAuth = useCallback((nextUser, nextToken) => {
-    setUser(nextUser);
-    setToken(nextToken);
-    try {
-      localStorage.setItem('user', JSON.stringify(nextUser));
-      if (nextToken) {
-        localStorage.setItem('auth_token', nextToken);
-      } else {
-        localStorage.removeItem('auth_token');
-      }
-    } catch {}
-  }, []);
+  const persistAuth = useCallback(
+    (nextUser, nextToken, nextRefreshToken = null) => {
+      setUser(nextUser);
+      setToken(nextToken);
+      setRefreshTokenValue(nextRefreshToken);
+      try {
+        localStorage.setItem('user', JSON.stringify(nextUser));
+        if (nextToken) {
+          localStorage.setItem('auth_token', nextToken);
+        } else {
+          localStorage.removeItem('auth_token');
+        }
+        if (nextRefreshToken) {
+          localStorage.setItem('refresh_token', nextRefreshToken);
+        } else {
+          localStorage.removeItem('refresh_token');
+        }
+      } catch {}
+    },
+    []
+  );
 
   const login = useCallback(
     async (email, password, options = {}) => {
       try {
         const res = await authService.login(email, password, options);
         if (res?.success) {
-          persistAuth(res.user, res.token || null);
-          return true;
+          persistAuth(res.user, res.token || null, res.refreshToken || null);
         }
-        return false;
+        return res;
       } catch (err) {
-        return false;
+        return { success: false, error: err?.message || 'Login failed' };
       }
     },
     [persistAuth]
@@ -121,7 +136,7 @@ export function AuthProvider({ children }) {
       try {
         const res = await authService.socialLogin(provider);
         if (res?.success) {
-          persistAuth(res.user, res.token || null);
+          persistAuth(res.user, res.token || null, res.refreshToken || null);
           return true;
         }
         return false;
@@ -139,7 +154,7 @@ export function AuthProvider({ children }) {
         if (!res?.success) return { success: false };
         // Only persist when we actually have a token (approved users)
         if (res.token) {
-          persistAuth(res.user, res.token);
+          persistAuth(res.user, res.token, res.refreshToken || null);
         }
         return res; // { success, pending?, user, token?, verifyToken? }
       } catch (err) {
@@ -155,7 +170,7 @@ export function AuthProvider({ children }) {
         const res = await authService.register(userData);
         // Do not persist during pending; page will route to verify
         if (res?.success && res?.token) {
-          persistAuth(res.user, res.token);
+          persistAuth(res.user, res.token, res.refreshToken || null);
         }
         return res;
       } catch (err) {
@@ -167,18 +182,22 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await authService.logout();
+      await authService.logout(refreshTokenValue);
     } catch {}
-    persistAuth(null, null);
-  }, [persistAuth]);
+    persistAuth(null, null, null);
+  }, [persistAuth, refreshTokenValue]);
 
   const refreshToken = useCallback(async () => {
     try {
-      const res = await authService.refreshToken();
+      const res = await authService.refreshToken(refreshTokenValue);
       if (res?.success && res?.token) {
         setToken(res.token);
+        setRefreshTokenValue(res.refreshToken || null);
         try {
           localStorage.setItem('auth_token', res.token);
+          if (res.refreshToken) {
+            localStorage.setItem('refresh_token', res.refreshToken);
+          }
         } catch {}
         return true;
       }
@@ -187,7 +206,7 @@ export function AuthProvider({ children }) {
       await logout();
       return false;
     }
-  }, [logout]);
+  }, [logout, refreshTokenValue]);
 
   // keep latest refresh function in a ref for onUnauthorized
   useEffect(() => {

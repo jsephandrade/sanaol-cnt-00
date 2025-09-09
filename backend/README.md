@@ -8,7 +8,7 @@ What's included
 - File-based SQLite DB by default (`db.sqlite3`) for models; override with `DJANGO_DB_NAME`
 - Endpoints:
   - `GET /api/health` -> `{ status: "ok" }`
-  - `POST /api/auth/login` -> returns mock user+token (accepts `admin@canteen.com` / `1234`)
+  - `POST /api/auth/login` -> authenticates with your created users
   - `POST /api/auth/logout`
   - `POST /api/auth/register`
   - `POST /api/auth/forgot-password`
@@ -46,6 +46,6 @@ Notes
 
 You can quickly create or update an admin via a management command:
 
-    python manage.py bootstrap_admin --email admin@canteen.com --password "your-strong-pass" --name "Admin User"
+    python manage.py bootstrap_admin --email your-email@example.com --password "your-strong-pass" --name "Admin"
 
 This will set role=admin and permissions=["all"]. Re-running updates the password/name.

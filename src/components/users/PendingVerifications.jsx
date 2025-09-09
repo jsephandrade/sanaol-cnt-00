@@ -107,6 +107,7 @@ export const PendingVerifications = () => {
                 <tr className="text-left text-muted-foreground">
                   <th className="py-2">User</th>
                   <th className="py-2">Email</th>
+                  <th className="py-2">Phone</th>
                   <th className="py-2">Submitted</th>
                   <th className="py-2">Headshot</th>
                   <th className="py-2">Actions</th>
@@ -119,6 +120,7 @@ export const PendingVerifications = () => {
                       {req.user?.name || '—'}
                     </td>
                     <td className="py-2">{req.user?.email}</td>
+                    <td className="py-2">{req.user?.phone || '—'}</td>
                     <td className="py-2">
                       {new Date(req.createdAt).toLocaleString()}
                     </td>

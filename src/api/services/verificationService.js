@@ -19,6 +19,13 @@ class VerificationService {
     return res?.data || res;
   }
 
+  async refreshVerifyToken(verifyToken) {
+    const res = await apiClient.post('/verify/resend-token', {
+      verifyToken,
+    });
+    return res?.data || res;
+  }
+
   async listRequests({
     status = 'pending',
     page = 1,

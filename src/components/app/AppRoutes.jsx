@@ -13,11 +13,15 @@ const Index = lazy(() => import('../../pages/Index'));
 const LoginPage = lazy(() => import('../../pages/LoginPage'));
 const SignupPage = lazy(() => import('../../pages/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('../../pages/ForgotPasswordPage'));
+const ResetCodePage = lazy(() => import('../../pages/ResetCodePage'));
+const SetNewPasswordPage = lazy(() => import('../../pages/SetNewPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../../pages/ResetPasswordPage'));
 const FaceScanPage = lazy(() => import('../../pages/FaceScanPage'));
 const FaceRegistrationPage = lazy(
   () => import('../../pages/FaceRegistrationPage')
 );
 const VerifyIdentityPage = lazy(() => import('../../pages/VerifyIdentityPage'));
+const VerifyEmailPage = lazy(() => import('../../pages/VerifyEmailPage'));
 const NotFound = lazy(() => import('../../pages/NotFound'));
 import HelpPage from '../../pages/HelpPage';
 const SettingsPage = lazy(() => import('../../pages/SettingsPage'));
@@ -75,9 +79,13 @@ const AppRoutes = () => {
         '/login': 'Login',
         '/signup': 'Sign Up',
         '/forgot-password': 'Forgot Password',
+        '/reset-code': 'Reset Code',
+        '/set-new-password': 'New Password',
+        '/reset-password': 'Reset Password',
         '/face-scan': 'Face Scan',
         '/face-registration': 'Face Registration',
         '/verify': 'Verify Identity',
+        '/verify-email': 'Verify Email',
         '/menu': 'Menu Management',
         '/sales': 'Sales Analytics',
         '/employees': 'Employee Schedule',
@@ -130,6 +138,30 @@ const AppRoutes = () => {
             }
           />
           <Route
+            path="/reset-code"
+            element={
+              <PublicRoute>
+                <ResetCodePage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/set-new-password"
+            element={
+              <PublicRoute>
+                <SetNewPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
             path="/face-scan"
             element={
               <PublicRoute>
@@ -150,6 +182,14 @@ const AppRoutes = () => {
             element={
               <PublicRoute>
                 <VerifyIdentityPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <PublicRoute>
+                <VerifyEmailPage />
               </PublicRoute>
             }
           />

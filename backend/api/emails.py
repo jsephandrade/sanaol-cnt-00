@@ -5,9 +5,13 @@ from django.core.mail import send_mail, mail_admins
 def _safe_send(func, *args, **kwargs):
     try:
         func(*args, **kwargs)
-    except Exception:
-        # In production, you might log this
-        pass
+    except Exception as e:
+        # Log in debug to aid troubleshooting (e.g., SMTP misconfig)
+        try:
+            if getattr(settings, "DEBUG", False):
+                print(f"[email] send failed: {e}")
+        except Exception:
+            pass
 
 
 def notify_admins_verification_submitted(app_user, access_request=None):
@@ -80,3 +84,47 @@ def email_user_rejected(app_user, note: str = ""):
         fail_silently=True,
     )
 
+
+def email_user_password_reset(email: str, reset_link: str, code: str | None = None, expires_minutes: int = 15):
+    """Send a password reset email containing a one-time link and optional code."""
+    if not email:
+        return
+    subject = "Reset your password"
+    code_text = f"\nReset code: {code}\n" if code else "\n"
+    message = (
+        "Hello,\n\n"
+        "We received a request to reset your password. If you made this request, "
+        "use the link below (or the 6-digit code) to choose a new password. "
+        "If you did not request this, you can safely ignore this email.\n\n"
+        f"Reset link: {reset_link}\n"
+        f"This reset expires in approximately {expires_minutes} minutes." + code_text +
+        "If the link doesn't work on this device, open the app and choose 'I have a code'.\n"
+    )
+    _safe_send(
+        send_mail,
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=True,
+    )
+
+def email_user_email_verification(email: str, verify_link: str):
+    """Send an email address verification link."""
+    if not email:
+        return
+    subject = "Verify your email address"
+    message = (
+        "Hello,\n\n"
+        "Please verify your email address by clicking the link below:\n\n"
+        f"Verify link: {verify_link}\n\n"
+        "If you did not create an account, you can ignore this email."
+    )
+    _safe_send(
+        send_mail,
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=True,
+    )

@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--email", required=True, help="Admin email")
         parser.add_argument("--password", required=True, help="Admin password")
-        parser.add_argument("--name", default="Admin User", help="Admin name")
+        parser.add_argument("--name", default="Admin", help="Admin name")
         parser.add_argument("--role", default="admin", help="Role (default: admin)")
 
     def handle(self, *args, **options):
@@ -44,4 +44,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Updated admin user: {email}"))
         else:
             self.stdout.write(self.style.SUCCESS(f"Created admin user: {email}"))
-

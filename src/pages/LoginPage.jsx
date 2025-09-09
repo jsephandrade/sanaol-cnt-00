@@ -57,13 +57,26 @@ const LoginPage = () => {
 
     setPending(true);
     try {
-      const ok = await login(email, password, { remember });
-      if (!ok) {
-        setError('Invalid credentials.');
+      const res = await login(email, password, { remember });
+      if (!res?.success) {
+        setError(res?.error || 'Invalid credentials.');
         return;
       }
-      // navigate on success if desired:
-      // navigate("/dashboard");
+      // If pending, stash verify token and route to verification
+      if (
+        res?.pending ||
+        (res?.user?.status || '').toLowerCase() !== 'active'
+      ) {
+        try {
+          sessionStorage.setItem('verify_token', res.verifyToken || '');
+          sessionStorage.setItem(
+            'pending_user',
+            JSON.stringify(res.user || {})
+          );
+        } catch {}
+        navigate('/verify');
+        return;
+      }
       navigate('/');
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-// import { useAuth } from '@/components/AuthContext'; // Uncomment if you have a real auth method
+import authService from '@/api/services/authService';
 
 const Spinner = () => (
   <svg
@@ -27,13 +27,14 @@ const Spinner = () => (
 );
 
 const ForgotPasswordPage = () => {
-  // const { sendPasswordResetEmail } = useAuth(); // <-- if available
+  // Using authService to trigger backend password reset email
 
   const [email, setEmail] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [success, setSuccess] = useState('');
+  const [debugLink, setDebugLink] = useState('');
   const alertRef = useRef(null);
 
   useEffect(() => {
@@ -59,14 +60,18 @@ const ForgotPasswordPage = () => {
 
     setPending(true);
     try {
-      // --- Replace this block with your real API call ---
-      // await sendPasswordResetEmail(email);
-      await new Promise((res) => setTimeout(res, 1200)); // simulate network
-      // --------------------------------------------------
-
+      const res = await authService.forgotPassword(email);
+      if (res?.debugResetLink) setDebugLink(res.debugResetLink);
       setSuccess(
         'If an account exists for this email, a password reset link has been sent.'
       );
+      try {
+        sessionStorage.setItem('reset_email', email);
+      } catch {}
+      // Navigate to code entry page for the new flow
+      setTimeout(() => {
+        window.location.href = `/reset-code?email=${encodeURIComponent(email)}`;
+      }, 400);
     } catch (err) {
       setError(
         'Something went wrong while sending the reset email. Please try again.'
@@ -149,6 +154,17 @@ const ForgotPasswordPage = () => {
             )}
           </button>
         </form>
+
+        {debugLink ? (
+          <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded text-xs break-all">
+            Developer only: Reset link
+            <div className="mt-1">
+              <a href={debugLink} className="underline break-all">
+                {debugLink}
+              </a>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-4 flex items-center justify-between text-sm">
           <Link

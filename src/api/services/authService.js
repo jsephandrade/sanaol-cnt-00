@@ -21,7 +21,7 @@ class AuthService {
         user: {
           id: 'g-' + Date.now().toString(),
           name: 'Google User',
-          email: 'user@gmail.com',
+          email: 'user@example.com',
           role: 'staff',
           status: 'pending',
         },
@@ -40,20 +40,28 @@ class AuthService {
       pending: Boolean(data?.pending ?? false),
       user: data.user || data,
       token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
     };
   }
   async login(email, password, options = {}) {
     if (USE_MOCKS) {
       await mockDelay();
-      if (email === 'admin@canteen.com' && password === '1234') {
-        return {
-          success: true,
-          user: { id: '1', name: 'Admin User', email, role: 'admin' },
-          token: 'mock-jwt-token-12345',
-        };
-      }
-      throw new Error('Invalid credentials');
+      // Generic mock: accept any email/password and return a basic user
+      return {
+        success: true,
+        pending: false,
+        user: {
+          id: 'u-' + Date.now().toString(),
+          name: email.split('@')[0] || 'User',
+          email,
+          role: 'staff',
+          status: 'active',
+        },
+        token: 'mock-jwt-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now(),
+        verifyToken: null,
+      };
     }
     const res = await apiClient.post(
       '/auth/login',
@@ -62,14 +70,18 @@ class AuthService {
     );
     const data = res?.data || res;
     return {
-      success: true,
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
       user: data.user || {
         id: data.userId || 'me',
         name: data.name || email,
         email,
-        role: (data.role || 'admin').toLowerCase(),
+        role: (data.role || 'staff').toLowerCase(),
+        status: data.status || 'active',
       },
       token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
     };
   }
 
@@ -103,16 +115,17 @@ class AuthService {
         status: data.status || 'pending',
       },
       token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
     };
   }
 
-  async logout() {
+  async logout(refreshToken) {
     if (USE_MOCKS) {
       await mockDelay(300);
       return { success: true };
     }
-    const res = await apiClient.post('/auth/logout', {});
+    const res = await apiClient.post('/auth/logout', { refreshToken });
     return res?.data || { success: true };
   }
 
@@ -122,10 +135,10 @@ class AuthService {
       return {
         success: true,
         user: {
-          id: '1',
-          name: 'Admin User',
-          email: 'admin@canteen.com',
-          role: 'admin',
+          id: 'u-' + Date.now().toString(),
+          name: 'Social User',
+          email: 'user@example.com',
+          role: 'staff',
         },
         token: 'mock-social-token-' + Date.now(),
       };
@@ -135,10 +148,10 @@ class AuthService {
     return {
       success: true,
       user: data.user || {
-        id: '1',
-        name: data.name || 'Admin User',
-        email: data.email || 'admin@canteen.com',
-        role: (data.role || 'admin').toLowerCase(),
+        id: 'me',
+        name: data.name || 'User',
+        email: data.email || 'user@example.com',
+        role: (data.role || 'staff').toLowerCase(),
       },
       token: data.token || data.accessToken || null,
     };
@@ -165,14 +178,89 @@ class AuthService {
     return res?.data || { success: true };
   }
 
-  async refreshToken() {
+  async resetPasswordWithCode(email, code, newPassword) {
     if (USE_MOCKS) {
       await mockDelay(300);
-      return { success: true, token: 'mock-refreshed-token-' + Date.now() };
+      if (!newPassword || newPassword.length < 8) {
+        return {
+          success: false,
+          message: 'Password must be at least 8 characters',
+        };
+      }
+      return { success: true };
     }
-    const res = await apiClient.post('/auth/refresh-token', {});
+    const res = await apiClient.post('/auth/reset-password-code', {
+      email,
+      code,
+      newPassword,
+    });
+    return res?.data || res;
+  }
+
+  async verifyResetCode(email, code) {
+    if (USE_MOCKS) {
+      await mockDelay(200);
+      return { success: true, commitToken: 'mock-commit-' + Date.now() };
+    }
+    const res = await apiClient.post('/auth/verify-reset-code', {
+      email,
+      code,
+    });
+    return res?.data || res;
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      if (!newPassword || newPassword.length < 8) {
+        return {
+          success: false,
+          message: 'Password must be at least 8 characters',
+        };
+      }
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return res?.data || res;
+  }
+
+  async refreshToken(refreshToken) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return {
+        success: true,
+        token: 'mock-refreshed-token-' + Date.now(),
+        refreshToken: 'mock-rtok-' + Date.now(),
+      };
+    }
+    const res = await apiClient.post('/auth/refresh-token', { refreshToken });
     const data = res?.data || res;
-    return { success: true, token: data.token || data.accessToken || null };
+    return {
+      success: true,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+    };
+  }
+
+  async verifyEmail(token) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/verify-email', { token });
+    return res?.data || res;
+  }
+
+  async resendVerification(email) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/resend-verification', { email });
+    return res?.data || res;
   }
 }
 

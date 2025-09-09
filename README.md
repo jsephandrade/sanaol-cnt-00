@@ -104,7 +104,7 @@ Health check: http://localhost:8000/api/health/
 Bootstrap an admin AppUser (in‑app admin used by the SPA):
 
 ```powershell
-python manage.py bootstrap_admin --email "admin@canteen.com" --password "your-strong-pass" --name "Admin User" --role admin
+python manage.py bootstrap_admin --email "your-email@example.com" --password "your-strong-pass" --name "Admin" --role admin
 ```
 
 Optional: Django Admin superuser for `/admin` (separate from AppUser):

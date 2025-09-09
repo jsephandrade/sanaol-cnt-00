@@ -174,7 +174,7 @@ class InventoryService {
           previousQuantity: 30,
           newQuantity: 50,
           reason: 'Weekly restock',
-          performedBy: 'Admin User',
+          performedBy: 'System',
           timestamp: new Date(Date.now() - 86400000).toISOString(),
         },
         {

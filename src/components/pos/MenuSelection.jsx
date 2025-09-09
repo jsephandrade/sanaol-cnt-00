@@ -189,7 +189,7 @@ const MenuSelection = ({
 
         <CardFooter className="border-t pt-3">
           <div className="flex justify-between w-full text-xs text-muted-foreground">
-            <span>Cashier: Admin User</span>
+            <span>Cashier</span>
             <span>
               {new Date().toLocaleDateString()}{' '}
               {new Date().toLocaleTimeString()}
