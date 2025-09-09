@@ -160,9 +160,15 @@ def face_login(request):
             return JsonResponse({"success": False, "message": "Face not recognized"}, status=401)
 
         user = best.user
-        # Require active status
-        if (user.status or "").lower() != "active":
-            # Issue verify token to allow app to route appropriately
+        # Require active status; block deactivated explicitly
+        status_l = (user.status or "").lower()
+        if status_l == "deactivated":
+            return JsonResponse({
+                "success": False,
+                "message": "Your account is currently deactivated, to activate please contact the admin.",
+            }, status=403)
+        if status_l != "active":
+            # Issue verify token to allow app to route appropriately for pending users
             from .views_common import _issue_verify_token_from_db
             return JsonResponse({
                 "success": True,
@@ -192,4 +198,3 @@ def face_login(request):
 
 
 __all__ = ["face_register", "face_login"]
-

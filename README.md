@@ -77,7 +77,7 @@ This repo contains both the React frontend (Vite) and the Django backend API.
 - Social login via allauth (Google). New users are created as `pending` with no privileges.
 - Verify Identity flow (frontend) captures a headshot and uploads it via a short‑lived verify token.
 - Admins review and approve/reject in the app (Users → Pending Verifications) or via Django Admin.
-- Middleware (`api.middleware.PendingUserGateMiddleware`) gates non‑public API routes until users are `active` and have an approved role (Admin/Manager/Staff/Cashier).
+- Middleware (`api.middleware.PendingUserGateMiddleware`) gates non‑public API routes until users are `active` and have an approved role (Admin/Manager/Staff).
 - Headshots stored in private media (not served publicly); streamed via authenticated endpoints only.
 
 ---
@@ -171,7 +171,7 @@ Defaults to console backend (emails printed to the runserver console). Configure
 - New or unassigned users → `status=pending`; no JWT issued until approval.
 - Verify Identity page (frontend) captures a headshot, uploads via a short‑lived verify token.
 - Admin reviews in Users → Pending Verifications (in‑app UI) or Django Admin `/admin`.
-- On approval: role set (Admin/Manager/Staff/Cashier), `status=active`; subsequent logins receive a JWT.
+- On approval: role set (Admin/Manager/Staff), `status=active`; subsequent logins receive a JWT.
 - Middleware blocks `/api/*` routes for non‑approved users.
 
 Key endpoints (backend):

@@ -74,19 +74,38 @@ def auth_login(request):
         _maybe_seed_from_memory()
         db_user = AppUser.objects.filter(email=email).first()
         if db_user and db_user.password_hash and password and check_password(password, db_user.password_hash):
+            status_l = (db_user.status or "").lower()
+            safe_user = _safe_user_from_db(db_user)
+            # Block deactivated accounts
+            if status_l == "deactivated":
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Your account is currently deactivated, to activate please contact the admin.",
+                    },
+                    status=403,
+                )
+            # Pending or other non-active states: return pending without issuing tokens
+            if status_l != "active":
+                try:
+                    vtok = _issue_verify_token_from_db(db_user)
+                except Exception:
+                    vtok = None
+                _lockout_check_and_touch(email, ip, success=True)
+                return JsonResponse({
+                    "success": True,
+                    "pending": True,
+                    "user": safe_user,
+                    **({"verifyToken": vtok} if vtok else {}),
+                })
+
+            # Active: issue tokens
             db_user.last_login = dj_timezone.now()
             db_user.save(update_fields=["last_login"])
-            safe_user = _safe_user_from_db(db_user)
             token = _issue_jwt(db_user, exp_seconds=exp_seconds)
             refresh_token = _issue_refresh_token_db(db_user, remember=remember, request=request)
             _lockout_check_and_touch(email, ip, success=True)
             payload = {"success": True, "user": safe_user, "token": token, "refreshToken": refresh_token}
-            if (db_user.status or "").lower() != "active":
-                payload["pending"] = True
-                try:
-                    payload["verifyToken"] = _issue_verify_token_from_db(db_user)
-                except Exception:
-                    pass
             return JsonResponse(payload)
     except (OperationalError, ProgrammingError):
         pass
@@ -94,16 +113,34 @@ def auth_login(request):
     # Fallback to in-memory
     user = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
     if user and password and password == user.get("password"):
+        status_l = (user.get("status") or "").lower()
         safe_user = {k: v for k, v in user.items() if k != "password"}
+        # Block deactivated accounts
+        if status_l == "deactivated":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Your account is currently deactivated, to activate please contact the admin.",
+                },
+                status=403,
+            )
+        # Pending or other non-active states: return pending without tokens
+        if status_l != "active":
+            _lockout_check_and_touch(email, ip, success=True)
+            try:
+                vtok = _issue_verify_token_from_dict(safe_user)
+            except Exception:
+                vtok = None
+            return JsonResponse({
+                "success": True,
+                "pending": True,
+                "user": safe_user,
+                **({"verifyToken": vtok} if vtok else {}),
+            })
+
         rtoken = _issue_refresh_token_mem(safe_user, remember=remember, request=request)
         _lockout_check_and_touch(email, ip, success=True)
         payload = {"success": True, "user": safe_user, "token": _issue_jwt_from_dict(safe_user, exp_seconds=exp_seconds), "refreshToken": rtoken}
-        if (user.get("status") or "").lower() != "active":
-            payload["pending"] = True
-            try:
-                payload["verifyToken"] = _issue_verify_token_from_dict(safe_user)
-            except Exception:
-                pass
         return JsonResponse(payload)
 
     # Record failed attempt and maybe lock
@@ -266,7 +303,13 @@ def auth_google(request):
             pass
 
         safe_user = _safe_user_from_db(db_user)
-        if (db_user.status or "").lower() != "active":
+        status_l = (db_user.status or "").lower()
+        if status_l == "deactivated":
+            return JsonResponse({
+                "success": False,
+                "message": "Your account is currently deactivated, to activate please contact the admin.",
+            }, status=403)
+        if status_l != "active":
             return JsonResponse({
                 "success": True,
                 "pending": True,
@@ -304,7 +347,13 @@ def auth_google(request):
         USERS.append(user)
 
     safe_user = {k: v for k, v in user.items() if k != "password"}
-    if (user.get("status") or "").lower() != "active":
+    status_l = (user.get("status") or "").lower()
+    if status_l == "deactivated":
+        return JsonResponse({
+            "success": False,
+            "message": "Your account is currently deactivated, to activate please contact the admin.",
+        }, status=403)
+    if status_l != "active":
         return JsonResponse({"success": True, "pending": True, "user": safe_user, "verifyToken": _issue_verify_token_from_dict(safe_user)})
     rtok = _issue_refresh_token_mem(user, remember=False, request=request)
     return JsonResponse({"success": True, "user": safe_user, "token": _issue_jwt_from_dict(safe_user), "refreshToken": rtok})
@@ -707,6 +756,17 @@ def refresh_token(request):
         if not rt or not rt.is_active:
             return JsonResponse({"success": False, "message": "Invalid or expired refresh token"}, status=401)
         user = rt.user
+        status_l = (user.status or "").lower()
+        if status_l == "deactivated":
+            return JsonResponse({
+                "success": False,
+                "message": "Your account is currently deactivated, to activate please contact the admin.",
+            }, status=403)
+        if status_l != "active":
+            return JsonResponse({
+                "success": False,
+                "message": "Account pending approval",
+            }, status=403)
         rt.revoked_at = dj_timezone.now()
         rt.save(update_fields=["revoked_at"])
         new_refresh = _issue_refresh_token_db(user, remember=rt.remember, request=request, rotated_from=rt)

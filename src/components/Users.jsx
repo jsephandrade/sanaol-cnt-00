@@ -82,8 +82,6 @@ const Users = () => {
         return 'default';
       case 'staff':
         return 'secondary';
-      case 'cashier':
-        return 'outline';
       default:
         return 'secondary';
     }
@@ -167,7 +165,6 @@ const Users = () => {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="staff">Staff</SelectItem>
-                    <SelectItem value="cashier">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

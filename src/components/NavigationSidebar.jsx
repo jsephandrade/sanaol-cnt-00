@@ -19,8 +19,12 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react';
+import { useAuth } from '@/components/AuthContext';
 export const NavigationSidebar = () => {
   const location = useLocation();
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole('admin');
+
   const navigationItems = [
     {
       name: 'Dashboard',
@@ -66,6 +70,7 @@ export const NavigationSidebar = () => {
       name: 'Users',
       href: '/users',
       icon: Users,
+      adminOnly: true,
     },
     {
       name: 'Activity Logs',
@@ -83,10 +88,15 @@ export const NavigationSidebar = () => {
       icon: MessageSquare,
     },
   ];
+  // Hide admin-only items for non-admin users
+  const visibleItems = navigationItems.filter(
+    (item) => !item.adminOnly || isAdmin
+  );
+
   return (
     <div className="px-2 py-2">
       <SidebarMenu>
-        {navigationItems.map((item) => (
+        {visibleItems.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton
               asChild

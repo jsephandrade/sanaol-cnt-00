@@ -269,7 +269,7 @@ def verify_approve(request):
     request_id = (data.get("requestId") or "").strip()
     role = (data.get("role") or "staff").lower()
     note = (data.get("note") or "").strip()
-    if role not in {"admin", "manager", "staff", "cashier"}:
+    if role not in {"admin", "manager", "staff"}:
         return JsonResponse({"success": False, "message": "Invalid role"}, status=400)
     if not request_id:
         return JsonResponse({"success": False, "message": "Missing requestId"}, status=400)

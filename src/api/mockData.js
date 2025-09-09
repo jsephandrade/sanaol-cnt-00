@@ -2,6 +2,7 @@
 export const mockDashboardStats = {
   dailySales: 12450.75,
   monthlySales: 385692.5,
+  monthlyExpenses: 254320.0,
   customerCount: 127,
   orderCount: 89,
   salesByTime: [

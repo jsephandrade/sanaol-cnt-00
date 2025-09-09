@@ -135,11 +135,15 @@ def _paginate(list_data, page, limit):
 
 
 def _safe_user_from_db(db_user):
+    # Normalize role to the supported set; map legacy/unknown roles to 'staff'
+    role = (getattr(db_user, "role", "") or "").lower()
+    if role not in {"admin", "manager", "staff"}:
+        role = "staff"
     return {
         "id": str(db_user.id),
         "name": db_user.name,
         "email": db_user.email,
-        "role": db_user.role,
+        "role": role,
         "status": db_user.status,
         "createdAt": (db_user.created_at or dj_timezone.now()).isoformat(),
         "lastLogin": db_user.last_login.isoformat() if db_user.last_login else None,
@@ -464,4 +468,3 @@ def _require_admin_or_manager(db_user):
         return role in {"admin", "manager"}
     except Exception:
         return False
-

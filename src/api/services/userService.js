@@ -276,12 +276,6 @@ class UserService {
           description: 'Kitchen and service staff access',
           permissions: ['orders', 'inventory:read'],
         },
-        {
-          label: 'Cashier',
-          value: 'cashier',
-          description: 'POS and payment access only',
-          permissions: ['pos', 'payments'],
-        },
       ],
     };
   }

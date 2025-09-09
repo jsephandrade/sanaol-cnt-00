@@ -22,10 +22,21 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useVerificationQueue } from '@/hooks/useVerificationQueue';
 import verificationService from '@/api/services/verificationService';
 import { Badge } from '@/components/ui/badge';
+import TableSkeleton from '@/components/shared/TableSkeleton';
+import ErrorState from '@/components/shared/ErrorState';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableRow,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Check, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
 
 const RoleSelect = ({ value, onChange }) => (
   <Select value={value} onValueChange={onChange}>
@@ -35,22 +46,30 @@ const RoleSelect = ({ value, onChange }) => (
     <SelectContent>
       <SelectItem value="staff">Staff</SelectItem>
       <SelectItem value="manager">Manager</SelectItem>
-      <SelectItem value="cashier">Cashier</SelectItem>
       <SelectItem value="admin">Admin</SelectItem>
     </SelectContent>
   </Select>
 );
 
 export const PendingVerifications = () => {
-  const { requests, loading, error, approve, reject } = useVerificationQueue({
-    status: 'pending',
-    limit: 10,
-  });
+  const { requests, pagination, loading, error, refetch, approve, reject } =
+    useVerificationQueue({
+      status: 'pending',
+      limit: 10,
+    });
   const [previewId, setPreviewId] = useState(null);
   const [previewUrl, setPreviewUrl] = useState('');
-  const [actionId, setActionId] = useState(null);
+  const [approveId, setApproveId] = useState(null);
   const [role, setRole] = useState('staff');
-  const [note, setNote] = useState('');
+
+  const total = pagination?.total ?? requests.length;
+  const getInitials = (name = '') =>
+    name
+      .split(' ')
+      .map((n) => n[0])
+      .filter(Boolean)
+      .join('')
+      .toUpperCase();
 
   const openPreview = async (reqId) => {
     setPreviewId(reqId);
@@ -69,142 +88,153 @@ export const PendingVerifications = () => {
   };
 
   const onApprove = async () => {
-    if (!actionId) return;
-    await approve.mutateAsync({ requestId: actionId, role, note });
-    setActionId(null);
-    setNote('');
+    if (!approveId) return;
+    await approve.mutateAsync({ requestId: approveId, role });
+    setApproveId(null);
   };
-  const onReject = async () => {
-    if (!actionId) return;
-    await reject.mutateAsync({ requestId: actionId, note });
-    setActionId(null);
-    setNote('');
+  const onRejectRow = async (id) => {
+    await reject.mutateAsync({ requestId: id, note: '' });
   };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Pending Verifications</CardTitle>
-        <CardDescription>
-          Review new account requests and assign roles
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            Pending Verifications
+            <Badge variant="secondary" className="font-normal">
+              {total} pending
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Review new account requests and assign roles
+          </CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          <RefreshCcw className="h-4 w-4 mr-2" /> Refresh
+        </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {loading ? (
-          <div className="space-y-2">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-10 w-full bg-muted rounded" />
-            ))}
-          </div>
+          <TableSkeleton
+            headers={['User', 'Contact', 'Submitted', 'Headshot', 'Actions']}
+            rows={5}
+          />
         ) : error ? (
-          <div className="text-sm text-red-500">{error}</div>
+          <ErrorState message={error} onRetry={refetch} />
         ) : requests.length === 0 ? (
-          <div className="text-sm text-muted-foreground">
-            No pending requests.
+          <div className="flex flex-col items-center justify-center text-center py-8 border rounded-md">
+            <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+            <div className="text-sm text-muted-foreground">
+              No pending requests
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2"
+              onClick={() => refetch()}
+            >
+              Refresh
+            </Button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-2">User</th>
-                  <th className="py-2">Email</th>
-                  <th className="py-2">Phone</th>
-                  <th className="py-2">Submitted</th>
-                  <th className="py-2">Headshot</th>
-                  <th className="py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Headshot</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {requests.map((req) => (
-                  <tr key={req.id} className="border-t border-border">
-                    <td className="py-2 font-medium">
-                      {req.user?.name || '—'}
-                    </td>
-                    <td className="py-2">{req.user?.email}</td>
-                    <td className="py-2">{req.user?.phone || '—'}</td>
-                    <td className="py-2">
-                      {new Date(req.createdAt).toLocaleString()}
-                    </td>
-                    <td className="py-2">
+                  <TableRow key={req.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback>
+                            {getInitials(req.user?.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium leading-none">
+                            {req.user?.name || '—'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {req.user?.email || '—'}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{req.user?.phone || '—'}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {new Date(req.createdAt).toLocaleString()}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {req.hasHeadshot ? (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => openPreview(req.id)}
+                          className="inline-flex items-center"
                         >
-                          Preview
+                          <ImageIcon className="h-4 w-4 mr-1" /> Preview
                         </Button>
                       ) : (
-                        <Badge size="sm" variant="secondary">
-                          No photo
-                        </Badge>
+                        <Badge variant="secondary">No photo</Badge>
                       )}
-                    </td>
-                    <td className="py-2 flex gap-2 items-center">
-                      <RoleSelect value={role} onChange={setRole} />
-                      <Button
-                        size="sm"
-                        onClick={() => setActionId(req.id)}
-                        disabled={approve.isPending}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setActionId(req.id);
-                          setNote('');
-                        }}
-                        disabled={reject.isPending}
-                      >
-                        Reject
-                      </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <RoleSelect value={role} onChange={setRole} />
+                        <Button
+                          size="sm"
+                          onClick={() => setApproveId(req.id)}
+                          disabled={approve.isPending}
+                          className="inline-flex items-center"
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onRejectRow(req.id)}
+                          disabled={reject.isPending}
+                          className="inline-flex items-center"
+                        >
+                          <X className="h-4 w-4 mr-1" /> Reject
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         )}
 
-        {/* Approve/Reject dialog */}
+        {/* Approve confirmation dialog */}
         <Dialog
-          open={Boolean(actionId)}
-          onOpenChange={(v) => !v && setActionId(null)}
+          open={Boolean(approveId)}
+          onOpenChange={(v) => !v && setApproveId(null)}
         >
-          <DialogContent>
+          <DialogContent className="sm:max-w-[420px]">
             <DialogHeader>
-              <DialogTitle>Review Request</DialogTitle>
+              <DialogTitle>Approve Account</DialogTitle>
               <DialogDescription>
-                Optionally add a note for the record.
+                Are you sure you want to approve this account?
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Role</label>
-                <RoleSelect value={role} onChange={setRole} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Note</label>
-                <Textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Optional note"
-                />
-              </div>
-            </div>
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setActionId(null)}>
+              <Button variant="outline" onClick={() => setApproveId(null)}>
                 Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={onReject}
-                disabled={reject.isPending}
-              >
-                Reject
               </Button>
               <Button onClick={onApprove} disabled={approve.isPending}>
                 Approve
@@ -234,7 +264,7 @@ export const PendingVerifications = () => {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={closePreview}>
+              <Button variant="outline" size="sm" onClick={closePreview}>
                 Close
               </Button>
             </DialogFooter>

@@ -31,17 +31,36 @@ ROLES = {
         "description": "Kitchen and service staff access",
         "permissions": ["orders", "inventory:read"],
     },
-    "cashier": {
-        "label": "Cashier",
-        "value": "cashier",
-        "description": "POS and payment access only",
-        "permissions": ["pos", "payments"],
-    },
 }
 
 
 @require_http_methods(["GET", "POST"]) 
 def users(request):
+    # For any access to the users collection, require Admin role
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if not auth.startswith("Bearer "):
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        tp = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except Exception:
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+    # Determine actor role (from DB if available; otherwise rely on token claims if present)
+    actor_role = None
+    try:
+        from .models import AppUser
+        current = AppUser.objects.filter(email=(tp.get("email") or "").lower()).first()
+        actor_role = (current.role or "").lower() if current else None
+    except Exception:
+        actor_role = (tp.get("role") or "").lower()
+    if actor_role != "admin":
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Your account can't access User Management, please contact the Admin",
+            },
+            status=403,
+        )
     if request.method == "GET":
         search = (request.GET.get("search") or "").lower()
         role = (request.GET.get("role") or "").lower()
@@ -116,14 +135,7 @@ def users(request):
         payload = {}
     try:
         # Authorization: only admin can create users
-        auth = request.META.get("HTTP_AUTHORIZATION", "")
-        if not auth.startswith("Bearer "):
-            return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
-        token = auth.split(" ", 1)[1].strip()
-        try:
-            tp = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        except Exception:
-            return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+        # (Auth already decoded above; tp set. Verify actor is admin.)
         try:
             from .models import AppUser
             current = AppUser.objects.filter(email=(tp.get("email") or "").lower()).first()
@@ -167,31 +179,7 @@ def user_detail(request, user_id):
     try:
         from .models import AppUser
         _maybe_seed_from_memory()
-        db_user = AppUser.objects.filter(id=user_id).first()
-        if not db_user:
-            raise OperationalError("not found")
-        if request.method == "GET":
-            return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
-        if request.method == "DELETE":
-            # Admin only delete
-            auth = request.META.get("HTTP_AUTHORIZATION", "")
-            if not auth.startswith("Bearer "):
-                return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
-            token = auth.split(" ", 1)[1].strip()
-            try:
-                tp = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-            except Exception:
-                return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
-            actor = AppUser.objects.filter(email=(tp.get("email") or "").lower()).first()
-            if not actor or (actor.role or "").lower() != "admin":
-                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
-            db_user.delete()
-            return JsonResponse({"success": True, "message": "Deleted"})
-        try:
-            payload = json.loads(request.body.decode("utf-8") or "{}")
-        except Exception:
-            payload = {}
-        # Only admin/manager can update; only admin can change role
+        # Require admin for all operations in user management, including viewing details
         auth = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth.startswith("Bearer "):
             return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
@@ -201,13 +189,32 @@ def user_detail(request, user_id):
         except Exception:
             return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
         actor = AppUser.objects.filter(email=(tp.get("email") or "").lower()).first()
-        if not actor or (actor.role or "").lower() not in {"admin", "manager"}:
-            return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+        if not actor or (actor.role or "").lower() != "admin":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Your account can't access User Management, please contact the Admin",
+                },
+                status=403,
+            )
+        db_user = AppUser.objects.filter(id=user_id).first()
+        if not db_user:
+            raise OperationalError("not found")
+        if request.method == "GET":
+            return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
+        if request.method == "DELETE":
+            # Admin only delete (already validated above)
+            db_user.delete()
+            return JsonResponse({"success": True, "message": "Deleted"})
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except Exception:
+            payload = {}
+        # Only admin can update user details in User Management
+        # (actor already validated as admin above)
         changed = False
         for k in ["name", "email", "role", "status", "permissions", "phone"]:
             if k in payload and payload[k] is not None:
-                if k == "role" and (actor.role or "").lower() != "admin":
-                    continue
                 setattr(db_user, "email" if k == "email" else k, payload[k] if k != "role" else str(payload[k]).lower())
                 changed = True
         if changed:
@@ -242,7 +249,7 @@ def user_status(request, user_id):
     try:
         from .models import AppUser
         _maybe_seed_from_memory()
-        # Only admin/manager can change status
+        # Only admin can change status
         auth = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth.startswith("Bearer "):
             return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
@@ -252,8 +259,14 @@ def user_status(request, user_id):
         except Exception:
             return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
         actor = AppUser.objects.filter(email=(tp.get("email") or "").lower()).first()
-        if not actor or (actor.role or "").lower() not in {"admin", "manager"}:
-            return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+        if not actor or (actor.role or "").lower() != "admin":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Your account can't access User Management, please contact the Admin",
+                },
+                status=403,
+            )
         db_user = AppUser.objects.filter(id=user_id).first()
         if not db_user:
             raise OperationalError("not found")
@@ -284,7 +297,7 @@ def user_status(request, user_id):
     return JsonResponse({"success": True, "data": USERS[idx]})
 
 
-@require_http_methods(["PATCH"])
+@require_http_methods(["PATCH"]) 
 def user_role(request, user_id):
     user_id = str(user_id)
     try:
@@ -359,6 +372,9 @@ def user_role_config(request, value):
     role_value = (value or payload.get("value") or "").lower()
     if not role_value:
         return JsonResponse({"success": False, "message": "Missing role value"}, status=400)
+    # Restrict to the built-in roles only
+    if role_value not in {"admin", "manager", "staff"}:
+        return JsonResponse({"success": False, "message": "Invalid role"}, status=400)
     cfg = {
         "label": payload.get("label") or role_value.capitalize(),
         "value": role_value,

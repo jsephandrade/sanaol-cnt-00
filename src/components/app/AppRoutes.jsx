@@ -58,6 +58,27 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Admin-only route wrapper
+const AdminRoute = ({ children }) => {
+  const { user, hasRole } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!hasRole('admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] p-6">
+        <div className="max-w-xl w-full border rounded-lg p-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            Your account can't access User Management, please contact the Admin
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return children;
+};
+
 // Public route wrapper (redirects to dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { user } = useAuth();
@@ -287,9 +308,11 @@ const AppRoutes = () => {
             path="/users"
             element={
               <ProtectedRoute>
-                <MainLayout title="User Management">
-                  <Users />
-                </MainLayout>
+                <AdminRoute>
+                  <MainLayout title="User Management">
+                    <Users />
+                  </MainLayout>
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

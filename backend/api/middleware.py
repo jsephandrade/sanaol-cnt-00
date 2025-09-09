@@ -36,7 +36,7 @@ class PendingUserGateMiddleware:
         "/media/",
     }
 
-    APPROVED_ROLES = {"admin", "manager", "staff", "cashier"}
+    APPROVED_ROLES = {"admin", "manager", "staff"}
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -56,6 +56,15 @@ class PendingUserGateMiddleware:
             status = (user.status or "").lower()
             role = (user.role or "").lower()
             if status != "active" or role not in self.APPROVED_ROLES:
+                # Provide clearer messaging for deactivated accounts
+                if status == "deactivated":
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": "Your account is currently deactivated, to activate please contact the admin.",
+                        },
+                        status=403,
+                    )
                 return JsonResponse(
                     {
                         "success": False,

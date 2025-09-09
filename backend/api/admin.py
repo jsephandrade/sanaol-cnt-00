@@ -14,7 +14,6 @@ from .emails import (
 APPROVE_ROLE_CHOICES = (
     ("staff", "Staff"),
     ("manager", "Manager"),
-    ("cashier", "Cashier"),
     ("admin", "Admin"),
 )
 

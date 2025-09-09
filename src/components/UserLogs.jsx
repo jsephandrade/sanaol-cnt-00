@@ -68,7 +68,7 @@ const UserLogs = () => {
       action: 'User Role Changed',
       user: 'user@example.com',
       timestamp: '2025-04-17 14:55:12',
-      details: 'Changed role for david@example.com from Staff to Cashier',
+      details: 'Changed role for david@example.com from Staff to Manager',
       type: 'security',
     },
   ]);
