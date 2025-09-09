@@ -161,8 +161,9 @@ def users(request):
     return JsonResponse({"success": True, "data": user})
 
 
-@require_http_methods(["GET", "PUT", "DELETE"]) 
+@require_http_methods(["GET", "PUT", "DELETE"])
 def user_detail(request, user_id):
+    user_id = str(user_id)
     try:
         from .models import AppUser
         _maybe_seed_from_memory()
@@ -235,8 +236,9 @@ def user_detail(request, user_id):
     return JsonResponse({"success": True, "data": user})
 
 
-@require_http_methods(["PATCH"]) 
+@require_http_methods(["PATCH"])
 def user_status(request, user_id):
+    user_id = str(user_id)
     try:
         from .models import AppUser
         _maybe_seed_from_memory()
@@ -282,8 +284,9 @@ def user_status(request, user_id):
     return JsonResponse({"success": True, "data": USERS[idx]})
 
 
-@require_http_methods(["PATCH"]) 
+@require_http_methods(["PATCH"])
 def user_role(request, user_id):
+    user_id = str(user_id)
     try:
         from .models import AppUser
         _maybe_seed_from_memory()

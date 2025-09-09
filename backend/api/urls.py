@@ -39,9 +39,9 @@ urlpatterns = [
 
     # Users endpoints
     path("users", user_views.users, name="users"),
-    path("users/<str:user_id>", user_views.user_detail, name="user_detail"),
-    path("users/<str:user_id>/status", user_views.user_status, name="user_status"),
-    path("users/<str:user_id>/role", user_views.user_role, name="user_role"),
+    path("users/<uuid:user_id>", user_views.user_detail, name="user_detail"),
+    path("users/<uuid:user_id>/status", user_views.user_status, name="user_status"),
+    path("users/<uuid:user_id>/role", user_views.user_role, name="user_role"),
     path("users/roles", user_views.user_roles, name="user_roles"),
     path("users/roles/<str:value>", user_views.user_role_config, name="user_role_config"),
 
