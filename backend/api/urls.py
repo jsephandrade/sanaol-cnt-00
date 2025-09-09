@@ -3,6 +3,7 @@ from . import views_auth as auth_views
 from . import views_verify as verify_views
 from . import views_menu as menu_views
 from . import views_users as user_views
+from . import views_face as face_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -43,4 +44,8 @@ urlpatterns = [
     path("users/<str:user_id>/role", user_views.user_role, name="user_role"),
     path("users/roles", user_views.user_roles, name="user_roles"),
     path("users/roles/<str:value>", user_views.user_role_config, name="user_role_config"),
+
+    # Face registration/login
+    path("auth/face-register", face_views.face_register, name="face_register"),
+    path("auth/face-login", face_views.face_login, name="face_login"),
 ]

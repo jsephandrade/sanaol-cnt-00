@@ -14,6 +14,13 @@ import { RoleManagement } from './users/RoleManagement';
 import { ActiveUsersList } from './users/ActiveUsersList';
 import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { UsersFooter } from './users/UsersFooter';
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
 import { PendingVerifications } from './users/PendingVerifications';
@@ -31,6 +38,7 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
+  const [roleFilter, setRoleFilter] = useState('');
   const {
     users,
     pagination,
@@ -42,7 +50,7 @@ const Users = () => {
     updateUser,
     deleteUser,
     updateUserStatus,
-  } = useUserManagement({ search: debouncedSearch });
+  } = useUserManagement({ search: debouncedSearch, role: roleFilter });
   const {
     roles,
     loading: rolesLoading,
@@ -51,6 +59,7 @@ const Users = () => {
   } = useRoles();
   const { hasAnyRole } = useAuth();
   const showVerifyQueue = hasAnyRole(['admin', 'manager']);
+  const isAdmin = hasAnyRole(['admin']);
 
   // Data is fetched with search term via hook; no local filtering needed
 
@@ -78,7 +87,13 @@ const Users = () => {
   };
 
   const handleAddUser = async (newUser) => {
-    await createUser.mutateAsync(newUser);
+    const res = await createUser.mutateAsync(newUser);
+    if (newUser?.sendInvite && newUser?.email) {
+      try {
+        const { authService } = await import('@/api/services/authService');
+        await authService.forgotPassword(newUser.email);
+      } catch {}
+    }
   };
 
   const handleUpdateUser = async (updatedUser) => {
@@ -112,12 +127,33 @@ const Users = () => {
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
         <Card>
-          <UsersHeader onAddClick={() => setShowAddModal(true)} />
+          <UsersHeader
+            onAddClick={() => setShowAddModal(true)}
+            canAdd={hasAnyRole(['admin'])}
+          />
           <CardContent className="space-y-4">
-            <UsersSearch
-              searchTerm={searchTerm}
-              onChange={(value) => setSearchTerm(value)}
-            />
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="flex-1 min-w-[220px]">
+                <UsersSearch
+                  searchTerm={searchTerm}
+                  onChange={(value) => setSearchTerm(value)}
+                />
+              </div>
+              <div className="w-full sm:w-[220px]">
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="cashier">Cashier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {loading || fetching ? (
               <TableSkeleton
@@ -137,6 +173,7 @@ const Users = () => {
                 onDeleteUser={handleDeleteUser}
                 getRoleBadgeVariant={getRoleBadgeVariant}
                 getInitials={getInitials}
+                isAdmin={isAdmin}
               />
             )}
           </CardContent>

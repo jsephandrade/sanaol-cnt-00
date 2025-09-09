@@ -155,3 +155,33 @@ class ResetToken(models.Model):
         if self.revoked_at or self.used_at:
             return False
         return timezone.now() < self.expires_at
+
+
+def _facetpl_upload_path(instance, filename):
+    base, ext = os.path.splitext(filename or "")
+    ext = ext if ext else ".jpg"
+    return f"face_templates/{instance.user_id}/{uuid4().hex}{ext}"
+
+
+class FaceTemplate(models.Model):
+    """Simple face template using perceptual/average hash of a reference image.
+
+    Note: This is a lightweight demonstration and not a substitute for
+    production-grade biometric matching. Hash collisions and false positives
+    are possible; tune thresholds accordingly.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.OneToOneField(AppUser, on_delete=models.CASCADE, related_name="face_template")
+    ahash = models.CharField(max_length=16)  # 64-bit average hash as 16-hex
+    reference = models.FileField(
+        upload_to=_facetpl_upload_path,
+        blank=True,
+        null=True,
+        storage=PrivateMediaStorage() if PrivateMediaStorage else None,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "face_template"

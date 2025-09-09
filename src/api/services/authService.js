@@ -44,6 +44,52 @@ class AuthService {
       verifyToken: data.verifyToken || null,
     };
   }
+  async loginWithFace(imageData, options = {}) {
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return {
+        success: true,
+        pending: false,
+        user: {
+          id: 'u-face-' + Date.now().toString(),
+          name: 'Face User',
+          email: 'face@example.com',
+          role: 'staff',
+          status: 'active',
+        },
+        token: 'mock-face-token-' + Date.now(),
+        refreshToken: 'mock-face-rt-' + Date.now(),
+      };
+    }
+    const remember = Boolean(options?.remember);
+    const res = await apiClient.post(
+      '/auth/face-login',
+      { image: imageData, remember },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
+    return {
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user: data.user || data,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
+    };
+  }
+
+  async registerFace(images) {
+    // images: array of base64 data URLs or objects with { data }
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true };
+    }
+    const payload = Array.isArray(images) ? { images } : { image: images };
+    const res = await apiClient.post('/auth/face-register', payload, {
+      retry: { retries: 1 },
+    });
+    return res?.data || res;
+  }
   async login(email, password, options = {}) {
     if (USE_MOCKS) {
       await mockDelay();

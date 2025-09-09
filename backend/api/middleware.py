@@ -25,9 +25,11 @@ class PendingUserGateMiddleware:
         "/api/auth/reset-password-code",
         "/api/auth/verify-reset-code",
         "/api/auth/refresh-token",
+        "/api/auth/face-login",
         "/api/verify/status",
         "/api/verify/upload",
         "/api/verify/resend-token",
+        "/api/users/roles",
         "/accounts/",  # allow allauth endpoints
         "/admin/",     # allow admin UI
         "/static/",

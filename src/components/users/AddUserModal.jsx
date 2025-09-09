@@ -23,13 +23,14 @@ export const AddUserModal = ({ open, onOpenChange, onAddUser }) => {
     name: '',
     email: '',
     role: 'staff',
+    sendInvite: true,
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.name && formData.email) {
       onAddUser(formData);
-      setFormData({ name: '', email: '', role: 'staff' });
+      setFormData({ name: '', email: '', role: 'staff', sendInvite: true });
       onOpenChange(false);
     }
   };
@@ -96,6 +97,25 @@ export const AddUserModal = ({ open, onOpenChange, onAddUser }) => {
                   <SelectItem value="cashier">Cashier</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="invite" className="text-right">
+                Send Invite
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <input
+                  id="invite"
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={!!formData.sendInvite}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sendInvite: e.target.checked })
+                  }
+                />
+                <span className="text-sm text-muted-foreground">
+                  Email user a password setup link
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/auth/Header';
@@ -8,6 +8,11 @@ import LoginForm from '@/components/auth/LoginForm';
 import SocialProviders from '@/components/auth/SocialProviders';
 import PageTransition from '@/components/PageTransition';
 import { signInWithGoogle } from '@/lib/google';
+import {
+  getRememberedEmail,
+  rememberEmail,
+  clearRememberedEmail,
+} from '@/lib/credentials';
 
 const LoginPage = () => {
   const { login, socialLogin, loginWithGoogle } = useAuth();
@@ -23,6 +28,17 @@ const LoginPage = () => {
   // field-level errors for a11y
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  // Prefill email from localStorage (we do not store passwords)
+  useEffect(() => {
+    try {
+      const savedEmail = getRememberedEmail();
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRemember(true);
+      }
+    } catch {}
+  }, []);
 
   const validate = () => {
     let ok = true;
@@ -77,6 +93,15 @@ const LoginPage = () => {
         navigate('/verify');
         return;
       }
+      // Persist or clear remembered email based on the checkbox
+      try {
+        if (remember) {
+          rememberEmail(email);
+        } else {
+          clearRememberedEmail();
+        }
+      } catch {}
+
       navigate('/');
     } catch (err) {
       setError(err?.message || 'Something went wrong. Please try again.');
@@ -92,7 +117,7 @@ const LoginPage = () => {
     setError('');
     try {
       if (provider === 'google-credential') {
-        const res = await loginWithGoogle(payload);
+        const res = await loginWithGoogle(payload, { remember });
         if (!res?.success) throw new Error('Google login failed');
         if (!res?.token) {
           setError(
@@ -102,7 +127,7 @@ const LoginPage = () => {
         }
       } else if (provider === 'google') {
         const credential = await signInWithGoogle();
-        const res = await loginWithGoogle(credential);
+        const res = await loginWithGoogle(credential, { remember });
         if (!res?.success) throw new Error('Google login failed');
         if (!res?.token) {
           setError(

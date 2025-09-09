@@ -180,6 +180,7 @@ Key endpoints (backend):
 - Auth: `POST /api/auth/login|register|logout|refresh-token|forgot-password|reset-password`
 - Me: `GET /api/auth/me`
 - Google: `POST /api/auth/google` (GIS One‑Tap token or auth code exchange)
+- Face: `POST /api/auth/face-register` (logged-in user registers template), `POST /api/auth/face-login` (submit image to login)
 - Verify: `GET /api/verify/status`, `POST /api/verify/upload`
 - Review: `GET /api/verify/requests`, `POST /api/verify/approve`, `POST /api/verify/reject`, `GET /api/verify/headshot/<uuid>`
 - Users/Menu/Inventory/etc.: see `backend/api/urls.py`

@@ -13,6 +13,7 @@ import { UserPlus, XCircle, ArrowLeft } from 'lucide-react';
 import Header from '@/components/auth/Header';
 import PageTransition from '@/components/PageTransition';
 import { useToast } from '@/hooks/use-toast';
+import authService from '@/api/services/authService';
 import CameraCapture from '@/components/face-registration/CameraCapture';
 import RegistrationStatus from '@/components/face-registration/RegistrationStatus';
 import ImagePreview from '@/components/face-registration/ImagePreview';
@@ -67,12 +68,14 @@ const FaceRegistrationPage = () => {
       }
 
       // Capture multiple face angles
+      const localImages = [];
       for (let i = 0; i < capturePositions.length; i++) {
         await new Promise((resolve) => {
           setTimeout(() => {
             const imageData = cameraRef.current?.captureImage(i);
             if (imageData) {
               setCapturedImages((prev) => [...prev, imageData]);
+              localImages.push(imageData);
             }
             setProgress(((i + 1) / capturePositions.length) * 100);
             resolve();
@@ -85,13 +88,8 @@ const FaceRegistrationPage = () => {
 
       setStep('processing');
 
-      // Simulate processing
-      setTimeout(() => {
-        // TODO: Replace with actual backend API call
-        // This is where you would send the captured images to your backend
-        // for face encoding and storage
-        processFaceData();
-      }, 2000);
+      // Send to backend for registration using the frames we actually captured
+      await processFaceData(localImages);
     } catch (err) {
       setError(
         'Unable to access camera. Please ensure camera permissions are granted.'
@@ -100,32 +98,19 @@ const FaceRegistrationPage = () => {
     }
   };
 
-  const processFaceData = async () => {
+  const processFaceData = async (images) => {
     try {
-      // TODO: Replace with actual API call
-      // Example backend integration:
-      // const response = await fetch('/api/face/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     userId: currentUser.id,
-      //     faceImages: capturedImages,
-      //     metadata: { device: navigator.userAgent }
-      //   })
-      // });
-
-      // Simulate successful processing
-      const success = Math.random() > 0.2; // 80% success rate for demo
-
-      if (success) {
-        setStep('complete');
-        toast({
-          title: 'Face registered successfully!',
-          description: 'You can now use face scan to log in.',
-        });
-      } else {
-        throw new Error('Processing failed');
-      }
+      const src =
+        Array.isArray(images) && images.length ? images : capturedImages;
+      const imagesPayload = src.map((img) => ({ data: img.data }));
+      if (!imagesPayload.length) throw new Error('No images captured');
+      const res = await authService.registerFace(imagesPayload);
+      if (!res?.success) throw new Error('Registration failed');
+      setStep('complete');
+      toast({
+        title: 'Face registered successfully!',
+        description: 'You can now use face scan to log in.',
+      });
     } catch (err) {
       setError('Failed to process face data. Please try again.');
       setStep('error');

@@ -31,26 +31,30 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+  const loadFromStores = (key, parseJson = false) => {
     try {
-      const stored = localStorage.getItem('user');
-      return stored ? JSON.parse(stored) : null;
+      const lsv = localStorage.getItem(key);
+      const ssv = sessionStorage.getItem(key);
+      const raw = lsv != null ? lsv : ssv;
+      if (raw == null) return null;
+      return parseJson ? JSON.parse(raw) : raw;
     } catch {
       return null;
     }
-  });
-  const [token, setToken] = useState(() => {
+  };
+
+  const [user, setUser] = useState(() => loadFromStores('user', true));
+  const [token, setToken] = useState(() => loadFromStores('auth_token'));
+  const [refreshTokenValue, setRefreshTokenValue] = useState(() =>
+    loadFromStores('refresh_token')
+  );
+  const [rememberPref, setRememberPref] = useState(() => {
     try {
-      return localStorage.getItem('auth_token') || null;
+      // default to true to keep previous behaviour (persist between sessions)
+      const v = localStorage.getItem('remember_pref');
+      return v == null ? true : v === '1';
     } catch {
-      return null;
-    }
-  });
-  const [refreshTokenValue, setRefreshTokenValue] = useState(() => {
-    try {
-      return localStorage.getItem('refresh_token') || null;
-    } catch {
-      return null;
+      return true;
     }
   });
 
@@ -81,6 +85,10 @@ export function AuthProvider({ children }) {
           try {
             localStorage.removeItem('user');
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('refresh_token');
           } catch {}
         }
       } finally {
@@ -95,25 +103,51 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const persistAuth = useCallback(
-    (nextUser, nextToken, nextRefreshToken = null) => {
+    (nextUser, nextToken, nextRefreshToken = null, remember = undefined) => {
+      const useRemember =
+        typeof remember === 'boolean' ? remember : Boolean(rememberPref);
+
       setUser(nextUser);
       setToken(nextToken);
       setRefreshTokenValue(nextRefreshToken);
+
       try {
-        localStorage.setItem('user', JSON.stringify(nextUser));
-        if (nextToken) {
-          localStorage.setItem('auth_token', nextToken);
+        // Choose storage target
+        const store = useRemember ? localStorage : sessionStorage;
+        const other = useRemember ? sessionStorage : localStorage;
+
+        // Clear old data from the other store to avoid confusion
+        try {
+          other.removeItem('user');
+          other.removeItem('auth_token');
+          other.removeItem('refresh_token');
+        } catch {}
+
+        // Persist to target store
+        if (nextUser) {
+          store.setItem('user', JSON.stringify(nextUser));
         } else {
-          localStorage.removeItem('auth_token');
+          store.removeItem('user');
+        }
+        if (nextToken) {
+          store.setItem('auth_token', nextToken);
+        } else {
+          store.removeItem('auth_token');
         }
         if (nextRefreshToken) {
-          localStorage.setItem('refresh_token', nextRefreshToken);
+          store.setItem('refresh_token', nextRefreshToken);
         } else {
-          localStorage.removeItem('refresh_token');
+          store.removeItem('refresh_token');
+        }
+
+        // Persist preference for next logins
+        if (typeof remember === 'boolean') {
+          localStorage.setItem('remember_pref', remember ? '1' : '0');
+          setRememberPref(remember);
         }
       } catch {}
     },
-    []
+    [rememberPref]
   );
 
   const login = useCallback(
@@ -121,7 +155,14 @@ export function AuthProvider({ children }) {
       try {
         const res = await authService.login(email, password, options);
         if (res?.success) {
-          persistAuth(res.user, res.token || null, res.refreshToken || null);
+          // Respect remember option for storage choice
+          const remember = Boolean(options?.remember);
+          persistAuth(
+            res.user,
+            res.token || null,
+            res.refreshToken || null,
+            remember
+          );
         }
         return res;
       } catch (err) {
@@ -148,15 +189,33 @@ export function AuthProvider({ children }) {
   );
 
   const loginWithGoogle = useCallback(
-    async (credential) => {
+    async (credential, options = {}) => {
       try {
         const res = await authService.loginWithGoogle(credential);
         if (!res?.success) return { success: false };
         // Only persist when we actually have a token (approved users)
         if (res.token) {
-          persistAuth(res.user, res.token, res.refreshToken || null);
+          const remember = Boolean(options?.remember);
+          persistAuth(res.user, res.token, res.refreshToken || null, remember);
         }
         return res; // { success, pending?, user, token?, verifyToken? }
+      } catch (err) {
+        return { success: false, error: err?.message || 'Login failed' };
+      }
+    },
+    [persistAuth]
+  );
+
+  const loginWithFace = useCallback(
+    async (imageData, options = {}) => {
+      try {
+        const res = await authService.loginWithFace(imageData, options);
+        if (!res?.success) return { success: false };
+        if (res.token) {
+          const remember = Boolean(options?.remember);
+          persistAuth(res.user, res.token, res.refreshToken || null, remember);
+        }
+        return res;
       } catch (err) {
         return { success: false, error: err?.message || 'Login failed' };
       }
@@ -184,7 +243,18 @@ export function AuthProvider({ children }) {
     try {
       await authService.logout(refreshTokenValue);
     } catch {}
-    persistAuth(null, null, null);
+    // Clear from both storages on logout
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('refresh_token');
+    } catch {}
+    setUser(null);
+    setToken(null);
+    setRefreshTokenValue(null);
   }, [persistAuth, refreshTokenValue]);
 
   const refreshToken = useCallback(async () => {
@@ -194,10 +264,15 @@ export function AuthProvider({ children }) {
         setToken(res.token);
         setRefreshTokenValue(res.refreshToken || null);
         try {
-          localStorage.setItem('auth_token', res.token);
-          if (res.refreshToken) {
-            localStorage.setItem('refresh_token', res.refreshToken);
-          }
+          // Update both storages just in case
+          [localStorage, sessionStorage].forEach((store) => {
+            try {
+              store.setItem('auth_token', res.token);
+              if (res.refreshToken) {
+                store.setItem('refresh_token', res.refreshToken);
+              }
+            } catch {}
+          });
         } catch {}
         return true;
       }
@@ -233,6 +308,7 @@ export function AuthProvider({ children }) {
         login,
         socialLogin,
         loginWithGoogle,
+        loginWithFace,
         register,
         logout,
         refreshToken,

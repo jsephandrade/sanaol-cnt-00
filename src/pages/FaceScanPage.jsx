@@ -27,7 +27,7 @@ const FaceScanPage = () => {
   const [error, setError] = useState('');
   const videoRef = useRef(null);
   const navigate = useNavigate();
-  const { socialLogin } = useAuth();
+  const { loginWithFace } = useAuth();
 
   const startFaceScan = async () => {
     try {
@@ -48,27 +48,38 @@ const FaceScanPage = () => {
         videoRef.current.srcObject = stream;
       }
 
-      // Simulate face scan processing
+      // Wait a moment for camera auto-exposure then capture a frame
       setTimeout(async () => {
-        // Stop camera
-        stream.getTracks().forEach((track) => track.stop());
+        try {
+          const canvas = document.createElement('canvas');
+          const video = videoRef.current;
+          if (!video) throw new Error('Camera not ready');
+          canvas.width = video.videoWidth || 640;
+          canvas.height = video.videoHeight || 480;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-        // Simulate scan result
-        const success = Math.random() > 0.3; // 70% success rate for demo
+          // Stop camera as soon as we have a frame
+          stream.getTracks().forEach((track) => track.stop());
 
-        if (success) {
-          setScanResult('success');
-          // Attempt login
-          const loginSuccess = await socialLogin('facescan');
-          if (loginSuccess) {
+          // Send to backend for face login
+          const res = await loginWithFace(dataUrl, { remember: true });
+          if (res?.success && res?.token) {
+            setScanResult('success');
             navigate('/');
+          } else if (res?.pending) {
+            setScanResult('success');
+            navigate('/verify');
+          } else {
+            setScanResult('failed');
           }
-        } else {
+        } catch (e) {
           setScanResult('failed');
+        } finally {
+          setIsScanning(false);
         }
-
-        setIsScanning(false);
-      }, 3000);
+      }, 1200);
     } catch (err) {
       setError(
         'Unable to access camera. Please ensure camera permissions are granted.'
@@ -228,7 +239,7 @@ const FaceScanPage = () => {
 
             {/* Security note */}
             <div className="text-center text-xs text-muted-foreground">
-              <p>Your face data is processed locally and never stored.</p>
+              <p>Only a privacy-preserving face template is stored securely.</p>
             </div>
           </div>
         </div>

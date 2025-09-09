@@ -12,13 +12,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const UserTable = ({ 
-  users, 
-  onEditUser, 
-  onDeactivateUser, 
+export const UserTable = ({
+  users,
+  onEditUser,
+  onDeactivateUser,
   onDeleteUser,
   getRoleBadgeVariant,
-  getInitials
+  getInitials,
+  isAdmin = false,
 }) => {
   return (
     <div className="rounded-md border">
@@ -42,7 +43,9 @@ export const UserTable = ({
                   <td className="p-4 align-middle">
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        <AvatarFallback>
+                          {getInitials(user.name)}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-medium">{user.name}</p>
@@ -91,13 +94,17 @@ export const UserTable = ({
                           <UserX className="mr-2 h-4 w-4" />
                           {user.status === 'active' ? 'Deactivate' : 'Activate'}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => onDeleteUser(user.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Delete
-                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => onDeleteUser(user.id)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
