@@ -197,4 +197,45 @@ def face_login(request):
         return JsonResponse({"success": False, "message": "Login failed"}, status=500)
 
 
-__all__ = ["face_register", "face_login"]
+from django.views.decorators.http import require_http_methods
+
+
+@require_http_methods(["POST", "DELETE"]) 
+def face_unregister(request):
+    """Remove the calling user's face template.
+
+    Requires Authorization: Bearer <jwt>.
+    Accepts POST or DELETE for convenience.
+    """
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if not auth.startswith("Bearer "):
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+    token = auth.split(" ", 1)[1].strip()
+
+    import jwt
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except Exception:
+        return JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+
+    try:
+        from .models import AppUser, FaceTemplate
+        user = AppUser.objects.filter(id=payload.get("sub")).first()
+        if not user:
+            return JsonResponse({"success": False, "message": "User not found"}, status=404)
+        tpl = FaceTemplate.objects.filter(user=user).first()
+        if not tpl:
+            # Already removed
+            return JsonResponse({"success": True})
+        try:
+            if getattr(tpl, "reference", None):
+                tpl.reference.delete(save=False)
+        except Exception:
+            pass
+        tpl.delete()
+        return JsonResponse({"success": True})
+    except Exception:
+        return JsonResponse({"success": False, "message": "Unregister failed"}, status=500)
+
+
+__all__ = ["face_register", "face_login", "face_unregister"]

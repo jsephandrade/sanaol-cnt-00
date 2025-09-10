@@ -48,4 +48,5 @@ urlpatterns = [
     # Face registration/login
     path("auth/face-register", face_views.face_register, name="face_register"),
     path("auth/face-login", face_views.face_login, name="face_login"),
+    path("auth/face-unregister", face_views.face_unregister, name="face_unregister"),
 ]
