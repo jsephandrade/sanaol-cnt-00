@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.mail import send_mail, mail_admins
+from django.template.loader import render_to_string
 
 
 def _safe_send(func, *args, **kwargs):
@@ -90,16 +91,30 @@ def email_user_password_reset(email: str, reset_link: str, code: str | None = No
     if not email:
         return
     subject = "Reset your password"
-    code_text = f"\nReset code: {code}\n" if code else "\n"
+    # Plain text fallback
     message = (
         "Hello,\n\n"
         "We received a request to reset your password. If you made this request, "
         "use the link below (or the 6-digit code) to choose a new password. "
         "If you did not request this, you can safely ignore this email.\n\n"
         f"Reset link: {reset_link}\n"
-        f"This reset expires in approximately {expires_minutes} minutes." + code_text +
-        "If the link doesn't work on this device, open the app and choose 'I have a code'.\n"
+        f"This reset expires in approximately {expires_minutes} minutes.\n"
+        + (f"Reset code: {code}\n" if code else "")
+        + "If the link doesn't work on this device, open the app and choose 'I have a code'.\n"
     )
+    # HTML body via template
+    try:
+        html = render_to_string(
+            "email/password_reset.html",
+            {
+                "reset_link": reset_link,
+                "expires_minutes": expires_minutes,
+                "code": code,
+                "brand": getattr(settings, "EMAIL_SUBJECT_PREFIX", ""),
+            },
+        )
+    except Exception:
+        html = None
     _safe_send(
         send_mail,
         subject,
@@ -107,6 +122,7 @@ def email_user_password_reset(email: str, reset_link: str, code: str | None = No
         settings.DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=True,
+        html_message=html,
     )
 
 def email_user_email_verification(email: str, verify_link: str):
@@ -120,6 +136,16 @@ def email_user_email_verification(email: str, verify_link: str):
         f"Verify link: {verify_link}\n\n"
         "If you did not create an account, you can ignore this email."
     )
+    try:
+        html = render_to_string(
+            "email/verify_email.html",
+            {
+                "verify_link": verify_link,
+                "brand": getattr(settings, "EMAIL_SUBJECT_PREFIX", ""),
+            },
+        )
+    except Exception:
+        html = None
     _safe_send(
         send_mail,
         subject,
@@ -127,4 +153,5 @@ def email_user_email_verification(email: str, verify_link: str):
         settings.DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=True,
+        html_message=html,
     )

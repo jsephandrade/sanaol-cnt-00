@@ -397,6 +397,10 @@ def verify_email(request):
     return JsonResponse({"success": False, "message": "User not found"}, status=404)
 
 
+from .views_common import _email_rate_key
+from .views_common import rate_limit
+
+@rate_limit(limit=5, window_seconds=60, key_fn=_email_rate_key)
 @require_http_methods(["POST"]) 
 def resend_verification(request):
     try:
