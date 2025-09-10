@@ -240,15 +240,6 @@ class AuthService {
     return res?.data || { success: true };
   }
 
-  async forgotPasswordSMS(phone) {
-    if (USE_MOCKS) {
-      await mockDelay(300);
-      return { success: true };
-    }
-    const res = await apiClient.post('/auth/forgot-password-sms', { phone });
-    return res?.data || { success: true };
-  }
-
   async resetPassword(token, newPassword) {
     if (USE_MOCKS) {
       await mockDelay(400);
@@ -259,18 +250,6 @@ class AuthService {
       newPassword,
     });
     return res?.data || { success: true };
-  }
-
-  async validateResetToken(token) {
-    if (USE_MOCKS) {
-      await mockDelay(200);
-      return { ok: true };
-    }
-    const res = await apiClient.get('/auth/reset-password/validate', {
-      params: { token },
-      retry: { retries: 1 },
-    });
-    return res?.data || res;
   }
 
   async resetPasswordWithCode(email, code, newPassword) {
@@ -301,15 +280,6 @@ class AuthService {
       email,
       code,
     });
-    return res?.data || res;
-  }
-
-  async verifyResetSMS(phone, code) {
-    if (USE_MOCKS) {
-      await mockDelay(200);
-      return { success: true, commitToken: 'mock-commit-' + Date.now() };
-    }
-    const res = await apiClient.post('/auth/verify-reset-sms', { phone, code });
     return res?.data || res;
   }
 

@@ -530,12 +530,10 @@ def auth_register(request):
 from datetime import timedelta
 import hashlib
 import secrets
-from .views_common import _email_rate_key, _issue_pwdreset_token_from_dict, _decode_pwdcommit_token, _issue_pwdcommit_token_from_db, _decode_pwdreset_token, _revoke_all_refresh_tokens, _revoke_all_refresh_tokens_mem, _phone_rate_key
+from .views_common import _email_rate_key, _issue_pwdreset_token_from_dict, _decode_pwdcommit_token, _issue_pwdcommit_token_from_db, _decode_pwdreset_token, _revoke_all_refresh_tokens, _revoke_all_refresh_tokens_mem
 from .emails import email_user_password_reset
-from .redis_store import setex as r_setex, get as r_get, delete as r_del
-from .sms import send_sms
 
-@rate_limit(limit=5, window_seconds=3600, key_fn=_email_rate_key)
+@rate_limit(limit=5, window_seconds=60, key_fn=_email_rate_key)
 @require_http_methods(["POST"]) 
 def forgot_password(request):
     try:
@@ -551,24 +549,11 @@ def forgot_password(request):
             _maybe_seed_from_memory()
             db_user = AppUser.objects.filter(email=email).first()
             if db_user:
-                # Invalidate any prior unused tokens for this user
-                try:
-                    ResetToken.objects.filter(
-                        user=db_user, used_at__isnull=True, revoked_at__isnull=True
-                    ).update(revoked_at=dj_timezone.now())
-                except Exception:
-                    pass
-
-                raw = secrets.token_urlsafe(48)
+                raw = secrets.token_urlsafe(32)
                 code = f"{secrets.randbelow(1000000):06d}"
                 rhash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
                 chash = hashlib.sha256(code.encode("utf-8")).hexdigest()
-                try:
-                    ttl_minutes = int(getattr(settings, "PASSWORD_RESET_EXP_MIN", 60))
-                except Exception:
-                    ttl_minutes = 60
-                ttl_minutes = max(1, ttl_minutes)
-                ttl_seconds = ttl_minutes * 60
+                ttl_seconds = 15 * 60
                 ua = request.META.get("HTTP_USER_AGENT", "")[:255]
                 ip = request.META.get("HTTP_X_FORWARDED_FOR") or request.META.get("REMOTE_ADDR") or ""
                 ip = (ip.split(",")[0].strip() if "," in ip else ip)[:64]
@@ -585,7 +570,7 @@ def forgot_password(request):
                     link = f"{base}/reset-password?token={raw}"
                     if getattr(settings, "DEBUG", False):
                         debug_link = link
-                    email_user_password_reset(email, link, code=code, expires_minutes=int(ttl_minutes))
+                    email_user_password_reset(email, link, code=code, expires_minutes=15)
                 except Exception:
                     pass
             else:
@@ -611,7 +596,7 @@ def forgot_password(request):
     return resp
 
 
-@rate_limit(limit=10, window_seconds=3600)
+@rate_limit(limit=5, window_seconds=60)
 @require_http_methods(["POST"]) 
 def reset_password(request):
     try:
@@ -619,37 +604,13 @@ def reset_password(request):
     except Exception:
         data = {}
     token = (data.get("token") or "").strip()
-    new_password = data.get("newPassword") or data.get("new_password") or data.get("password") or ""
+    new_password = data.get("newPassword") or data.get("password") or ""
     if not token:
         return JsonResponse({"success": False, "message": "Missing token"}, status=400)
     if not new_password or len(new_password) < 8:
         return JsonResponse({"success": False, "message": "Password must be at least 8 characters"}, status=400)
 
     from .views_common import _decode_pwdcommit_token, _decode_pwdreset_token, _revoke_all_refresh_tokens, _revoke_all_refresh_tokens_mem
-    # New: Redis-backed commit token (from SMS verification)
-    try:
-        import hashlib as _hl
-        chash = _hl.sha256(token.encode("utf-8")).hexdigest()
-        entry = r_get(f"pw:sms:commit:{chash}")
-        if entry and (entry.get("phone") or entry.get("user_id")):
-            from .models import AppUser
-            u = None
-            uid = str(entry.get("user_id") or "").strip()
-            if uid:
-                u = AppUser.objects.filter(id=uid).first()
-            if not u:
-                phone = (entry.get("phone") or "").strip()
-                u = AppUser.objects.filter(phone=phone).first()
-            if not u:
-                return JsonResponse({"success": False, "message": "Invalid token"}, status=400)
-            from django.contrib.auth.hashers import make_password
-            u.password_hash = make_password(new_password)
-            u.save(update_fields=["password_hash"])
-            r_del(f"pw:sms:commit:{chash}")  # consume
-            _revoke_all_refresh_tokens(u)
-            return JsonResponse({"success": True, "message": "Password reset successful"})
-    except Exception:
-        pass
     payload_commit = _decode_pwdcommit_token(token)
     if payload_commit:
         email = (payload_commit.get("email") or "").lower().strip()
@@ -705,164 +666,6 @@ def reset_password(request):
     user["password"] = new_password
     _revoke_all_refresh_tokens_mem(user)
     return JsonResponse({"success": True, "message": "Password reset successful"})
-
-
-@rate_limit(limit=10, window_seconds=3600)
-@require_http_methods(["GET"]) 
-def reset_password_validate(request):
-    """Validate a reset token without consuming it.
-
-    Returns 200 {"ok": true} if the token is valid and active; otherwise
-    returns 400 {"token": "Invalid or expired link."}.
-    """
-    token = (request.GET.get("token") or "").strip()
-    if not token:
-        return JsonResponse({"token": "Invalid or expired link."}, status=400)
-
-    # Try Redis-backed commit token first
-    try:
-        import hashlib as _hl
-        chash = _hl.sha256(token.encode("utf-8")).hexdigest()
-        entry = r_get(f"pw:sms:commit:{chash}")
-        if entry and entry.get("phone"):
-            return JsonResponse({"ok": True})
-    except Exception:
-        pass
-
-    # Try DB-based hashed token next
-    try:
-        from .models import ResetToken
-        rhash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        rt = ResetToken.objects.filter(token_hash=rhash).first()
-        if rt and rt.is_active:
-            return JsonResponse({"ok": True})
-    except Exception:
-        pass
-
-    # Fallback to JWT-based reset token (in-memory demo users)
-    try:
-        payload = _decode_pwdreset_token(token)
-        if payload:
-            return JsonResponse({"ok": True})
-    except Exception:
-        pass
-
-    return JsonResponse({"token": "Invalid or expired link."}, status=400)
-
-
-# -----------------------
-# Minimal SMS code workflow
-# -----------------------
-
-def _normalize_phone(p: str) -> str:
-    p = (p or "").strip()
-    # Keep digits only for storage consistency
-    return "".join(ch for ch in p if ch.isdigit())
-
-
-@rate_limit(limit=5, window_seconds=3600, key_fn=_phone_rate_key)
-@require_http_methods(["POST"]) 
-def forgot_password_sms(request):
-    try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
-    except Exception:
-        data = {}
-    raw_phone = data.get("phone") or ""
-    phone = _normalize_phone(raw_phone)
-
-    # Always return neutral response to avoid enumeration
-    resp_payload = {"success": True, "message": "If that phone exists, we sent a code."}
-
-    # Enforce resend cooldown via Redis (60s)
-    try:
-        if r_get(f"pw:sms:cool:{phone}"):
-            return JsonResponse(resp_payload, status=202)
-    except Exception:
-        pass
-
-    try:
-        from .models import AppUser
-        _maybe_seed_from_memory()
-        # Try direct match, then normalized-digit match
-        u = AppUser.objects.filter(phone=raw_phone).first() or AppUser.objects.filter(phone=phone).first()
-        if not u:
-            try:
-                # Fallback scan by digits-only equality to tolerate formatting differences
-                wanted = ''.join(ch for ch in (raw_phone or '') if ch.isdigit()) or phone
-                for cand in AppUser.objects.all()[:1000]:
-                    digits = ''.join(ch for ch in (getattr(cand, 'phone', '') or '') if ch.isdigit())
-                    if digits and digits == wanted:
-                        u = cand
-                        break
-            except Exception:
-                pass
-        if u:
-            import secrets, hashlib as _hl, time as _t
-            code = f"{secrets.randbelow(1000000):06d}"
-            chash = _hl.sha256(code.encode("utf-8")).hexdigest()
-            ttl = 5 * 60
-            entry = {
-                "user_id": str(u.id),
-                "phone": phone or (u.phone or ""),
-                "code_hash": chash,
-                "attempts": 0,
-                "created_at": int(_t.time()),
-            }
-            r_setex(f"pw:sms:code:{phone}", ttl, entry)
-            # Cooldown: prevent immediate re-send floods
-            r_setex(f"pw:sms:cool:{phone}", 60, {"at": int(_t.time())})
-            # Send SMS (stub/Twilio)
-            send_sms(u.phone or raw_phone, f"Your reset code is {code}. It expires in 5 minutes.")
-    except Exception:
-        pass
-
-    return JsonResponse(resp_payload, status=202)
-
-
-@rate_limit(limit=10, window_seconds=3600, key_fn=_phone_rate_key)
-@require_http_methods(["POST"]) 
-def verify_reset_sms(request):
-    try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
-    except Exception:
-        data = {}
-    raw_phone = data.get("phone") or ""
-    phone = _normalize_phone(raw_phone)
-    code = (data.get("code") or "").strip()
-    if not phone or not code:
-        return JsonResponse({"success": False, "message": "Invalid or expired code"}, status=400)
-
-    try:
-        import hashlib as _hl, secrets, time as _t
-        key = f"pw:sms:code:{phone}"
-        entry = r_get(key)
-        if not entry:
-            return JsonResponse({"success": False, "message": "Invalid or expired code"}, status=400)
-        attempts = int(entry.get("attempts", 0)) + 1
-        if attempts > 5:
-            r_del(key)
-            return JsonResponse({"success": False, "message": "Invalid or expired code"}, status=400)
-        chash = _hl.sha256(code.encode("utf-8")).hexdigest()
-        if entry.get("code_hash") != chash:
-            # update attempts by resetting with small ttl remainder (best-effort; leave original ttl ~ unchanged)
-            entry["attempts"] = attempts
-            r_setex(key, 60, entry)  # keep at least a short window; precise remaining TTL not tracked
-            return JsonResponse({"success": False, "message": "Invalid or expired code"}, status=400)
-
-        # OK: issue a short-lived commit token stored by hash in Redis (5 minutes)
-        raw = secrets.token_urlsafe(32)
-        rhash = _hl.sha256(raw.encode("utf-8")).hexdigest()
-        commit = {
-            "user_id": entry.get("user_id"),
-            "phone": entry.get("phone") or raw_phone,
-            "created_at": int(_t.time()),
-        }
-        r_setex(f"pw:sms:commit:{rhash}", 5 * 60, commit)
-        # consume the code
-        r_del(key)
-        return JsonResponse({"success": True, "commitToken": raw})
-    except Exception:
-        return JsonResponse({"success": False, "message": "Invalid or expired code"}, status=400)
 
 
 @rate_limit(limit=5, window_seconds=60, key_fn=_email_rate_key)
@@ -1044,7 +847,6 @@ __all__ = [
     "auth_logout",
     "auth_register",
     "forgot_password",
-    "reset_password_validate",
     "reset_password",
     "reset_password_code",
     "verify_reset_code",

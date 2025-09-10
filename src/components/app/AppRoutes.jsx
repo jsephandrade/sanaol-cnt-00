@@ -101,7 +101,6 @@ const AppRoutes = () => {
         '/signup': 'Sign Up',
         '/forgot-password': 'Forgot Password',
         '/reset-code': 'Reset Code',
-        '/verify-sms': 'Reset Code',
         '/set-new-password': 'New Password',
         '/reset-password': 'Reset Password',
         '/face-scan': 'Face Scan',
@@ -161,14 +160,6 @@ const AppRoutes = () => {
           />
           <Route
             path="/reset-code"
-            element={
-              <PublicRoute>
-                <ResetCodePage />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/verify-sms"
             element={
               <PublicRoute>
                 <ResetCodePage />

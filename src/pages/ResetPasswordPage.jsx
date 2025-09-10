@@ -44,7 +44,6 @@ const ResetPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [pending, setPending] = useState(false);
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -55,30 +54,6 @@ const ResetPasswordPage = () => {
       alertRef.current.focus();
     }
   }, [error, success]);
-
-  useEffect(() => {
-    let mounted = true;
-    if (token) {
-      // Validate token on mount (no consumption)
-      authService
-        .validateResetToken(token)
-        .then(() => {
-          if (mounted) setReady(true);
-        })
-        .catch(() => {
-          if (mounted) {
-            setError('That link isn’t valid anymore. Request a new one.');
-            setReady(false);
-          }
-        });
-    } else {
-      // Code-based flow does not require pre-validation
-      setReady(true);
-    }
-    return () => {
-      mounted = false;
-    };
-  }, [token]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -116,19 +91,6 @@ const ResetPasswordPage = () => {
       setPending(false);
     }
   };
-
-  if (token && !ready && !error) {
-    return (
-      <PageTransition>
-        <div className="min-h-screen flex flex-col bg-white">
-          <Header />
-          <main className="flex-1 flex items-center justify-center px-4 py-10">
-            <p className="text-gray-600">Validating link…</p>
-          </main>
-        </div>
-      </PageTransition>
-    );
-  }
 
   return (
     <PageTransition>

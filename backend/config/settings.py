@@ -162,35 +162,3 @@ EMAIL_SUBJECT_PREFIX = _email["EMAIL_SUBJECT_PREFIX"]
 
 # Frontend base URL for building links in emails (password reset, verification)
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:8080")
-
-# Password reset token expiry in minutes (used by reset emails)
-try:
-    PASSWORD_RESET_EXP_MIN = int(os.getenv("PASSWORD_RESET_EXP_MIN", "60"))
-except Exception:
-    PASSWORD_RESET_EXP_MIN = 60
-
-# Redis (for temporary token/code storage)
-REDIS_URL = os.getenv("REDIS_URL", "")
-
-# SMS / Twilio
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "").strip()
-# Default country code for normalizing local numbers (e.g., +1)
-SMS_DEFAULT_COUNTRY_CODE = os.getenv("SMS_DEFAULT_COUNTRY_CODE", "")
-
-CACHES = {
-  "default": {
-    "BACKEND":"django_redis.cache.RedisCache",
-    "LOCATION": os.getenv("REDIS_URL","redis://127.0.0.1:6379/0"),
-    "OPTIONS":{"CLIENT_CLASS":"django_redis.client.DefaultClient"},
-    "TIMEOUT": None,
-  }
-}
-
-RESET_TOKEN_SIGNING_KEY = os.getenv("RESET_TOKEN_SIGNING_KEY", SECRET_KEY)
-FRONTEND_RESET_URL = os.getenv(
-    "FRONTEND_RESET_URL",
-    f"{os.getenv('FRONTEND_BASE_URL','http://localhost:8080')}/reset-password?token={{token}}"
-)
-
