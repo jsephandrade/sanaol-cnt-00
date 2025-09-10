@@ -27,14 +27,12 @@ const Spinner = () => (
 );
 
 const ForgotPasswordPage = () => {
-  // Using authService to trigger backend password reset email
-
-  const [email, setEmail] = useState('');
+  // Minimal SMS flow: request code via phone
+  const [phone, setPhone] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [success, setSuccess] = useState('');
-  const [debugLink, setDebugLink] = useState('');
   const alertRef = useRef(null);
 
   useEffect(() => {
@@ -43,38 +41,33 @@ const ForgotPasswordPage = () => {
     }
   }, [error, success]);
 
-  const validateEmail = (val) => {
-    if (!val) return 'Email is required.';
-    // Simple email format check
-    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
-    return ok ? '' : 'Please enter a valid email address.';
+  const validatePhone = (val) => {
+    if (!val) return 'Phone number is required.';
+    const digits = (val || '').replace(/\D+/g, '');
+    return digits.length < 8 ? 'Please enter a valid phone number.' : '';
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    const emailErr = validateEmail(email);
-    setEmailError(emailErr);
-    if (emailErr) return;
+    const err = validatePhone(phone);
+    setPhoneError(err);
+    if (err) return;
 
     setPending(true);
     try {
-      const res = await authService.forgotPassword(email);
-      if (res?.debugResetLink) setDebugLink(res.debugResetLink);
-      setSuccess(
-        'If an account exists for this email, a password reset link has been sent.'
-      );
+      await authService.forgotPasswordSMS(phone);
+      setSuccess('If that phone exists, we sent a 6-digit code.');
       try {
-        sessionStorage.setItem('reset_email', email);
+        sessionStorage.setItem('reset_phone', phone);
       } catch {}
-      // Navigate to code entry page for the new flow
       setTimeout(() => {
-        window.location.href = `/reset-code?email=${encodeURIComponent(email)}`;
+        window.location.href = `/verify-sms?phone=${encodeURIComponent(phone)}`;
       }, 400);
     } catch (err) {
       setError(
-        'Something went wrong while sending the reset email. Please try again.'
+        'Something went wrong while sending the code. Please try again.'
       );
     } finally {
       setPending(false);
@@ -86,7 +79,7 @@ const ForgotPasswordPage = () => {
       <div className="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
         <h1 className="text-2xl font-semibold mb-2">Forgot Password</h1>
         <p className="text-sm text-gray-600 mb-4">
-          Enter your email and we’ll send you a link to reset your password.
+          Enter your verified phone number to receive a 6-digit code.
         </p>
 
         {(error || success) && (
@@ -109,33 +102,33 @@ const ForgotPasswordPage = () => {
           aria-busy={pending || undefined}
         >
           <div>
-            <label className="sr-only" htmlFor="email">
-              Email
+            <label className="sr-only" htmlFor="phone">
+              Phone
             </label>
             <input
-              id="email"
-              name="email"
-              type="email"
-              inputMode="email"
-              autoComplete="username email"
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
               autoCapitalize="none"
               spellCheck={false}
-              value={email}
+              value={phone}
               onChange={(e) => {
-                setEmail(e.target.value);
-                if (emailError) setEmailError('');
+                setPhone(e.target.value);
+                if (phoneError) setPhoneError('');
               }}
-              placeholder="Email"
+              placeholder="Phone number"
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
               required
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? 'email-error' : undefined}
+              aria-invalid={!!phoneError}
+              aria-describedby={phoneError ? 'phone-error' : undefined}
               disabled={pending}
               autoFocus
             />
-            {emailError && (
-              <p id="email-error" className="mt-1 text-sm text-red-700">
-                {emailError}
+            {phoneError && (
+              <p id="phone-error" className="mt-1 text-sm text-red-700">
+                {phoneError}
               </p>
             )}
           </div>
@@ -150,21 +143,10 @@ const ForgotPasswordPage = () => {
                 <Spinner /> Sending…
               </>
             ) : (
-              'Send reset link'
+              'Send code'
             )}
           </button>
         </form>
-
-        {debugLink ? (
-          <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded text-xs break-all">
-            Developer only: Reset link
-            <div className="mt-1">
-              <a href={debugLink} className="underline break-all">
-                {debugLink}
-              </a>
-            </div>
-          </div>
-        ) : null}
 
         <div className="mt-4 flex items-center justify-between text-sm">
           <Link

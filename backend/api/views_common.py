@@ -47,6 +47,15 @@ def _email_rate_key(request):
     return f"{_client_ip(request)}:{email}"
 
 
+def _phone_rate_key(request):
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        data = {}
+    phone = (data.get("phone") or "").strip()
+    return f"{_client_ip(request)}:{phone}"
+
+
 def _lockout_check_and_touch(email: str, ip: str, success: bool):
     now = int(time.time())
     key = (email or "", ip or "")

@@ -13,18 +13,18 @@ const ResetCodePage = () => {
   const query = useQuery();
   const navigate = useNavigate();
   const alertRef = useRef(null);
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const qemail = query.get('email') || '';
-    if (qemail) setEmail(qemail);
+    const qphone = query.get('phone') || '';
+    if (qphone) setPhone(qphone);
     try {
-      const stored = sessionStorage.getItem('reset_email');
-      if (!qemail && stored) setEmail(stored);
+      const stored = sessionStorage.getItem('reset_phone');
+      if (!qphone && stored) setPhone(stored);
     } catch {}
   }, []);
 
@@ -36,13 +36,13 @@ const ResetCodePage = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!email || !code || code.length < 6) {
-      setError('Enter your email and the 6-digit code.');
+    if (!phone || !code || code.length < 6) {
+      setError('Enter your phone and the 6-digit code.');
       return;
     }
     setPending(true);
     try {
-      const res = await authService.verifyResetCode(email, code);
+      const res = await authService.verifyResetSMS(phone, code);
       if (!res?.success || !res?.commitToken) {
         setError(res?.message || 'Invalid or expired code.');
         return;
@@ -64,13 +64,13 @@ const ResetCodePage = () => {
   const onResend = async () => {
     setError('');
     setSuccess('');
-    if (!email) {
-      setError('Enter your email first.');
+    if (!phone) {
+      setError('Enter your phone first.');
       return;
     }
     setPending(true);
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPasswordSMS(phone);
       setSuccess('If an account exists, a new code has been sent.');
     } catch (e) {
       setError('Could not resend code.');
@@ -89,7 +89,7 @@ const ResetCodePage = () => {
               Enter Verification Code
             </h1>
             <p className="text-sm text-gray-600 mb-4">
-              We sent a 6-digit code to your email.
+              We sent a 6-digit code to your phone.
             </p>
 
             {(error || success) && (
@@ -114,10 +114,10 @@ const ResetCodePage = () => {
               aria-busy={pending || undefined}
             >
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone number"
                 className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
                 required
                 disabled={pending}
@@ -152,7 +152,7 @@ const ResetCodePage = () => {
               <button
                 type="button"
                 onClick={onResend}
-                disabled={pending || !email}
+                disabled={pending || !phone}
                 className="text-primary hover:text-primary-dark disabled:opacity-60"
               >
                 Resend code
