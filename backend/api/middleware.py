@@ -24,6 +24,7 @@ class PendingUserGateMiddleware:
         "/api/auth/reset-password",
         "/api/auth/reset-password-code",
         "/api/auth/verify-reset-code",
+        "/api/auth/password-reset/",
         "/api/auth/refresh-token",
         "/api/auth/face-login",
         "/api/verify/status",

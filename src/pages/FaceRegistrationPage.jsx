@@ -173,13 +173,15 @@ const FaceRegistrationPage = () => {
 
                 {/* Camera viewport */}
                 <div className="relative">
-                  <CameraCapture
-                    ref={cameraRef}
-                    step={step}
-                    currentPosition={currentPosition}
-                    capturedImages={capturedImages}
-                    capturePositions={capturePositions}
-                  />
+                  {step !== 'complete' && (
+                    <CameraCapture
+                      ref={cameraRef}
+                      step={step}
+                      currentPosition={currentPosition}
+                      capturedImages={capturedImages}
+                      capturePositions={capturePositions}
+                    />
+                  )}
                   <RegistrationStatus step={step} />
                 </div>
 

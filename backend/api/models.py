@@ -157,6 +157,34 @@ class ResetToken(models.Model):
         return timezone.now() < self.expires_at
 
 
+class PasswordResetCode(models.Model):
+    """Short‑lived OTP for password reset verification.
+
+    Stores only a SHA256 hash of the 6‑digit code. Single‑use with
+    attempt tracking and strict expiry.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="password_reset_codes")
+    code_hash = models.CharField(max_length=128)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "password_reset_code"
+        indexes = [
+            models.Index(fields=["user", "expires_at", "used"]),
+        ]
+
+    @property
+    def is_active(self) -> bool:
+        if self.used:
+            return False
+        return timezone.now() < self.expires_at
+
+
 def _facetpl_upload_path(instance, filename):
     base, ext = os.path.splitext(filename or "")
     ext = ext if ext else ".jpg"

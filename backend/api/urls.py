@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views_auth as auth_views
+from . import views_password_reset as pr_views
 from . import views_verify as verify_views
 from . import views_menu as menu_views
 from . import views_users as user_views
@@ -17,6 +18,10 @@ urlpatterns = [
     path("auth/reset-password", auth_views.reset_password, name="reset_password"),
     path("auth/reset-password-code", auth_views.reset_password_code, name="reset_password_code"),
     path("auth/verify-reset-code", auth_views.verify_reset_code, name="verify_reset_code"),
+    # New OTP + signer-based password reset
+    path("auth/password-reset/request", pr_views.password_reset_request, name="password_reset_request"),
+    path("auth/password-reset/verify", pr_views.password_reset_verify, name="password_reset_verify"),
+    path("auth/password-reset/confirm", pr_views.password_reset_confirm, name="password_reset_confirm"),
     path("auth/change-password", auth_views.change_password, name="change_password"),
     path("auth/refresh-token", auth_views.refresh_token, name="refresh_token"),
     path("auth/google", auth_views.auth_google, name="auth_google"),

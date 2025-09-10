@@ -336,6 +336,40 @@ class AuthService {
     const res = await apiClient.post('/auth/resend-verification', { email });
     return res?.data || res;
   }
+
+  // New OTP password reset flow
+  async requestPasswordReset(email) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true, message: 'If account exists, code sent.' };
+    }
+    const res = await apiClient.post('/auth/password-reset/request', { email });
+    return res?.data || res;
+  }
+
+  async verifyPasswordReset(email, code) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true, resetToken: 'mock-reset-' + Date.now() };
+    }
+    const res = await apiClient.post('/auth/password-reset/verify', {
+      email,
+      code,
+    });
+    return res?.data || res;
+  }
+
+  async confirmPasswordReset(resetToken, newPassword) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/password-reset/confirm', {
+      resetToken,
+      newPassword,
+    });
+    return res?.data || res;
+  }
 }
 
 export const authService = new AuthService();
