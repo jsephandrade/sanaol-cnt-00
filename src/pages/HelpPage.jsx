@@ -1,4 +1,5 @@
-//
+import { useMemo, useState, useEffect } from 'react';
+import { useAuth } from '@/components/AuthContext';
 import {
   Card,
   CardContent,
@@ -14,7 +15,51 @@ import {
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Mail } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 const HelpPage = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const supportEmail = 'josephformentera2@gmail.com';
+  const defaultBody = useMemo(() => {
+    const lines = [];
+    lines.push('Hello TechnoMart Support,', '');
+    if (user?.email) {
+      const name = user?.name ? user.name + ' ' : '';
+      lines.push(`From: ${name}<${user.email}>`);
+    }
+    if (user?.id) lines.push(`User ID: ${user.id}`);
+    if (user?.role) lines.push(`Role: ${user.role}`);
+    if (typeof window !== 'undefined' && window.location?.href) {
+      lines.push(`Page: ${window.location.href}`);
+    }
+    lines.push('', 'Please describe your issue here...');
+    return lines.join('\n');
+  }, [user]);
+  // Pre-composed mailto (not used directly; kept for future deep link)
+  // Compose dialog state
+  const [open, setOpen] = useState(false);
+  const [to, setTo] = useState(supportEmail);
+  const [from, setFrom] = useState(user?.email || '');
+  const [body, setBody] = useState(defaultBody);
+  useEffect(() => {
+    setTo(supportEmail);
+  }, [supportEmail]);
+  useEffect(() => {
+    setFrom(user?.email || '');
+  }, [user?.email]);
+  useEffect(() => {
+    setBody(defaultBody);
+  }, [defaultBody]);
   const faqs = [
     {
       question: 'How do I manage menu items?',
@@ -89,23 +134,90 @@ const HelpPage = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={() => setOpen(true)}
+            >
               <Mail className="h-4 w-4" />
               Email Support
             </Button>
           </div>
-          <div className="mt-4 p-4 bg-muted rounded-lg">
-            <h4 className="font-semibold mb-2">Support Hours</h4>
-            <p className="text-sm text-muted-foreground">
-              Monday - Friday: 9:00 AM - 6:00 PM
-              <br />
-              Saturday: 10:00 AM - 4:00 PM
-              <br />
-              Sunday: Closed
-            </p>
-          </div>
         </CardContent>
       </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Compose Email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="compose-to">To</Label>
+              <Input
+                id="compose-to"
+                type="email"
+                value={to}
+                readOnly
+                placeholder="support@example.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="compose-from">From</Label>
+              <Input
+                id="compose-from"
+                type="email"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                placeholder="you@example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Your email client will use your configured account as the actual
+                sender. We include this value at the top of the message for
+                clarity.
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="compose-body">Message</Label>
+              <Textarea
+                id="compose-body"
+                rows={10}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                const subject = encodeURIComponent(
+                  (import.meta.env && import.meta.env.VITE_SUPPORT_SUBJECT) ||
+                    'TechnoMart Support Request'
+                );
+                let finalBody = body || '';
+                const fromLine = from ? `From: <${from}>` : '';
+                if (fromLine && !finalBody.toLowerCase().includes('from:')) {
+                  finalBody = `${fromLine}\n\n${finalBody}`;
+                }
+                const href = `mailto:${encodeURIComponent(supportEmail)}?subject=${subject}&body=${encodeURIComponent(finalBody)}`;
+                try {
+                  window.location.href = href;
+                } finally {
+                  toast({
+                    title: 'Opening your email client...',
+                    description: `If it didn't open, email ${supportEmail}`,
+                  });
+                  setOpen(false);
+                }
+              }}
+            >
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

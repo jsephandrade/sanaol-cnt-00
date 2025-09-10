@@ -90,6 +90,34 @@ class AuthService {
     });
     return res?.data || res;
   }
+  async unregisterFace() {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    try {
+      const res = await apiClient.post(
+        '/auth/face-unregister',
+        {},
+        {
+          retry: { retries: 1 },
+        }
+      );
+      return res?.data || res;
+    } catch (e1) {
+      try {
+        const res = await apiClient.delete('/auth/face-register', {
+          retry: { retries: 1 },
+        });
+        return res?.data || res;
+      } catch (e2) {
+        return {
+          success: false,
+          message: e2?.message || e1?.message || 'Failed to disable face login',
+        };
+      }
+    }
+  }
   async login(email, password, options = {}) {
     if (USE_MOCKS) {
       await mockDelay();
