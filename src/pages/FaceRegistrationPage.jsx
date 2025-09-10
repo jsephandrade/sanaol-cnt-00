@@ -106,6 +106,10 @@ const FaceRegistrationPage = () => {
       if (!imagesPayload.length) throw new Error('No images captured');
       const res = await authService.registerFace(imagesPayload);
       if (!res?.success) throw new Error('Registration failed');
+      try {
+        localStorage.setItem('face_enabled', '1');
+        sessionStorage.setItem('face_enabled', '1');
+      } catch {}
       setStep('complete');
       toast({
         title: 'Face registered successfully!',

@@ -163,9 +163,13 @@ const FaceScanPage = () => {
                     {scanResult === 'failed' && (
                       <div className="text-center text-destructive">
                         <XCircle className="w-16 h-16 mx-auto mb-2" />
-                        <p className="font-medium">Face not recognized</p>
+                        <p className="font-medium">
+                          {error || 'Face not recognized'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          Please try again
+                          {error
+                            ? 'Update settings then try again'
+                            : 'Please try again'}
                         </p>
                       </div>
                     )}

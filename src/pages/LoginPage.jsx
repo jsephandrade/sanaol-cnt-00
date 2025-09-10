@@ -119,19 +119,44 @@ const LoginPage = () => {
       if (provider === 'google-credential') {
         const res = await loginWithGoogle(payload, { remember });
         if (!res?.success) throw new Error('Google login failed');
-        if (!res?.token) {
+        if (res?.token) {
+          // approved path -> handled below by navigate('/')
+        } else if (res?.verifyToken) {
+          // pending path -> send to verification
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+          navigate('/verify');
+          return;
+        } else {
           setError(
-            'Your Google account is not registered or not yet approved. Please sign up and complete identity verification.'
+            'Your Google account is not registered or not yet approved.'
           );
-          return; // Do not navigate; user can click Create Account
+          return;
         }
       } else if (provider === 'google') {
         const credential = await signInWithGoogle();
         const res = await loginWithGoogle(credential, { remember });
         if (!res?.success) throw new Error('Google login failed');
-        if (!res?.token) {
+        if (res?.token) {
+          // approved path -> continue to home
+        } else if (res?.verifyToken) {
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+          navigate('/verify');
+          return;
+        } else {
           setError(
-            'Your Google account is not registered or not yet approved. Please sign up and complete identity verification.'
+            'Your Google account is not registered or not yet approved.'
           );
           return;
         }

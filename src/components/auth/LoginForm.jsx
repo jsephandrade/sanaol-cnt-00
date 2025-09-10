@@ -74,27 +74,35 @@ const LoginForm = ({
         aria-busy={pending || undefined}
       >
         <div>
-          <label className="sr-only" htmlFor="email">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            inputMode="email"
-            autoComplete="username email"
-            autoCapitalize="none"
-            spellCheck={false}
-            value={email}
-            onChange={(e) => onEmailChange?.(e.target.value)}
-            placeholder="Email"
-            className="w-full p-2 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
-            required
-            aria-invalid={!!emailError}
-            aria-describedby={emailError ? 'email-error' : undefined}
-            disabled={pending}
-            autoFocus
-          />
+          <div className="relative">
+            <input
+              id="email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="username email"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={email}
+              onChange={(e) => onEmailChange?.(e.target.value)}
+              placeholder=" "
+              className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+              required
+              aria-invalid={!!emailError}
+              aria-describedby={emailError ? 'email-error' : undefined}
+              disabled={pending}
+              autoFocus
+            />
+            <label
+              htmlFor="email"
+              className="absolute left-3 text-muted-foreground pointer-events-none transition-all
+                top-0 -translate-y-1/2 text-xs px-1 bg-white
+                peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0
+                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+            >
+              Email
+            </label>
+          </div>
           {emailError && (
             <p id="email-error" className="mt-1 text-sm text-red-700">
               {emailError}
@@ -103,9 +111,6 @@ const LoginForm = ({
         </div>
 
         <div>
-          <label className="sr-only" htmlFor="password">
-            Password
-          </label>
           <div className="relative">
             <input
               id="password"
@@ -113,8 +118,8 @@ const LoginForm = ({
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => onPasswordChange?.(e.target.value)}
-              placeholder="Password"
-              className="w-full p-2 pr-9 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+              placeholder=" "
+              className="peer w-full h-10 px-3 pt-3 pb-3 pr-9 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
               required
               autoComplete="current-password"
               aria-invalid={!!passwordError}
@@ -122,6 +127,15 @@ const LoginForm = ({
               disabled={pending}
               minLength={8}
             />
+            <label
+              htmlFor="password"
+              className="absolute left-3 text-muted-foreground pointer-events-none transition-all
+                top-0 -translate-y-1/2 text-xs px-1 bg-white
+                peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0
+                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+            >
+              Password
+            </label>
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}

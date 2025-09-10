@@ -36,7 +36,25 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Check, X, Image as ImageIcon, RefreshCcw } from 'lucide-react';
+import {
+  Check,
+  X,
+  Image as ImageIcon,
+  RefreshCcw,
+  MoreVertical,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 const RoleSelect = ({ value, onChange }) => (
   <Select value={value} onValueChange={onChange}>
@@ -192,26 +210,50 @@ export const PendingVerifications = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <RoleSelect value={role} onChange={setRole} />
-                        <Button
-                          size="sm"
-                          onClick={() => setApproveId(req.id)}
-                          disabled={approve.isPending}
-                          className="inline-flex items-center"
-                        >
-                          <Check className="h-4 w-4 mr-1" /> Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRejectRow(req.id)}
-                          disabled={reject.isPending}
-                          className="inline-flex items-center"
-                        >
-                          <X className="h-4 w-4 mr-1" /> Reject
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 p-0"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              Assign Role
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuRadioGroup
+                                value={role}
+                                onValueChange={setRole}
+                              >
+                                <DropdownMenuRadioItem value="staff">
+                                  Staff
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="manager">
+                                  Manager
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="admin">
+                                  Admin
+                                </DropdownMenuRadioItem>
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setApproveId(req.id)}
+                          >
+                            <Check className="h-4 w-4 mr-2" /> Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onRejectRow(req.id)}>
+                            <X className="h-4 w-4 mr-2" /> Reject
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

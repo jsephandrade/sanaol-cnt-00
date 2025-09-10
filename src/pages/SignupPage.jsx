@@ -130,50 +130,94 @@ const SignupPage = () => {
               <AuthCard title="Create Account" compact>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="First Name"
-                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                      required
-                    />
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Last Name"
-                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        id="firstName"
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder=" "
+                        className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                        required
+                      />
+                      <label
+                        htmlFor="firstName"
+                        className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                      >
+                        First Name
+                      </label>
+                    </div>
+                    <div className="relative">
+                      <input
+                        id="lastName"
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder=" "
+                        className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                        required
+                      />
+                      <label
+                        htmlFor="lastName"
+                        className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                      >
+                        Last Name
+                      </label>
+                    </div>
                   </div>
-                  <input
-                    type="tel"
-                    value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    placeholder="Contact Number"
-                    className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                    required
-                  />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      id="contactNumber"
+                      type="tel"
+                      value={contactNumber}
+                      onChange={(e) => setContactNumber(e.target.value)}
+                      placeholder=" "
+                      className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                      required
+                    />
+                    <label
+                      htmlFor="contactNumber"
+                      className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                    >
+                      Contact Number
+                    </label>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder=" "
+                      className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                      required
+                    />
+                    <label
+                      htmlFor="email"
+                      className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                    >
+                      Email
+                    </label>
+                  </div>
 
                   {/* Password with toggle */}
                   <div className="relative">
                     <input
+                      id="password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
-                      className="w-full p-2 pr-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder=" "
+                      className="peer w-full h-10 px-3 pt-3 pb-3 pr-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
                       required
+                      minLength={8}
                     />
+                    <label
+                      htmlFor="password"
+                      className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                    >
+                      Password
+                    </label>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -182,18 +226,28 @@ const SignupPage = () => {
                       {!showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    The password should be at least 8 characters.
+                  </p>
 
                   {/* Confirm Password with toggle */}
                   <div>
                     <div className="relative">
                       <input
+                        id="confirmPassword"
                         type={showConfirmPassword ? 'text' : 'password'}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm Password"
-                        className="w-full p-2 pr-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
+                        placeholder=" "
+                        className="peer w-full h-10 px-3 pt-3 pb-3 pr-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
                         required
                       />
+                      <label
+                        htmlFor="confirmPassword"
+                        className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
+                      >
+                        Confirm Password
+                      </label>
                       <button
                         type="button"
                         onClick={() =>

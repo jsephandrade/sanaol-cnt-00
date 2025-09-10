@@ -19,11 +19,15 @@ export function usersApiToModel(list = []) {
 
 // For creating users: validate the payload we send to API
 export function userModelToCreatePayload(model) {
-  const payload = validate(UserCreateSchema, {
-    name: model.name,
-    email: model.email,
-    role: (model.role || 'staff').toLowerCase(),
-  }, 'UserCreate');
+  const payload = validate(
+    UserCreateSchema,
+    {
+      name: model.name,
+      email: model.email,
+      role: (model.role || 'staff').toLowerCase(),
+    },
+    'UserCreate'
+  );
   return payload;
 }
 
@@ -32,8 +36,9 @@ export function userModelToUpdatePayload(model) {
   const update = {};
   if (model.name !== undefined) update.name = model.name;
   if (model.email !== undefined) update.email = model.email;
+  if (model.phone !== undefined) update.phone = model.phone;
   if (model.role !== undefined) update.role = (model.role || '').toLowerCase();
-  if (model.status !== undefined) update.status = (model.status || '').toLowerCase();
+  if (model.status !== undefined)
+    update.status = (model.status || '').toLowerCase();
   return validate(UserUpdateSchema, update, 'UserUpdate');
 }
-

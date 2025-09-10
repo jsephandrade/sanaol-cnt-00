@@ -9,6 +9,7 @@ export const UserSchema = z
     id: z.string().min(1),
     name: z.string().min(1),
     email: z.string().email(),
+    phone: z.string().optional().default(''),
     role: RoleValue,
     status: UserStatus,
     permissions: z.array(z.string()).optional().default([]),
@@ -33,6 +34,7 @@ export const UserUpdateSchema = z
   .object({
     name: z.string().min(1).optional(),
     email: z.string().email().optional(),
+    phone: z.string().optional(),
     role: RoleValue.optional(),
     status: UserStatus.optional(),
   })

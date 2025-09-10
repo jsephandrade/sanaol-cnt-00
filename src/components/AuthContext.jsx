@@ -300,6 +300,24 @@ export function AuthProvider({ children }) {
     );
   };
 
+  const updateProfile = useCallback(
+    async (updates) => {
+      try {
+        const nextUser = { ...(user || {}), ...(updates || {}) };
+        // Reuse current token/refresh; persist to the same store based on rememberPref
+        persistAuth(
+          nextUser,
+          tokenRef.current || token,
+          refreshTokenValue || null
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [user, persistAuth, token, refreshTokenValue]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -312,6 +330,7 @@ export function AuthProvider({ children }) {
         register,
         logout,
         refreshToken,
+        updateProfile,
         hasRole,
         hasAnyRole,
         can,
