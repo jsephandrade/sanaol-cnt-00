@@ -64,20 +64,7 @@ const SignupPage = () => {
   const handleSocial = async (provider, payload /* e or credential */) => {
     setPending(true);
 
-    if (provider === 'facescan') {
-      // Handle face scan authentication
-      try {
-        // Simulate face scan process
-        alert('Face scan authentication initiated...');
-        // In a real implementation, you would integrate with a face recognition API
-        setTimeout(() => {
-          alert('Face scan authentication successful!');
-          navigate('/dashboard'); // or wherever you want to redirect after successful auth
-        }, 2000);
-      } catch (error) {
-        alert('Face scan authentication failed. Please try again.');
-      }
-    } else if (provider === 'google-credential') {
+    if (provider === 'google-credential') {
       try {
         const res = await loginWithGoogle(payload);
         if (!res?.success) throw new Error('Google failed');
