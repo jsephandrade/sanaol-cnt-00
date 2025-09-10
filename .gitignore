@@ -45,3 +45,5 @@ venv/
 env/
 backend/.venv/
 
+# Backend uploads and private storage
+backend/private_media/
