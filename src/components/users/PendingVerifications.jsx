@@ -15,13 +15,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from '@/components/ui/select';
 import { useVerificationQueue } from '@/hooks/useVerificationQueue';
 import verificationService from '@/api/services/verificationService';
 import { Badge } from '@/components/ui/badge';
@@ -55,19 +48,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-
-const RoleSelect = ({ value, onChange }) => (
-  <Select value={value} onValueChange={onChange}>
-    <SelectTrigger className="w-[140px]">
-      <SelectValue placeholder="Select role" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="staff">Staff</SelectItem>
-      <SelectItem value="manager">Manager</SelectItem>
-      <SelectItem value="admin">Admin</SelectItem>
-    </SelectContent>
-  </Select>
-);
 
 export const PendingVerifications = () => {
   const { requests, pagination, loading, error, refetch, approve, reject } =

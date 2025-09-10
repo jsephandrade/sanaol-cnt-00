@@ -10,9 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Settings, User, Bell, Shield, Scan } from 'lucide-react';
+import { Settings, User, Shield, Scan } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/components/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -250,50 +249,6 @@ const SettingsPage = () => {
             <Button onClick={handleSaveProfile} disabled={profilePending}>
               {profilePending ? 'Saving…' : 'Save Profile Changes'}
             </Button>
-          </CardContent>
-        </Card>
-
-        {/* Notification Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Bell className="h-5 w-5" />
-              <span>Notification Settings</span>
-            </CardTitle>
-            <CardDescription>
-              Configure how you receive notifications
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="emailNotifications">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive notifications via email
-                </p>
-              </div>
-              <Switch id="emailNotifications" />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="pushNotifications">Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive push notifications in browser
-                </p>
-              </div>
-              <Switch id="pushNotifications" />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="salesAlerts">Sales Alerts</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified about daily sales reports
-                </p>
-              </div>
-              <Switch id="salesAlerts" />
-            </div>
           </CardContent>
         </Card>
 
