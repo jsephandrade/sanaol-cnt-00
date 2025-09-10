@@ -23,7 +23,7 @@ const SetNewPasswordPage = () => {
     const q = query.get('token') || '';
     if (q) return q;
     try {
-      return sessionStorage.getItem('pwd_commit') || '';
+      return sessionStorage.getItem('reset_token') || '';
     } catch {
       return '';
     }
@@ -51,11 +51,11 @@ const SetNewPasswordPage = () => {
     }
     setPending(true);
     try {
-      const res = await authService.resetPassword(token, password);
+      const res = await authService.confirmPasswordReset(token, password);
       if (res?.success) {
         setSuccess('Your password has been reset. You can now log in.');
         try {
-          sessionStorage.removeItem('pwd_commit');
+          sessionStorage.removeItem('reset_token');
         } catch {}
       } else {
         setError(res?.message || 'Reset failed. The link may have expired.');

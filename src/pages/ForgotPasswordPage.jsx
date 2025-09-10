@@ -60,10 +60,10 @@ const ForgotPasswordPage = () => {
 
     setPending(true);
     try {
-      const res = await authService.forgotPassword(email);
+      const res = await authService.requestPasswordReset(email);
       if (res?.debugResetLink) setDebugLink(res.debugResetLink);
       setSuccess(
-        'If an account exists for this email, a password reset link has been sent.'
+        'If an account exists for this email, a verification code has been sent.'
       );
       try {
         sessionStorage.setItem('reset_email', email);

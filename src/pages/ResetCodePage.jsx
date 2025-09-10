@@ -42,18 +42,16 @@ const ResetCodePage = () => {
     }
     setPending(true);
     try {
-      const res = await authService.verifyResetCode(email, code);
-      if (!res?.success || !res?.commitToken) {
+      const res = await authService.verifyPasswordReset(email, code);
+      if (!res?.success || !res?.resetToken) {
         setError(res?.message || 'Invalid or expired code.');
         return;
       }
       try {
-        sessionStorage.setItem('pwd_commit', res.commitToken);
+        sessionStorage.setItem('reset_token', res.resetToken);
       } catch {}
       setSuccess('Code verified. Proceed to set a new password.');
-      navigate(
-        `/set-new-password?token=${encodeURIComponent(res.commitToken)}`
-      );
+      navigate(`/set-new-password?token=${encodeURIComponent(res.resetToken)}`);
     } catch (err) {
       setError('Could not verify code.');
     } finally {
@@ -70,7 +68,7 @@ const ResetCodePage = () => {
     }
     setPending(true);
     try {
-      await authService.forgotPassword(email);
+      await authService.requestPasswordReset(email);
       setSuccess('If an account exists, a new code has been sent.');
     } catch (e) {
       setError('Could not resend code.');
