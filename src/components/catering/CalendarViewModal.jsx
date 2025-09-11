@@ -57,7 +57,7 @@ export const CalendarViewModal = ({ open, onOpenChange, events }) => {
               mode="single"
               selected={selectedDate}
               onSelect={setSelectedDate}
-              className="rounded-md border p-3 pointer-events-auto"
+              className="rounded-md border p-3 w-full max-w-full pointer-events-auto"
               modifiers={{
                 hasEvents: (date) => hasEventsOnDate(date),
               }}

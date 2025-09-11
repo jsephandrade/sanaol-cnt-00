@@ -110,6 +110,7 @@ const AppRoutes = () => {
         '/menu': 'Menu Management',
         '/analytics': 'Analytics',
         '/employees': 'Employee Schedule',
+
         '/feedback': 'Customer Feedback',
         '/pos': 'Point of Sale',
         '/catering': 'Catering',
@@ -254,6 +255,7 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/feedback"
             element={

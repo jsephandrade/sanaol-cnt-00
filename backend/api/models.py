@@ -216,6 +216,68 @@ class FaceTemplate(models.Model):
 
 
 # -----------------------------
+# Employees & Scheduling
+# -----------------------------
+
+
+class Employee(models.Model):
+    """Employee directory entry for scheduling and staffing.
+
+    This model is intentionally separate from AppUser to allow
+    non-login employees to exist. It can be linked to an AppUser
+    by email in the future if needed.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    # Optional link to an AppUser for confidentiality-aware features
+    user = models.OneToOneField(
+        AppUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="employee_profile",
+    )
+    name = models.CharField(max_length=255)
+    position = models.CharField(max_length=128, blank=True)
+    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    contact = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=32, default="active")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "employee"
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["name"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.position})"
+
+
+class ScheduleEntry(models.Model):
+    """Simple weekly schedule entry for an employee.
+
+    Uses a day-of-week string (e.g., 'Monday') and start/end times.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="schedules")
+    day = models.CharField(max_length=16)  # Sunday..Saturday
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "schedule_entry"
+        indexes = [
+            models.Index(fields=["employee", "day"]),
+        ]
+
+
+# -----------------------------
 # Activity / Audit Logging
 # -----------------------------
 
@@ -382,3 +444,76 @@ class PaymentMethodConfig(models.Model):
 
     class Meta:
         db_table = "payment_method_config"
+
+
+# -----------------------------
+# Attendance & Leave
+# -----------------------------
+
+
+class AttendanceRecord(models.Model):
+    STATUS_PRESENT = "present"
+    STATUS_ABSENT = "absent"
+    STATUS_LATE = "late"
+    STATUS_CHOICES = [
+        (STATUS_PRESENT, "Present"),
+        (STATUS_ABSENT, "Absent"),
+        (STATUS_LATE, "Late"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    employee = models.ForeignKey("Employee", on_delete=models.CASCADE, related_name="attendance_records")
+    date = models.DateField()
+    check_in = models.TimeField(blank=True, null=True)
+    check_out = models.TimeField(blank=True, null=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PRESENT)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "attendance_record"
+        unique_together = ("employee", "date")
+        indexes = [
+            models.Index(fields=["employee", "date"]),
+            models.Index(fields=["date"]),
+        ]
+
+
+class LeaveRecord(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    TYPE_SICK = "sick"
+    TYPE_VACATION = "vacation"
+    TYPE_OTHER = "other"
+    TYPE_CHOICES = [
+        (TYPE_SICK, "Sick"),
+        (TYPE_VACATION, "Vacation"),
+        (TYPE_OTHER, "Other"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    employee = models.ForeignKey("Employee", on_delete=models.CASCADE, related_name="leave_records")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    type = models.CharField(max_length=16, choices=TYPE_CHOICES, default=TYPE_OTHER)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    reason = models.TextField(blank=True)
+    decided_by = models.CharField(max_length=255, blank=True)
+    decided_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "leave_record"
+        indexes = [
+            models.Index(fields=["employee", "start_date", "end_date"]),
+            models.Index(fields=["status"]),
+        ]

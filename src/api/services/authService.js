@@ -24,6 +24,7 @@ class AuthService {
           email: 'user@example.com',
           role: 'staff',
           status: 'pending',
+          employeeId: 'emp-' + Date.now().toString(),
         },
         token: null,
         verifyToken: 'mock-verify-token-' + Date.now(),
@@ -35,10 +36,21 @@ class AuthService {
       { retry: { retries: 1 } }
     );
     const data = res?.data || res;
+    const rawUser = data.user || data;
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: Boolean(data?.success ?? true),
       pending: Boolean(data?.pending ?? false),
-      user: data.user || data,
+      user,
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
@@ -56,6 +68,7 @@ class AuthService {
           email: 'face@example.com',
           role: 'staff',
           status: 'active',
+          employeeId: 'emp-face-' + Date.now().toString(),
         },
         token: 'mock-face-token-' + Date.now(),
         refreshToken: 'mock-face-rt-' + Date.now(),
@@ -68,10 +81,21 @@ class AuthService {
       { retry: { retries: 1 } }
     );
     const data = res?.data || res;
+    const rawUser = data.user || data;
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: Boolean(data?.success ?? true),
       pending: Boolean(data?.pending ?? false),
-      user: data.user || data,
+      user,
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
@@ -131,6 +155,7 @@ class AuthService {
           email,
           role: 'staff',
           status: 'active',
+          employeeId: 'emp-' + (email?.split('@')[0] || 'mock'),
         },
         token: 'mock-jwt-token-' + Date.now(),
         refreshToken: 'mock-refresh-token-' + Date.now(),
@@ -143,16 +168,27 @@ class AuthService {
       { retry: { retries: 1 } }
     );
     const data = res?.data || res;
+    const rawUser = data.user || {
+      id: data.userId || 'me',
+      name: data.name || email,
+      email,
+      role: (data.role || 'staff').toLowerCase(),
+      status: data.status || 'active',
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: Boolean(data?.success ?? true),
       pending: Boolean(data?.pending ?? false),
-      user: data.user || {
-        id: data.userId || 'me',
-        name: data.name || email,
-        email,
-        role: (data.role || 'staff').toLowerCase(),
-        status: data.status || 'active',
-      },
+      user,
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
@@ -170,6 +206,7 @@ class AuthService {
           ...userData,
           role: 'staff',
           status: 'pending',
+          employeeId: 'emp-' + Date.now().toString(),
         },
         token: null,
         verifyToken: 'mock-verify-token-' + Date.now(),
@@ -179,15 +216,26 @@ class AuthService {
       retry: { retries: 1 },
     });
     const data = res?.data || res;
+    const rawUser = data.user || {
+      id: data.id || String(Date.now()),
+      ...userData,
+      role: (data.role || 'staff').toLowerCase(),
+      status: data.status || 'pending',
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: Boolean(data?.success ?? true),
       pending: Boolean(data?.pending ?? false),
-      user: data.user || {
-        id: data.id || String(Date.now()),
-        ...userData,
-        role: (data.role || 'staff').toLowerCase(),
-        status: data.status || 'pending',
-      },
+      user,
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
@@ -213,20 +261,32 @@ class AuthService {
           name: 'Social User',
           email: 'user@example.com',
           role: 'staff',
+          employeeId: 'emp-social-' + Date.now().toString(),
         },
         token: 'mock-social-token-' + Date.now(),
       };
     }
     const res = await apiClient.post('/auth/social', { provider });
     const data = res?.data || res;
+    const rawUser = data.user || {
+      id: 'me',
+      name: data.name || 'User',
+      email: data.email || 'user@example.com',
+      role: (data.role || 'staff').toLowerCase(),
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: true,
-      user: data.user || {
-        id: 'me',
-        name: data.name || 'User',
-        email: data.email || 'user@example.com',
-        role: (data.role || 'staff').toLowerCase(),
-      },
+      user,
       token: data.token || data.accessToken || null,
     };
   }

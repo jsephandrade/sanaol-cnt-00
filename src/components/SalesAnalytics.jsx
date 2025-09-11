@@ -41,7 +41,8 @@ import {
   mockSalesAnalytics,
   mockOrders,
 } from '@/api/mockData';
-import { salesData, employees, scheduleData } from '@/utils/mockData';
+import { salesData, employees as mockEmployees } from '@/utils/mockData';
+import { useEmployees, useSchedule } from '@/hooks/useEmployees';
 
 // Helpers
 import { groupSalesByDate, getSalesByPaymentMethod } from '@/utils/salesUtils';
@@ -462,23 +463,28 @@ function OrdersPanel() {
 
 // ----- Staff Attendance Reports
 function AttendancePanel() {
-  // Aggregate scheduled hours per employee (simple calc from HH:MM)
+  const { employees } = useEmployees();
+  const { schedule } = useSchedule();
   const toHours = (start, end) => {
-    const [sh, sm] = start.split(':').map(Number);
-    const [eh, em] = end.split(':').map(Number);
-    return eh + em / 60 - (sh + sm / 60);
+    if (!start || !end) return 0;
+    const [sh, sm] = String(start).split(':').map(Number);
+    const [eh, em] = String(end).split(':').map(Number);
+    if (Number.isNaN(sh) || Number.isNaN(eh)) return 0;
+    return eh + (em || 0) / 60 - (sh + (sm || 0) / 60);
   };
   const hours = useMemo(() => {
+    const nameById = Object.fromEntries(employees.map((e) => [e.id, e.name]));
     const map = {};
-    for (const s of scheduleData) {
+    for (const s of schedule) {
       const h = toHours(s.startTime, s.endTime);
-      map[s.employeeName] = (map[s.employeeName] || 0) + h;
+      const name = s.employeeName || nameById[s.employeeId] || 'Unknown';
+      map[name] = (map[name] || 0) + h;
     }
     return Object.entries(map).map(([name, hrs]) => ({
       name,
       hours: Math.round(hrs * 10) / 10,
     }));
-  }, []);
+  }, [employees, schedule]);
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -527,15 +533,17 @@ function AttendancePanel() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {employees.slice(0, 6).map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-medium">{e.name}</TableCell>
-                    <TableCell>{e.position}</TableCell>
-                    <TableCell className="text-right">
-                      {currency(e.hourlyRate)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {(employees.length ? employees : mockEmployees)
+                  .slice(0, 6)
+                  .map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="font-medium">{e.name}</TableCell>
+                      <TableCell>{e.position}</TableCell>
+                      <TableCell className="text-right">
+                        {currency(e.hourlyRate)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </div>

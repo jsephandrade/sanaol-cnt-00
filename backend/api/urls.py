@@ -8,6 +8,8 @@ from . import views_face as face_views
 from . import views_logs as logs_views
 from . import views_notifications as notif_views
 from . import views_payments as pay_views
+from . import views_employees as emp_views
+from . import views_attendance as att_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -79,4 +81,16 @@ urlpatterns = [
     path("payments/<uuid:pid>/invoice", pay_views.payment_invoice, name="payment_invoice"),
     path("payments/config", pay_views.payments_config, name="payments_config"),
     path("orders/<str:order_id>/payment", pay_views.order_payment, name="order_payment"),
+
+    # Employees & Schedule
+    path("employees", emp_views.employees, name="employees"),
+    path("employees/<uuid:emp_id>", emp_views.employee_detail, name="employee_detail"),
+    path("schedule", emp_views.schedule, name="schedule"),
+    path("schedule/<uuid:sid>", emp_views.schedule_detail, name="schedule_detail"),
+
+    # Attendance & Leaves
+    path("attendance", att_views.attendance, name="attendance"),
+    path("attendance/<uuid:rid>", att_views.attendance_detail, name="attendance_detail"),
+    path("leaves", att_views.leaves, name="leaves"),
+    path("leaves/<uuid:lid>", att_views.leave_detail, name="leave_detail"),
 ]

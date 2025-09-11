@@ -16,28 +16,36 @@ const WeeklyScheduleCard = ({
   onEditSchedule,
   onDeleteSchedule,
   onAddScheduleForDay,
+  onOpenManageEmployees,
+  onOpenAddSchedule,
+  canManage = false,
 }) => {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Weekly Schedule</CardTitle>
-        <CardDescription>
-          Employee shifts for the current week
-        </CardDescription>
+      <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Weekly Schedule</CardTitle>
+          <CardDescription>
+            Employee shifts for the current week
+          </CardDescription>
+        </div>
+        {canManage && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onOpenManageEmployees}>
+              Manage Employees
+            </Button>
+            <Button onClick={onOpenAddSchedule}>Add Schedule</Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <div className="w-full">
             {/* Header Row */}
             <div className="grid grid-cols-8 gap-2 mb-4 pb-2 border-b">
-              <div className="col-span-1 font-semibold text-left">
-                Employee
-              </div>
+              <div className="col-span-1 font-semibold text-left">Employee</div>
               {daysOfWeek.map((day) => (
-                <div
-                  key={day}
-                  className="text-center font-semibold text-sm"
-                >
+                <div key={day} className="text-center font-semibold text-sm">
                   {day.slice(0, 3)}
                 </div>
               ))}
@@ -79,34 +87,44 @@ const WeeklyScheduleCard = ({
                             <div className="text-center font-medium">
                               {entry.startTime} - {entry.endTime}
                             </div>
-                            <div className="flex gap-1 justify-center">
-                              <button
-                                onClick={() => onEditSchedule(entry)}
-                                className="text-primary hover:text-primary/80 p-0.5"
-                                title="Edit schedule"
-                              >
-                                <Edit size={10} />
-                              </button>
-                              <button
-                                onClick={() => onDeleteSchedule(entry.id)}
-                                className="text-destructive hover:text-destructive/80 p-0.5"
-                                title="Delete schedule"
-                              >
-                                <Trash2 size={10} />
-                              </button>
-                            </div>
+                            {canManage && (
+                              <div className="flex gap-1 justify-center">
+                                <button
+                                  onClick={() => onEditSchedule(entry)}
+                                  className="text-primary hover:text-primary/80 p-0.5"
+                                  title="Edit schedule"
+                                >
+                                  <Edit size={10} />
+                                </button>
+                                <button
+                                  onClick={() => onDeleteSchedule(entry.id)}
+                                  className="text-destructive hover:text-destructive/80 p-0.5"
+                                  title="Delete schedule"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="border border-dashed border-muted rounded-md w-full h-8 flex items-center justify-center hover:border-primary/30">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-primary/10"
-                              onClick={() => onAddScheduleForDay(employee.id, day)}
-                              title={`Add schedule for ${day}`}
-                            >
-                              <Plus size={10} />
-                            </Button>
+                            {canManage ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-10 p-0 hover:bg-primary/10"
+                                onClick={() =>
+                                  onAddScheduleForDay(employee.id, day)
+                                }
+                                title={`Add schedule for ${day}`}
+                              >
+                                <Plus size={10} />
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                —
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
@@ -123,4 +141,3 @@ const WeeklyScheduleCard = ({
 };
 
 export default WeeklyScheduleCard;
-

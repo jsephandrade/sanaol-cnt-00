@@ -16,6 +16,7 @@ import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { Link } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
+import logo from '@/assets/technomart-logo.png';
 
 // ⬇️ Add these imports
 import {
@@ -42,16 +43,18 @@ const MainLayout = ({ children, title: _title }) => {
     <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex h-screen w-full bg-background">
         {/* Sidebar */}
-        <Sidebar variant="sidebar">
+        <Sidebar variant="sidebar" collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center justify-center p-4">
               <div className="flex items-center space-x-2">
                 <img
-                  src="/favicon.ico"
+                  src={logo}
                   alt="TechnoMart Logo"
-                  className="h-8 w-8 object-contain"
+                  className="h-8 w-8 object-contain group-data-[collapsible=icon]:hidden"
                 />
-                <span className="text-xl font-bold">TechnoMart</span>
+                <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">
+                  TechnoMart
+                </span>
               </div>
             </div>
           </SidebarHeader>
@@ -61,7 +64,8 @@ const MainLayout = ({ children, title: _title }) => {
           </SidebarContent>
 
           <SidebarFooter>
-            <div className="p-4 border-t border-sidebar-border">
+            {/* Expanded footer with name/role */}
+            <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
                   <span className="font-semibold text-sidebar-accent-foreground">
@@ -74,6 +78,15 @@ const MainLayout = ({ children, title: _title }) => {
                     {displayRole}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Collapsed footer shows only user initial */}
+            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-2 border-t border-sidebar-border">
+              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+                <span className="text-sm font-semibold text-sidebar-accent-foreground">
+                  {avatarInitial}
+                </span>
               </div>
             </div>
           </SidebarFooter>

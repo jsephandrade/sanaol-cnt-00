@@ -212,7 +212,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "payment.refund",
         # Staff and Work Scheduling
         "profile.view_roles",
+        # Staff can view schedules, managers can manage
         "schedule.view_edit",
+        "schedule.manage",
         "attendance.manage",
         "leave.manage",
         # Reports and Analytics
@@ -227,6 +229,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "notification.view",
         # Menu management (alias for clarity in endpoints)
         "menu.manage",
+        # Employee directory management
+        "employees.manage",
         # Verification review
         "verify.review",
     },
@@ -253,6 +257,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "order.history.view",
         # Staff and Work Scheduling
         "profile.view_roles",
+        # Staff can only view schedules
         "schedule.view_edit",
         # Notifications
         "notification.send",

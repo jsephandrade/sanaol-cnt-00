@@ -28,14 +28,17 @@ const AddScheduleDialog = ({
   employeeList,
   daysOfWeek,
   onAddSchedule,
+  showTrigger = true,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button className="flex items-center gap-2">
-          <Plus size={16} /> Add Schedule
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button className="flex items-center gap-2">
+            <Plus size={16} /> Add Schedule
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Schedule</DialogTitle>

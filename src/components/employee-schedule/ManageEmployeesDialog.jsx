@@ -19,14 +19,17 @@ const ManageEmployeesDialog = ({
   newEmployee,
   setNewEmployee,
   onAddEmployee,
+  showTrigger = true,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
-          <Users size={16} /> Manage Employees
-        </Button>
-      </DialogTrigger>
+      {showTrigger && (
+        <DialogTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2">
+            <Users size={16} /> Manage Employees
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Employee</DialogTitle>
@@ -110,4 +113,3 @@ const ManageEmployeesDialog = ({
 };
 
 export default ManageEmployeesDialog;
-
