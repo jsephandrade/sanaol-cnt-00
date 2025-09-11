@@ -19,6 +19,7 @@ from .views_common import (
     _issue_jwt,
     _issue_refresh_token_db,
 )
+from .utils_audit import record_audit
 
 
 def _compute_ahash(image_bytes: bytes, size: int = 8) -> Optional[str]:
@@ -109,6 +110,17 @@ def face_register(request):
         except Exception:
             pass
         tpl.save()
+        try:
+            record_audit(
+                request,
+                user=user,
+                type="security",
+                action="Face template registered",
+                details="User added/updated face template",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True})
     except Exception:
         return JsonResponse({"success": False, "message": "Registration failed"}, status=500)
@@ -148,6 +160,16 @@ def face_login(request):
         from .models import FaceTemplate
         candidates = list(FaceTemplate.objects.select_related("user").all())
         if not candidates:
+            try:
+                record_audit(
+                    request,
+                    type="login",
+                    action="Login failed",
+                    details="Face login: no registered faces",
+                    severity="warning",
+                )
+            except Exception:
+                pass
             return JsonResponse({"success": False, "message": "No registered faces"}, status=404)
         best = None
         best_d = 999
@@ -157,12 +179,33 @@ def face_login(request):
                 best_d = d
                 best = tpl
         if not best or best_d > MAX_DIST:
+            try:
+                record_audit(
+                    request,
+                    type="login",
+                    action="Login failed",
+                    details="Face login: not recognized",
+                    severity="warning",
+                )
+            except Exception:
+                pass
             return JsonResponse({"success": False, "message": "Face not recognized"}, status=401)
 
         user = best.user
         # Require active status; block deactivated explicitly
         status_l = (user.status or "").lower()
         if status_l == "deactivated":
+            try:
+                record_audit(
+                    request,
+                    user=user,
+                    type="security",
+                    action="Login blocked (deactivated)",
+                    details="Face login",
+                    severity="warning",
+                )
+            except Exception:
+                pass
             return JsonResponse({
                 "success": False,
                 "message": "Your account is currently deactivated, to activate please contact the admin.",
@@ -170,6 +213,17 @@ def face_login(request):
         if status_l != "active":
             # Issue verify token to allow app to route appropriately for pending users
             from .views_common import _issue_verify_token_from_db
+            try:
+                record_audit(
+                    request,
+                    user=user,
+                    type="login",
+                    action="Login pending",
+                    details="Face login",
+                    severity="info",
+                )
+            except Exception:
+                pass
             return JsonResponse({
                 "success": True,
                 "pending": True,
@@ -187,6 +241,17 @@ def face_login(request):
         )
         token = _issue_jwt(user, exp_seconds=exp_seconds)
         refresh_token = _issue_refresh_token_db(user, remember=remember, request=request)
+        try:
+            record_audit(
+                request,
+                user=user,
+                type="login",
+                action="Login success",
+                details="Face login",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse({
             "success": True,
             "user": _safe_user_from_db(user),
@@ -194,6 +259,16 @@ def face_login(request):
             "refreshToken": refresh_token,
         })
     except Exception:
+        try:
+            record_audit(
+                request,
+                type="system",
+                action="Login error",
+                details="Face login failed with server error",
+                severity="warning",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": False, "message": "Login failed"}, status=500)
 
 
@@ -233,6 +308,17 @@ def face_unregister(request):
         except Exception:
             pass
         tpl.delete()
+        try:
+            record_audit(
+                request,
+                user=user,
+                type="security",
+                action="Face template unregistered",
+                details="User removed face template",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True})
     except Exception:
         return JsonResponse({"success": False, "message": "Unregister failed"}, status=500)

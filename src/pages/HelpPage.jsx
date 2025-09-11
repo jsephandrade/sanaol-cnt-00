@@ -72,9 +72,9 @@ const HelpPage = () => {
         'Go to the Point of Sale section, select items from the menu, add them to the cart, and process payment. You can handle cash or card transactions.',
     },
     {
-      question: 'How do I view sales analytics?',
+      question: 'How do I view analytics?',
       answer:
-        'The Sales Analytics page provides comprehensive reports on revenue, popular items, and sales trends. Use the date filters to view specific periods.',
+        'The Analytics page provides comprehensive reports on revenue, inventory, orders, staff attendance, and customer purchases. Use the tabs and filters to view specific periods.',
     },
     {
       question: 'How do I schedule employees?',

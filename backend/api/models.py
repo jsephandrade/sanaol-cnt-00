@@ -213,3 +213,172 @@ class FaceTemplate(models.Model):
 
     class Meta:
         db_table = "face_template"
+
+
+# -----------------------------
+# Activity / Audit Logging
+# -----------------------------
+
+
+class AuditLog(models.Model):
+    TYPE_LOGIN = "login"
+    TYPE_ACTION = "action"
+    TYPE_SYSTEM = "system"
+    TYPE_SECURITY = "security"
+    TYPE_CHOICES = [
+        (TYPE_LOGIN, "Login"),
+        (TYPE_ACTION, "Action"),
+        (TYPE_SYSTEM, "System"),
+        (TYPE_SECURITY, "Security"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+    actor_email = models.CharField(max_length=255, blank=True)
+    type = models.CharField(max_length=16, choices=TYPE_CHOICES, default=TYPE_ACTION)
+    action = models.CharField(max_length=255)
+    details = models.TextField(blank=True)
+    severity = models.CharField(max_length=16, blank=True)  # e.g., info, warning, critical
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_log"
+        indexes = [
+            models.Index(fields=["type", "created_at"]),
+            models.Index(fields=["actor_email", "created_at"]),
+        ]
+
+
+# -----------------------------
+# Notifications
+# -----------------------------
+
+
+class Notification(models.Model):
+    TYPE_INFO = "info"
+    TYPE_WARNING = "warning"
+    TYPE_SUCCESS = "success"
+    TYPE_ERROR = "error"
+    TYPE_CHOICES = [
+        (TYPE_INFO, "Info"),
+        (TYPE_WARNING, "Warning"),
+        (TYPE_SUCCESS, "Success"),
+        (TYPE_ERROR, "Error"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="notifications")
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True)
+    type = models.CharField(max_length=16, choices=TYPE_CHOICES, default=TYPE_INFO)
+    read = models.BooleanField(default=False)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "notification"
+        indexes = [
+            models.Index(fields=["user", "read", "created_at"]),
+            models.Index(fields=["type", "created_at"]),
+        ]
+
+
+class NotificationPreference(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.OneToOneField(AppUser, on_delete=models.CASCADE, related_name="notification_pref")
+    email_enabled = models.BooleanField(default=True)
+    push_enabled = models.BooleanField(default=False)
+    low_stock = models.BooleanField(default=True)
+    order = models.BooleanField(default=True)
+    payment = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notification_preference"
+        indexes = [
+            models.Index(fields=["user"]),
+        ]
+
+
+class WebPushSubscription(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="push_subscriptions")
+    endpoint = models.URLField(unique=True)
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    expiration_time = models.DateTimeField(blank=True, null=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "webpush_subscription"
+        indexes = [
+            models.Index(fields=["user", "active"]),
+        ]
+
+
+# -----------------------------
+# Payments
+# -----------------------------
+
+
+class PaymentTransaction(models.Model):
+    METHOD_CASH = "cash"
+    METHOD_CARD = "card"
+    METHOD_MOBILE = "mobile"
+    METHOD_CHOICES = [
+        (METHOD_CASH, "Cash"),
+        (METHOD_CARD, "Card"),
+        (METHOD_MOBILE, "Mobile"),
+    ]
+
+    STATUS_COMPLETED = "completed"
+    STATUS_PENDING = "pending"
+    STATUS_FAILED = "failed"
+    STATUS_REFUNDED = "refunded"
+    STATUS_CHOICES = [
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_PENDING, "Pending"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_REFUNDED, "Refunded"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order_id = models.CharField(max_length=64)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    method = models.CharField(max_length=16, choices=METHOD_CHOICES)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_COMPLETED)
+    reference = models.CharField(max_length=128, blank=True)
+    customer = models.CharField(max_length=255, blank=True)
+    processed_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments_processed")
+    refunded_at = models.DateTimeField(blank=True, null=True)
+    refunded_by = models.CharField(max_length=255, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "payment_txn"
+        indexes = [
+            models.Index(fields=["order_id", "created_at"]),
+            models.Index(fields=["method", "created_at"]),
+            models.Index(fields=["status", "created_at"]),
+        ]
+
+
+class PaymentMethodConfig(models.Model):
+    id = models.SmallIntegerField(primary_key=True, default=1, editable=False)
+    cash_enabled = models.BooleanField(default=True)
+    card_enabled = models.BooleanField(default=True)
+    mobile_enabled = models.BooleanField(default=True)
+    updated_by = models.CharField(max_length=255, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "payment_method_config"

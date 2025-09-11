@@ -52,8 +52,8 @@ export const NavigationSidebar = () => {
       icon: Package,
     },
     {
-      name: 'Sales Analytics',
-      href: '/sales',
+      name: 'Analytics',
+      href: '/analytics',
       icon: TrendingUp,
     },
     {

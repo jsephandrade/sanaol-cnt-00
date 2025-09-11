@@ -5,6 +5,9 @@ from . import views_verify as verify_views
 from . import views_menu as menu_views
 from . import views_users as user_views
 from . import views_face as face_views
+from . import views_logs as logs_views
+from . import views_notifications as notif_views
+from . import views_payments as pay_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -54,4 +57,26 @@ urlpatterns = [
     path("auth/face-register", face_views.face_register, name="face_register"),
     path("auth/face-login", face_views.face_login, name="face_login"),
     path("auth/face-unregister", face_views.face_unregister, name="face_unregister"),
+
+    # Activity logs
+    path("logs", logs_views.logs, name="logs"),
+    path("logs/summary", logs_views.logs_summary, name="logs_summary"),
+    path("logs/alerts", logs_views.logs_alerts, name="logs_alerts"),
+
+    # Notifications
+    path("notifications", notif_views.notifications, name="notifications"),
+    path("notifications/mark-all-read", notif_views.notifications_mark_all, name="notifications_mark_all"),
+    path("notifications/settings", notif_views.notifications_settings, name="notifications_settings"),
+    path("notifications/<str:notif_id>/read", notif_views.notification_read, name="notification_read"),
+    path("notifications/<str:notif_id>", notif_views.notification_delete, name="notification_delete"),
+    path("notifications/push/public-key", notif_views.notifications_push_public_key, name="notifications_push_public_key"),
+    path("notifications/push/subscribe", notif_views.notifications_push_subscribe, name="notifications_push_subscribe"),
+    path("notifications/push/unsubscribe", notif_views.notifications_push_unsubscribe, name="notifications_push_unsubscribe"),
+
+    # Payments
+    path("payments", pay_views.payments_list, name="payments_list"),
+    path("payments/<uuid:pid>/refund", pay_views.payment_refund, name="payment_refund"),
+    path("payments/<uuid:pid>/invoice", pay_views.payment_invoice, name="payment_invoice"),
+    path("payments/config", pay_views.payments_config, name="payments_config"),
+    path("orders/<str:order_id>/payment", pay_views.order_payment, name="order_payment"),
 ]

@@ -17,6 +17,8 @@ from .views_common import (
     _issue_verify_token_from_dict,
     USERS,
     _require_admin_or_manager,
+    _actor_from_request,
+    _has_permission,
 )
 from .emails import (
     notify_admins_verification_submitted,
@@ -164,7 +166,8 @@ def verify_requests(request):
     try:
         from .models import AppUser, AccessRequest
         reviewer = AppUser.objects.filter(email=(payload.get("email") or "").lower()).first()
-        if not reviewer or not _require_admin_or_manager(reviewer):
+        # Require manager/admin role and explicit permission
+        if not reviewer or not _require_admin_or_manager(reviewer) or not _has_permission(reviewer, "verify.review"):
             return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
         status_q = (request.GET.get("status") or "pending").lower()
@@ -231,7 +234,8 @@ def verify_headshot(request, request_id):
     try:
         from .models import AppUser, AccessRequest
         reviewer = AppUser.objects.filter(email=(payload.get("email") or "").lower()).first()
-        if not reviewer or not _require_admin_or_manager(reviewer):
+        # Require manager/admin role and explicit permission
+        if not reviewer or not _require_admin_or_manager(reviewer) or not _has_permission(reviewer, "verify.review"):
             return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
         ar = AccessRequest.objects.filter(id=request_id).first()
@@ -291,7 +295,16 @@ def verify_approve(request):
         u = ar.user
         u.role = role
         u.status = "active"
-        u.save(update_fields=["role", "status"])
+        # Assign default permissions for the role if none set
+        try:
+            from .views_common import DEFAULT_ROLE_PERMISSIONS
+            if not (u.permissions or []):
+                u.permissions = sorted(list(DEFAULT_ROLE_PERMISSIONS.get(role, set())))
+                u.save(update_fields=["role", "status", "permissions"])
+            else:
+                u.save(update_fields=["role", "status"])
+        except Exception:
+            u.save(update_fields=["role", "status"])
         try:
             email_user_approved(u)
         except Exception:

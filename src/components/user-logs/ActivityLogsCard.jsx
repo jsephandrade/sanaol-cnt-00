@@ -32,11 +32,14 @@ const ActivityLogsCard = ({
 }) => {
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.details.toLowerCase().includes(searchTerm.toLowerCase());
+      (log.action || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.user || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.userId || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.type || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.details || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType = selectedLogType === 'all' || log.type === selectedLogType;
+    const matchesType =
+      selectedLogType === 'all' || log.type === selectedLogType;
 
     return matchesSearch && matchesType;
   });
@@ -53,7 +56,11 @@ const ActivityLogsCard = ({
           <CardDescription>Track system and user activities</CardDescription>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1"
+          >
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
         </div>
@@ -102,10 +109,14 @@ const ActivityLogsCard = ({
             <table className="w-full caption-bottom text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="h-10 px-4 text-left font-medium">Action</th>
-                  <th className="h-10 px-4 text-left font-medium">User</th>
+                  <th className="h-10 px-4 text-left font-medium w-[55%]">
+                    Action
+                  </th>
+                  <th className="h-10 px-4 text-left font-medium">User ID</th>
                   <th className="h-10 px-4 text-left font-medium">Timestamp</th>
-                  <th className="h-10 px-4 text-left font-medium hidden md:table-cell">Details</th>
+                  <th className="h-10 px-4 text-left font-medium">
+                    More Details
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -116,23 +127,39 @@ const ActivityLogsCard = ({
                       className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
                       onClick={() => onRowClick(log)}
                     >
-                      <td className="p-4 align-middle">
-                        <div className="flex items-center gap-2">
-                          <div className={`rounded-full p-1 ${getActionColor(log.type)}`}>
+                      <td className="p-4 align-middle w-[55%]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`rounded-full p-1 ${getActionColor(log.type)}`}
+                          >
                             {getActionIcon(log.type)}
                           </div>
-                          <span>{log.action}</span>
+                          <span className="truncate">
+                            {log.action || (log.type || '').toUpperCase()}
+                          </span>
                         </div>
                       </td>
-                      <td className="p-4 align-middle">{log.user}</td>
+                      <td className="p-4 align-middle whitespace-nowrap">
+                        <span className="font-mono">{log.userId || '—'}</span>
+                      </td>
                       <td className="p-4 align-middle whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {log.timestamp}
                         </div>
                       </td>
-                      <td className="p-4 align-middle hidden md:table-cell">
-                        <span className="line-clamp-1">{log.details}</span>
+                      <td className="p-4 align-middle">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRowClick(log);
+                          }}
+                          aria-label={`View details for ${log.id}`}
+                        >
+                          View
+                        </Button>
                       </td>
                     </tr>
                   ))
@@ -158,4 +185,3 @@ const ActivityLogsCard = ({
 };
 
 export default ActivityLogsCard;
-

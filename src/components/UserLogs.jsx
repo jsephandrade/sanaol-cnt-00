@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FileText, ShieldAlert, UserCog, LogIn, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ActivityLogsCard from './user-logs/ActivityLogsCard';
 import SecurityAlertsCard from './user-logs/SecurityAlertsCard';
 import LogSummaryCard from './user-logs/LogSummaryCard';
 import LogDetailsDialog from './user-logs/LogDetailsDialog';
+import { useLogs } from '@/hooks/useLogs';
 
 const UserLogs = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -14,82 +15,34 @@ const UserLogs = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const [logs, _setLogs] = useState([
-    {
-      id: '1',
-      action: 'User Login',
-      user: 'user@example.com',
-      timestamp: '2025-04-17 09:32:15',
-      details: 'Successful login from IP 192.168.1.105',
-      type: 'login',
-    },
-    {
-      id: '2',
-      action: 'Menu Item Added',
-      user: 'sarah@example.com',
-      timestamp: '2025-04-17 10:15:22',
-      details: 'Added new menu item "Grilled Chicken Sandwich" to lunch menu',
-      type: 'action',
-    },
-    {
-      id: '3',
-      action: 'Inventory Updated',
-      user: 'miguel@example.com',
-      timestamp: '2025-04-17 11:25:40',
-      details: 'Updated stock levels for Rice (-5kg) and Tomatoes (-2kg)',
-      type: 'action',
-    },
-    {
-      id: '4',
-      action: 'Payment Processed',
-      user: 'aisha@example.com',
-      timestamp: '2025-04-17 12:10:05',
-      details: 'Processed card payment of $45.75 for order #1289',
-      type: 'action',
-    },
-    {
-      id: '5',
-      action: 'Failed Login Attempt',
-      user: 'unknown',
-      timestamp: '2025-04-17 13:27:51',
-      details: 'Failed login attempt for user@example.com from IP 203.45.67.89',
-      type: 'security',
-    },
-    {
-      id: '6',
-      action: 'System Backup',
-      user: 'system',
-      timestamp: '2025-04-17 14:00:00',
-      details: 'Automated system backup completed successfully',
-      type: 'system',
-    },
-    {
-      id: '7',
-      action: 'User Role Changed',
-      user: 'user@example.com',
-      timestamp: '2025-04-17 14:55:12',
-      details: 'Changed role for david@example.com from Staff to Manager',
-      type: 'security',
-    },
-  ]);
+  const { logs, filters, setFilters, alerts, setAlerts, summary } = useLogs({
+    timeRange: '24h',
+    limit: 100,
+  });
+  const [securityAlerts, setSecurityAlerts] = useState([]);
 
-  const [securityAlerts, setSecurityAlerts] = useState([
-    {
-      id: '1',
-      type: 'critical',
-      title: 'Failed Login Attempts',
-      description:
-        'Multiple failed login attempts detected for admin account from unknown IP address',
-      dismissed: false,
-    },
-    {
-      id: '2',
-      type: 'warning',
-      title: 'Password Expiring',
-      description: '2 user passwords will expire in the next 7 days',
-      dismissed: false,
-    },
-  ]);
+  useEffect(() => {
+    setSecurityAlerts(alerts || []);
+  }, [alerts]);
+
+  // Sync UI controls to backend filters
+  useEffect(() => {
+    setFilters({
+      ...filters,
+      type: selectedLogType === 'all' ? '' : selectedLogType,
+      timeRange,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLogType, timeRange]);
+
+  useEffect(() => {
+    const h = setTimeout(
+      () => setFilters({ ...filters, search: searchTerm }),
+      300
+    );
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   const getActionIcon = (type) => {
     switch (type) {
@@ -159,7 +112,13 @@ const UserLogs = () => {
           setSelectedLogType={setSelectedLogType}
           timeRange={timeRange}
           setTimeRange={setTimeRange}
-          logs={logs}
+          logs={logs.map((l) => ({
+            ...l,
+            timestamp:
+              typeof l.timestamp === 'string'
+                ? l.timestamp
+                : new Date(l.timestamp).toLocaleString(),
+          }))}
           onRowClick={handleRowClick}
           getActionIcon={getActionIcon}
           getActionColor={getActionColor}
@@ -173,7 +132,7 @@ const UserLogs = () => {
           onDismiss={handleDismissAlert}
         />
 
-        <LogSummaryCard />
+        <LogSummaryCard summary={summary} />
       </div>
 
       <LogDetailsDialog

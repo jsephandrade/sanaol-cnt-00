@@ -170,3 +170,12 @@ EMAIL_SUBJECT_PREFIX = _email["EMAIL_SUBJECT_PREFIX"]
 
 # Frontend base URL for building links in emails (password reset, verification)
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:8080")
+
+# --- Web Push / VAPID ---
+WEBPUSH_VAPID_PUBLIC_KEY = os.getenv("WEBPUSH_VAPID_PUBLIC_KEY", "").strip()
+WEBPUSH_VAPID_PRIVATE_KEY = os.getenv("WEBPUSH_VAPID_PRIVATE_KEY", "").strip()
+WEBPUSH_VAPID_SUBJECT = os.getenv("WEBPUSH_VAPID_SUBJECT", "mailto:josephformentera2@gmail.com")
+
+# Optional: simple guard to fail early if you forget the keys in prod
+if not DEBUG:
+    assert WEBPUSH_VAPID_PUBLIC_KEY and WEBPUSH_VAPID_PRIVATE_KEY, "Missing VAPID keys"

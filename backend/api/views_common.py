@@ -180,6 +180,156 @@ def _maybe_seed_from_memory():
 
 
 # -----------------------------
+# Role and permission helpers
+# -----------------------------
+
+# Canonical default permissions derived from AGENTS.md
+DEFAULT_ROLE_PERMISSIONS = {
+    # Admin implicitly has all permissions via wildcard
+    "admin": {"all"},
+    "manager": {
+        # Account Management
+        "account.login",
+        "account.logout",
+        "account.password.edit",
+        "account.info.edit",
+        "account.biometric",
+        # Inventory Management
+        "inventory.view",
+        "inventory.update",
+        "inventory.expiry.track",
+        "inventory.menu.manage",  # Manage Menu Items
+        "inventory.lowstock.alerts",
+        "inventory.restock.manage",
+        # Order Handling (manager handles queue and updates; tracking bulk too)
+        "order.queue.handle",
+        "order.status.update",
+        "order.bulk.track",
+        # Payments and Transactions
+        "payment.process",
+        "payment.records.view",
+        "order.history.view",
+        "payment.refund",
+        # Staff and Work Scheduling
+        "profile.view_roles",
+        "schedule.view_edit",
+        "attendance.manage",
+        "leave.manage",
+        # Reports and Analytics
+        "reports.sales.view",
+        "reports.inventory.view",
+        "reports.orders.view",
+        "reports.staff.view",
+        "reports.customer.view",
+        # Notifications
+        "notification.send",
+        "notification.receive",
+        "notification.view",
+        # Menu management (alias for clarity in endpoints)
+        "menu.manage",
+        # Verification review
+        "verify.review",
+    },
+    "staff": {
+        # Account Management
+        "account.login",
+        "account.logout",
+        "account.password.edit",
+        "account.info.edit",
+        "account.biometric",
+        # Inventory Management
+        "inventory.view",
+        "inventory.update",
+        "inventory.expiry.track",
+        # Order Handling
+        "order.place",
+        "order.status.view",
+        "order.queue.handle",
+        "order.status.update",
+        "order.bulk.track",
+        # Payments and Transactions
+        "payment.process",
+        "payment.records.view",
+        "order.history.view",
+        # Staff and Work Scheduling
+        "profile.view_roles",
+        "schedule.view_edit",
+        # Notifications
+        "notification.send",
+        "notification.receive",
+        "notification.view",
+    },
+}
+
+
+def _effective_permissions_from_role(role: str):
+    role_l = (role or "").lower()
+    return set(DEFAULT_ROLE_PERMISSIONS.get(role_l, set()))
+
+
+def _effective_permissions(user_or_dict):
+    try:
+        # DB model
+        role = (getattr(user_or_dict, "role", "") or "").lower()
+        explicit = set(getattr(user_or_dict, "permissions", []) or [])
+    except Exception:
+        # Dict-like
+        role = (user_or_dict.get("role") or "").lower()
+        explicit = set(user_or_dict.get("permissions") or [])
+    # Admin wildcard
+    if role == "admin" or "all" in explicit:
+        return {"all"}
+    # Union of defaults and explicit grants
+    return _effective_permissions_from_role(role) | explicit
+
+
+def _has_permission(user_or_dict, perm_code: str) -> bool:
+    perms = _effective_permissions(user_or_dict)
+    return "all" in perms or perm_code in perms
+
+
+def _actor_from_request(request):
+    """Extract the authenticated actor from Authorization header.
+
+    Returns (actor, error_response) where actor is either AppUser instance or a
+    dict from USERS fallback. If not authorized/invalid, returns (None, JsonResponse).
+    """
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if not auth.startswith("Bearer "):
+        return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+    token = auth.split(" ", 1)[1].strip()
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except Exception:
+        return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+
+    email = (payload.get("email") or "").lower().strip()
+    sub = str(payload.get("sub") or "")
+    # Try DB
+    try:
+        from .models import AppUser
+        _maybe_seed_from_memory()
+        actor = None
+        if sub:
+            actor = AppUser.objects.filter(id=sub).first()
+        if not actor and email:
+            actor = AppUser.objects.filter(email=email).first()
+        if actor:
+            return actor, None
+    except Exception:
+        pass
+    # Fallback to in-memory USERS
+    if email:
+        actor = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
+        if actor:
+            return actor, None
+    if sub:
+        actor = next((u for u in USERS if str(u.get("id")) == sub), None)
+        if actor:
+            return actor, None
+    return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
+
+
 # JWT and token helpers
 # -----------------------------
 

@@ -1,4 +1,4 @@
-// import apiClient from '../client';
+import apiClient from '../client';
 import { mockOrders } from '../mockData';
 
 // Mock delay for realistic API simulation
@@ -144,24 +144,11 @@ class OrderService {
   }
 
   async processPayment(orderId, paymentData) {
-    await mockDelay(1200);
-
-    // TODO: Replace with actual API call
-    // return apiClient.post(`/orders/${orderId}/payment`, paymentData);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: {
-        paymentId: Date.now().toString(),
-        orderId,
-        amount: paymentData.amount,
-        method: paymentData.method,
-        status: 'completed',
-        reference: paymentData.method === 'card' ? `TXN-${Date.now()}` : null,
-        timestamp: new Date().toISOString(),
-      },
-    };
+    // Call backend to process payment (POST /orders/:id/payment)
+    return apiClient.post(
+      `/orders/${encodeURIComponent(orderId)}/payment`,
+      paymentData
+    );
   }
 }
 

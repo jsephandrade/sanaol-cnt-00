@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -36,6 +36,7 @@ import {
 import { Switch } from '@/components/ui/switch'; // NEW
 import PaymentsHeader from '@/components/payments/PaymentsHeader';
 import PaymentsFilters from '@/components/payments/PaymentsFilters';
+import { paymentsService } from '@/api/services/paymentsService';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,69 +50,33 @@ const Payments = () => {
     mobile: true,
   });
 
-  const [payments, _setPayments] = useState([
-    {
-      id: '1',
-      orderId: 'ORD-2581',
-      amount: 45.75,
-      date: '2025-04-17 10:32:15',
-      method: 'card',
-      status: 'completed',
-      customer: 'John Doe',
-    },
-    {
-      id: '2',
-      orderId: 'ORD-2582',
-      amount: 22.5,
-      date: '2025-04-17 11:15:22',
-      method: 'cash',
-      status: 'completed',
-    },
-    {
-      id: '3',
-      orderId: 'ORD-2583',
-      amount: 38.9,
-      date: '2025-04-17 12:25:40',
-      method: 'mobile',
-      status: 'completed',
-      customer: 'Sarah Johnson',
-    },
-    {
-      id: '4',
-      orderId: 'ORD-2584',
-      amount: 29.95,
-      date: '2025-04-17 13:10:05',
-      method: 'card',
-      status: 'failed',
-      customer: 'Alex Chen',
-    },
-    {
-      id: '5',
-      orderId: 'ORD-2585',
-      amount: 52.35,
-      date: '2025-04-17 14:27:51',
-      method: 'mobile',
-      status: 'completed',
-      customer: 'Maria Lopez',
-    },
-    {
-      id: '6',
-      orderId: 'ORD-2586',
-      amount: 18.25,
-      date: '2025-04-17 15:45:12',
-      method: 'cash',
-      status: 'completed',
-    },
-    {
-      id: '7',
-      orderId: 'ORD-2587',
-      amount: 65.8,
-      date: '2025-04-17 16:30:45',
-      method: 'card',
-      status: 'refunded',
-      customer: 'David Brown',
-    },
-  ]);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadPayments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await paymentsService.list({
+        timeRange: dateRange,
+        status: selectedStatus === 'all' ? '' : selectedStatus,
+      });
+      const mapped = (list || []).map((p) => ({
+        ...p,
+        date: p.date || p.timestamp || new Date().toISOString(),
+      }));
+      setPayments(mapped);
+    } catch (e) {
+      setError(e?.message || 'Failed to load payments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPayments();
+  }, [dateRange, selectedStatus]);
 
   const getPaymentMethodIcon = (method) => {
     switch (method) {
@@ -169,6 +134,59 @@ const Payments = () => {
       .toFixed(2);
   }, [filteredPayments]);
 
+  const handleRefund = async (paymentId) => {
+    try {
+      const updated = await paymentsService.refund(paymentId);
+      setPayments((prev) =>
+        prev.map((p) => (p.id === paymentId ? { ...p, ...updated } : p))
+      );
+    } catch (e) {
+      // optionally show toast
+    }
+  };
+
+  // Load payment method config
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg = await paymentsService.getConfig();
+        setMethodActive({
+          cash: Boolean(cfg.cash),
+          card: Boolean(cfg.card),
+          mobile: Boolean(cfg.mobile),
+        });
+      } catch {}
+    })();
+  }, []);
+
+  const updateMethod = async (key, value) => {
+    const next = { ...methodActive, [key]: value };
+    setMethodActive(next);
+    try {
+      await paymentsService.updateConfig({
+        cash: next.cash,
+        card: next.card,
+        mobile: next.mobile,
+      });
+    } catch {}
+  };
+
+  const handleDownloadInvoice = async (payment) => {
+    try {
+      const blob = await paymentsService.downloadInvoiceBlob(payment.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${payment.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      // optionally toast error
+    }
+  };
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
@@ -217,7 +235,13 @@ const Payments = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedPayments.length > 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="h-24 text-center">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : sortedPayments.length > 0 ? (
                       sortedPayments.map((payment) => (
                         <tr
                           key={payment.id}
@@ -258,12 +282,16 @@ const Payments = () => {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDownloadInvoice(payment)}
+                                >
                                   <Download className="mr-2 h-4 w-4" /> Download
                                   Invoice
                                 </DropdownMenuItem>
                                 {payment.status === 'completed' && (
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRefund(payment.id)}
+                                  >
                                     <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
                                     Process Refund
                                   </DropdownMenuItem>
@@ -407,9 +435,7 @@ const Payments = () => {
                   </span>
                   <Switch
                     checked={methodActive.cash}
-                    onCheckedChange={(v) =>
-                      setMethodActive((prev) => ({ ...prev, cash: v }))
-                    }
+                    onCheckedChange={(v) => updateMethod('cash', v)}
                     aria-label="Toggle cash method"
                   />
                 </div>
@@ -432,9 +458,7 @@ const Payments = () => {
                   </span>
                   <Switch
                     checked={methodActive.card}
-                    onCheckedChange={(v) =>
-                      setMethodActive((prev) => ({ ...prev, card: v }))
-                    }
+                    onCheckedChange={(v) => updateMethod('card', v)}
                     aria-label="Toggle card method"
                   />
                 </div>
@@ -457,9 +481,7 @@ const Payments = () => {
                   </span>
                   <Switch
                     checked={methodActive.mobile}
-                    onCheckedChange={(v) =>
-                      setMethodActive((prev) => ({ ...prev, mobile: v }))
-                    }
+                    onCheckedChange={(v) => updateMethod('mobile', v)}
                     aria-label="Toggle mobile method"
                   />
                 </div>

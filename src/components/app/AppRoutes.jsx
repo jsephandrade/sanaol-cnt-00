@@ -108,7 +108,7 @@ const AppRoutes = () => {
         '/verify': 'Verify Identity',
         '/verify-email': 'Verify Email',
         '/menu': 'Menu Management',
-        '/sales': 'Sales Analytics',
+        '/analytics': 'Analytics',
         '/employees': 'Employee Schedule',
         '/feedback': 'Customer Feedback',
         '/pos': 'Point of Sale',
@@ -235,10 +235,10 @@ const AppRoutes = () => {
             }
           />
           <Route
-            path="/sales"
+            path="/analytics"
             element={
               <ProtectedRoute>
-                <MainLayout title="Sales Analytics">
+                <MainLayout title="Analytics">
                   <SalesAnalytics />
                 </MainLayout>
               </ProtectedRoute>

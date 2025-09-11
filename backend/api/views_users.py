@@ -9,7 +9,7 @@ from django.db import transaction
 from django.conf import settings
 import jwt
 
-from .views_common import USERS, _paginate, _maybe_seed_from_memory, _safe_user_from_db, _now_iso
+from .views_common import USERS, _paginate, _maybe_seed_from_memory, _safe_user_from_db, _now_iso, DEFAULT_ROLE_PERMISSIONS
 
 
 ROLES = {
@@ -22,14 +22,14 @@ ROLES = {
     "manager": {
         "label": "Manager",
         "value": "manager",
-        "description": "Can manage most settings and view reports",
-        "permissions": ["menu", "inventory", "reports", "users:read"],
+        "description": "Manages inventory/menu, queue, refunds, and sees reports",
+        "permissions": sorted(list(DEFAULT_ROLE_PERMISSIONS.get("manager", set()))),
     },
     "staff": {
         "label": "Staff",
         "value": "staff",
-        "description": "Kitchen and service staff access",
-        "permissions": ["orders", "inventory:read"],
+        "description": "Handles orders, inventory updates, and payments",
+        "permissions": sorted(list(DEFAULT_ROLE_PERMISSIONS.get("staff", set()))),
     },
 }
 
@@ -200,12 +200,14 @@ def user_detail(request, user_id):
         db_user = AppUser.objects.filter(id=user_id).first()
         if not db_user:
             raise OperationalError("not found")
+
         if request.method == "GET":
             return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
         if request.method == "DELETE":
             # Admin only delete (already validated above)
             db_user.delete()
             return JsonResponse({"success": True, "message": "Deleted"})
+
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
         except Exception:
@@ -326,7 +328,12 @@ def user_role(request, user_id):
         if role not in ROLES:
             return JsonResponse({"success": False, "message": "Invalid role"}, status=400)
         db_user.role = role
-        db_user.save(update_fields=["role"])
+        # Initialize permissions to role defaults if empty/not set
+        if not (db_user.permissions or []):
+            db_user.permissions = sorted(list(DEFAULT_ROLE_PERMISSIONS.get(role, set())))
+            db_user.save(update_fields=["role", "permissions"])
+        else:
+            db_user.save(update_fields=["role"])
         return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
     except (OperationalError, ProgrammingError):
         pass

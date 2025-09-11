@@ -34,6 +34,7 @@ from .views_common import (
     _issue_verify_token_from_db,
     _issue_verify_token_from_dict,
 )
+from .utils_audit import record_audit
 
 
 @require_http_methods(["GET"]) 
@@ -63,6 +64,18 @@ def auth_login(request):
     ip = _client_ip(request)
     locked, retry_after = _is_locked(email, ip)
     if locked:
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="security",
+                action="Login rate limited",
+                details=f"email={email}",
+                severity="warning",
+                meta={"reason": "lockout", "retryAfter": int(retry_after)},
+            )
+        except Exception:
+            pass
         resp = JsonResponse({"success": False, "message": "Too many attempts. Try again later."})
         resp.status_code = 423
         resp["Retry-After"] = str(max(1, int(retry_after)))
@@ -78,6 +91,17 @@ def auth_login(request):
             safe_user = _safe_user_from_db(db_user)
             # Block deactivated accounts
             if status_l == "deactivated":
+                try:
+                    record_audit(
+                        request,
+                        user=db_user,
+                        type="security",
+                        action="Login blocked (deactivated)",
+                        details="Password login",
+                        severity="warning",
+                    )
+                except Exception:
+                    pass
                 return JsonResponse(
                     {
                         "success": False,
@@ -92,6 +116,17 @@ def auth_login(request):
                 except Exception:
                     vtok = None
                 _lockout_check_and_touch(email, ip, success=True)
+                try:
+                    record_audit(
+                        request,
+                        user=db_user,
+                        type="login",
+                        action="Login pending",
+                        details="Password login",
+                        severity="info",
+                    )
+                except Exception:
+                    pass
                 return JsonResponse({
                     "success": True,
                     "pending": True,
@@ -106,6 +141,17 @@ def auth_login(request):
             refresh_token = _issue_refresh_token_db(db_user, remember=remember, request=request)
             _lockout_check_and_touch(email, ip, success=True)
             payload = {"success": True, "user": safe_user, "token": token, "refreshToken": refresh_token}
+            try:
+                record_audit(
+                    request,
+                    user=db_user,
+                    type="login",
+                    action="Login success",
+                    details="Password login",
+                    severity="info",
+                )
+            except Exception:
+                pass
             return JsonResponse(payload)
     except (OperationalError, ProgrammingError):
         pass
@@ -117,6 +163,17 @@ def auth_login(request):
         safe_user = {k: v for k, v in user.items() if k != "password"}
         # Block deactivated accounts
         if status_l == "deactivated":
+            try:
+                record_audit(
+                    request,
+                    actor_email=email,
+                    type="security",
+                    action="Login blocked (deactivated)",
+                    details="Password login",
+                    severity="warning",
+                )
+            except Exception:
+                pass
             return JsonResponse(
                 {
                     "success": False,
@@ -127,6 +184,17 @@ def auth_login(request):
         # Pending or other non-active states: return pending without tokens
         if status_l != "active":
             _lockout_check_and_touch(email, ip, success=True)
+            try:
+                record_audit(
+                    request,
+                    actor_email=email,
+                    type="login",
+                    action="Login pending",
+                    details="Password login (mem)",
+                    severity="info",
+                )
+            except Exception:
+                pass
             try:
                 vtok = _issue_verify_token_from_dict(safe_user)
             except Exception:
@@ -141,15 +209,49 @@ def auth_login(request):
         rtoken = _issue_refresh_token_mem(safe_user, remember=remember, request=request)
         _lockout_check_and_touch(email, ip, success=True)
         payload = {"success": True, "user": safe_user, "token": _issue_jwt_from_dict(safe_user, exp_seconds=exp_seconds), "refreshToken": rtoken}
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="login",
+                action="Login success",
+                details="Password login (mem)",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse(payload)
 
     # Record failed attempt and maybe lock
     locked, retry_after = _lockout_check_and_touch(email, ip, success=False)
     if locked:
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="security",
+                action="Login rate limited",
+                details=f"email={email}",
+                severity="warning",
+                meta={"reason": "lockout", "retryAfter": int(retry_after)},
+            )
+        except Exception:
+            pass
         resp = JsonResponse({"success": False, "message": "Too many attempts. Try again later."})
         resp.status_code = 423
         resp["Retry-After"] = str(max(1, int(retry_after)))
         return resp
+    try:
+        record_audit(
+            request,
+            actor_email=email,
+            type="login",
+            action="Login failed",
+            details="Invalid credentials",
+            severity="warning",
+        )
+    except Exception:
+        pass
     return JsonResponse({"success": False, "message": "Invalid credentials"}, status=401)
 
 
@@ -162,6 +264,29 @@ def auth_logout(request):
     rtoken = (data.get("refreshToken") or "").strip()
     if rtoken:
         _revoke_refresh_token(request, rtoken)
+    # Audit: best-effort capture of actor
+    email_for_log = ""
+    try:
+        from .views_common import _actor_from_request
+        actor, _ = _actor_from_request(request)
+        if actor is not None:
+            try:
+                email_for_log = (getattr(actor, "email", None) or actor.get("email") or "").lower().strip()
+            except Exception:
+                email_for_log = ""
+    except Exception:
+        pass
+    try:
+        record_audit(
+            request,
+            actor_email=email_for_log,
+            type="login",
+            action="Logout",
+            details="User logged out",
+            severity="info",
+        )
+    except Exception:
+        pass
     return JsonResponse({"success": True})
 
 
@@ -305,11 +430,33 @@ def auth_google(request):
         safe_user = _safe_user_from_db(db_user)
         status_l = (db_user.status or "").lower()
         if status_l == "deactivated":
+            try:
+                record_audit(
+                    request,
+                    user=db_user,
+                    type="security",
+                    action="Login blocked (deactivated)",
+                    details="Google login",
+                    severity="warning",
+                )
+            except Exception:
+                pass
             return JsonResponse({
                 "success": False,
                 "message": "Your account is currently deactivated, to activate please contact the admin.",
             }, status=403)
         if status_l != "active":
+            try:
+                record_audit(
+                    request,
+                    user=db_user,
+                    type="login",
+                    action="Login pending",
+                    details="Google login",
+                    severity="info",
+                )
+            except Exception:
+                pass
             return JsonResponse({
                 "success": True,
                 "pending": True,
@@ -318,6 +465,17 @@ def auth_google(request):
             })
         token = _issue_jwt(db_user)
         rtok = _issue_refresh_token_db(db_user, remember=False, request=request)
+        try:
+            record_audit(
+                request,
+                user=db_user,
+                type="login",
+                action="Login success",
+                details="Google login",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True, "user": safe_user, "token": token, "refreshToken": rtok})
     except (OperationalError, ProgrammingError):
         pass
@@ -349,13 +507,46 @@ def auth_google(request):
     safe_user = {k: v for k, v in user.items() if k != "password"}
     status_l = (user.get("status") or "").lower()
     if status_l == "deactivated":
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="security",
+                action="Login blocked (deactivated)",
+                details="Google login (mem)",
+                severity="warning",
+            )
+        except Exception:
+            pass
         return JsonResponse({
             "success": False,
             "message": "Your account is currently deactivated, to activate please contact the admin.",
         }, status=403)
     if status_l != "active":
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="login",
+                action="Login pending",
+                details="Google login (mem)",
+                severity="info",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True, "pending": True, "user": safe_user, "verifyToken": _issue_verify_token_from_dict(safe_user)})
     rtok = _issue_refresh_token_mem(user, remember=False, request=request)
+    try:
+        record_audit(
+            request,
+            actor_email=email,
+            type="login",
+            action="Login success",
+            details="Google login (mem)",
+            severity="info",
+        )
+    except Exception:
+        pass
     return JsonResponse({"success": True, "user": safe_user, "token": _issue_jwt_from_dict(safe_user), "refreshToken": rtok})
 
 
@@ -776,6 +967,18 @@ def refresh_token(request):
         new_refresh = _issue_refresh_token_db(user, remember=rt.remember, request=request, rotated_from=rt)
         access_ttl = settings.JWT_REMEMBER_EXP_SECONDS if rt.remember else settings.JWT_EXP_SECONDS
         new_access = _issue_jwt(user, exp_seconds=access_ttl)
+        try:
+            record_audit(
+                request,
+                user=user,
+                type="security",
+                action="Refresh token rotated",
+                details="Token refresh",
+                severity="info",
+                meta={"remember": bool(rt.remember)},
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True, "token": new_access, "refreshToken": new_refresh})
     except (OperationalError, ProgrammingError):
         pass
@@ -785,6 +988,17 @@ def refresh_token(request):
     out = _rotate_refresh_token_mem(rtoken, request=request)
     if not out:
         return JsonResponse({"success": False, "message": "Invalid or expired refresh token"}, status=401)
+    try:
+        # We don't have DB user here; capture via token decode in _rotate helper is absent
+        record_audit(
+            request,
+            type="security",
+            action="Refresh token rotated",
+            details="Token refresh (mem)",
+            severity="info",
+        )
+    except Exception:
+        pass
     return JsonResponse({"success": True, "token": out["token"], "refreshToken": out["refreshToken"]})
 
 
@@ -825,6 +1039,17 @@ def change_password(request):
         from django.contrib.auth.hashers import make_password
         u.password_hash = make_password(new)
         u.save(update_fields=["password_hash"])
+        try:
+            record_audit(
+                request,
+                user=u,
+                type="security",
+                action="Password changed",
+                details="User changed password",
+                severity="warning",
+            )
+        except Exception:
+            pass
         return JsonResponse({"success": True})
     except (OperationalError, ProgrammingError):
         pass
@@ -839,6 +1064,17 @@ def change_password(request):
     if not current or user.get("password") != current:
         return JsonResponse({"success": False, "message": "Invalid current password"}, status=400)
     user["password"] = new
+    try:
+        record_audit(
+            request,
+            actor_email=email,
+            type="security",
+            action="Password changed",
+            details="User changed password (mem)",
+            severity="warning",
+        )
+    except Exception:
+        pass
     return JsonResponse({"success": True})
 
 __all__ = [
