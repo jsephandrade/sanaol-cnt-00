@@ -7,9 +7,11 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
+from django.db import connection
 from django.utils import timezone as dj_timezone
 from django.contrib.auth.hashers import check_password
 import jwt
+import secrets
 import requests as _requests
 
 from .views_common import (
@@ -40,6 +42,70 @@ from .utils_audit import record_audit
 @require_http_methods(["GET"]) 
 def health(request):
     return JsonResponse({"status": "ok", "service": "backend", "version": "0.1"})
+
+
+@require_http_methods(["GET"]) 
+def health_db(request):
+    """Deep health check that verifies DB connectivity and basic ORM access.
+
+    Returns 200 when the database connection works. If the schema is not
+    migrated yet, "migrated" will be false but the connection check still
+    passes. Returns 500 on connection errors.
+    """
+    import time
+    db_info = {}
+    try:
+        start = time.perf_counter()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+            db_version = None
+            try:
+                cursor.execute("SELECT VERSION()")
+                row = cursor.fetchone()
+                if row:
+                    db_version = str(row[0])
+            except Exception:
+                db_version = None
+        ping_ms = round((time.perf_counter() - start) * 1000, 2)
+
+        engine = settings.DATABASES.get("default", {}).get("ENGINE", "")
+        name = settings.DATABASES.get("default", {}).get("NAME", "")
+        vendor = getattr(connection, "vendor", "unknown")
+
+        # Check if a key table exists (migrations applied). Avoid raising if missing.
+        migrated = False
+        try:
+            from .models import AppUser  # late import
+            # If table doesn't exist, this may raise ProgrammingError.
+            _ = AppUser.objects.all()[:1]
+            migrated = True
+        except ProgrammingError:
+            migrated = False
+
+        db_info = {
+            "connected": True,
+            "vendor": vendor,
+            "engine": engine,
+            "name": str(name),
+            "ping_ms": ping_ms,
+            "migrated": migrated,
+            **({"version": db_version} if db_version else {}),
+        }
+        return JsonResponse({
+            "status": "ok",
+            "service": "backend",
+            "version": "0.1",
+            "db": db_info,
+        })
+    except OperationalError as e:
+        db_info = {"connected": False, "error": str(e)}
+        return JsonResponse({
+            "status": "error",
+            "service": "backend",
+            "version": "0.1",
+            "db": db_info,
+        }, status=500)
 
 
 @rate_limit(limit=7, window_seconds=60, key_fn=_login_rate_key)
@@ -81,11 +147,36 @@ def auth_login(request):
         resp["Retry-After"] = str(max(1, int(retry_after)))
         return resp
 
+    # Basic input presence check (avoid unnecessary DB hits)
+    if not email or not password:
+        # Record failed attempt and respond uniformly
+        locked, retry_after = _lockout_check_and_touch(email, ip, success=False)
+        if locked:
+            resp = JsonResponse({"success": False, "message": "Too many attempts. Try again later."})
+            resp.status_code = 423
+            resp["Retry-After"] = str(max(1, int(retry_after)))
+            return resp
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="login",
+                action="Login failed",
+                details="Invalid credentials (missing email/password)",
+                severity="warning",
+            )
+        except Exception:
+            pass
+        return JsonResponse({"success": False, "message": "Invalid credentials"}, status=401)
+
     # Try DB first
+    user_exists = False
     try:
         from .models import AppUser
         _maybe_seed_from_memory()
         db_user = AppUser.objects.filter(email=email).first()
+        if db_user:
+            user_exists = True
         if db_user and db_user.password_hash and password and check_password(password, db_user.password_hash):
             status_l = (db_user.status or "").lower()
             safe_user = _safe_user_from_db(db_user)
@@ -156,9 +247,20 @@ def auth_login(request):
     except (OperationalError, ProgrammingError):
         pass
 
-    # Fallback to in-memory
+    # Fallback to in-memory (disabled when DISABLE_INMEM_FALLBACK is true)
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Service temporarily unavailable. Please try again later.",
+            },
+            status=503,
+        )
+
     user = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
-    if user and password and password == user.get("password"):
+    if user:
+        user_exists = True
+    if user and password and secrets.compare_digest(str(password), str(user.get("password") or "")):
         status_l = (user.get("status") or "").lower()
         safe_user = {k: v for k, v in user.items() if k != "password"}
         # Block deactivated accounts
@@ -247,11 +349,13 @@ def auth_login(request):
             actor_email=email,
             type="login",
             action="Login failed",
-            details="Invalid credentials",
+            details=("Account not found" if not user_exists else "Invalid credentials"),
             severity="warning",
         )
     except Exception:
         pass
+    if not user_exists:
+        return JsonResponse({"success": False, "message": "Account not found"}, status=404)
     return JsonResponse({"success": False, "message": "Invalid credentials"}, status=401)
 
 
@@ -318,6 +422,9 @@ def auth_me(request):
         return JsonResponse({"success": True, "user": _safe_user_from_db(u)})
     except (OperationalError, ProgrammingError):
         pass
+
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse({"success": False, "message": "Service temporarily unavailable"}, status=503)
 
     user = None
     if email:
@@ -398,6 +505,9 @@ def auth_google(request):
     picture = idinfo.get("picture") or ""
     if not email:
         return JsonResponse({"success": False, "message": "Google account missing email"}, status=401)
+    # Community best-practice: require verified email claim for Google sign-in
+    if idinfo.get("email_verified") is False:
+        return JsonResponse({"success": False, "message": "Google email not verified"}, status=401)
 
     try:
         from .models import AppUser, AccessRequest
@@ -985,6 +1095,9 @@ def refresh_token(request):
     except Exception:
         pass
 
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse({"success": False, "message": "Service temporarily unavailable"}, status=503)
+
     out = _rotate_refresh_token_mem(rtoken, request=request)
     if not out:
         return JsonResponse({"success": False, "message": "Invalid or expired refresh token"}, status=401)
@@ -1053,6 +1166,9 @@ def change_password(request):
         return JsonResponse({"success": True})
     except (OperationalError, ProgrammingError):
         pass
+
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse({"success": False, "message": "Service temporarily unavailable"}, status=503)
 
     user = None
     if email:

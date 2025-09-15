@@ -1,19 +1,36 @@
-// import apiClient from '../client';
+import apiClient from '../client';
 import { mockInventoryItems } from '../mockData';
 
-// Mock delay for realistic API simulation
 const mockDelay = (ms = 800) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+const USE_MOCKS = !(
+  typeof import.meta !== 'undefined' &&
+  import.meta.env &&
+  (import.meta.env.VITE_ENABLE_MOCKS === 'false' ||
+    import.meta.env.VITE_ENABLE_MOCKS === '0')
+);
 
 class InventoryService {
-  async getInventoryItems(_params = {}) {
+  async getInventoryItems(params = {}) {
+    if (!USE_MOCKS) {
+      const qs = new URLSearchParams();
+      Object.entries(params || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+      });
+      const res = await apiClient.get(`/inventory/items?${qs.toString()}`);
+      const data = res?.data || res;
+      return {
+        success: true,
+        data: data?.data || data,
+        pagination: data?.pagination || {
+          page: 1,
+          limit: (data?.data || data)?.length || 0,
+          total: (data?.data || data)?.length || 0,
+          totalPages: 1,
+        },
+      };
+    }
     await mockDelay();
-
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/inventory/items?${queryParams}`);
-
-    // Mock implementation
     return {
       success: true,
       data: mockInventoryItems,
@@ -27,97 +44,80 @@ class InventoryService {
   }
 
   async getInventoryItemById(itemId) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/inventory/items/${itemId}`);
-
-    // Mock implementation
-    const item = mockInventoryItems.find((i) => i.id === itemId);
-    if (!item) {
-      throw new Error('Inventory item not found');
+    if (!USE_MOCKS) {
+      const res = await apiClient.get(`/inventory/items/${itemId}`);
+      const data = res?.data || res;
+      return { success: true, data: data?.data || data };
     }
-
-    return {
-      success: true,
-      data: item,
-    };
+    await mockDelay(600);
+    const item = mockInventoryItems.find((i) => i.id === itemId);
+    if (!item) throw new Error('Inventory item not found');
+    return { success: true, data: item };
   }
 
   async createInventoryItem(itemData) {
+    if (!USE_MOCKS) {
+      const res = await apiClient.post('/inventory/items', itemData, {
+        retry: { retries: 1 },
+      });
+      const data = res?.data || res;
+      return { success: true, data: data?.data || data };
+    }
     await mockDelay(1000);
-
-    // TODO: Replace with actual API call
-    // return apiClient.post('/inventory/items', itemData);
-
-    // Mock implementation
     const newItem = {
       id: Date.now().toString(),
       ...itemData,
       createdAt: new Date().toISOString(),
       lastRestocked: new Date().toISOString(),
     };
-
-    return {
-      success: true,
-      data: newItem,
-    };
+    return { success: true, data: newItem };
   }
 
   async updateInventoryItem(itemId, updates) {
-    await mockDelay(800);
-
-    // TODO: Replace with actual API call
-    // return apiClient.put(`/inventory/items/${itemId}`, updates);
-
-    // Mock implementation
-    const itemIndex = mockInventoryItems.findIndex((i) => i.id === itemId);
-    if (itemIndex === -1) {
-      throw new Error('Inventory item not found');
+    if (!USE_MOCKS) {
+      const res = await apiClient.put(`/inventory/items/${itemId}`, updates, {
+        retry: { retries: 1 },
+      });
+      const data = res?.data || res;
+      return { success: true, data: data?.data || data };
     }
-
+    await mockDelay(800);
+    const itemIndex = mockInventoryItems.findIndex((i) => i.id === itemId);
+    if (itemIndex === -1) throw new Error('Inventory item not found');
     const updatedItem = {
       ...mockInventoryItems[itemIndex],
       ...updates,
       updatedAt: new Date().toISOString(),
     };
-
-    return {
-      success: true,
-      data: updatedItem,
-    };
+    return { success: true, data: updatedItem };
   }
 
   async deleteInventoryItem(itemId) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.delete(`/inventory/items/${itemId}`);
-
-    // Mock implementation
-    const item = mockInventoryItems.find((i) => i.id === itemId);
-    if (!item) {
-      throw new Error('Inventory item not found');
+    if (!USE_MOCKS) {
+      const res = await apiClient.delete(`/inventory/items/${itemId}`, {
+        retry: { retries: 1 },
+      });
+      return { success: true, data: res?.data || true };
     }
-
-    return {
-      success: true,
-      message: 'Inventory item deleted successfully',
-    };
+    await mockDelay(600);
+    const item = mockInventoryItems.find((i) => i.id === itemId);
+    if (!item) throw new Error('Inventory item not found');
+    return { success: true, message: 'Inventory item deleted successfully' };
   }
 
   async updateStock(itemId, quantity, operation = 'set') {
-    await mockDelay(500);
-
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/inventory/items/${itemId}/stock`, { quantity, operation });
-
-    // Mock implementation
-    const item = mockInventoryItems.find((i) => i.id === itemId);
-    if (!item) {
-      throw new Error('Inventory item not found');
+    if (!USE_MOCKS) {
+      const res = await apiClient.patch(
+        `/inventory/items/${itemId}/stock`,
+        { quantity, operation },
+        { retry: { retries: 1 } }
+      );
+      const data = res?.data || res;
+      return { success: true, data: data?.data || data };
     }
-
+    await mockDelay(500);
+    const item = mockInventoryItems.find((i) => i.id === itemId);
+    if (!item) throw new Error('Inventory item not found');
     let newQuantity;
     switch (operation) {
       case 'add':
@@ -129,7 +129,6 @@ class InventoryService {
       default:
         newQuantity = quantity;
     }
-
     return this.updateInventoryItem(itemId, {
       quantity: newQuantity,
       lastRestocked:
@@ -138,58 +137,91 @@ class InventoryService {
   }
 
   async getLowStockItems(threshold) {
+    if (!USE_MOCKS) {
+      const res = await apiClient.get(
+        `/inventory/low-stock${
+          threshold !== undefined
+            ? `?threshold=${encodeURIComponent(threshold)}`
+            : ''
+        }`
+      );
+      const data = res?.data || res;
+      return { success: true, data: data?.data || data };
+    }
     await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/inventory/low-stock?threshold=${threshold}`);
-
-    // Mock implementation
     const lowStockItems = mockInventoryItems.filter(
       (item) => item.quantity <= (threshold || item.minStock)
     );
-
-    return {
-      success: true,
-      data: lowStockItems,
-    };
+    return { success: true, data: lowStockItems };
   }
 
-  async getInventoryActivities(_params = {}) {
+  async getInventoryActivities(params = {}) {
+    if (!USE_MOCKS) {
+      const qs = new URLSearchParams();
+      Object.entries(params || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+      });
+      // Use new authoritative endpoint
+      const res = await apiClient.get(
+        `/inventory/recent-activity?${qs.toString()}`
+      );
+      const raw = res?.data || res;
+      const list = raw?.data || raw;
+      // Map to UI-friendly structure used by components
+      const typeToAction = (t) => {
+        switch ((t || '').toUpperCase()) {
+          case 'RECEIPT':
+            return 'Stock Received';
+          case 'SALE':
+            return 'Stock Deduction';
+          case 'ADJUSTMENT':
+            return 'Stock Adjustment';
+          case 'WASTE':
+            return 'Waste';
+          case 'TRANSFER_IN':
+            return 'Transfer In';
+          case 'TRANSFER_OUT':
+            return 'Transfer Out';
+          case 'RETURN':
+            return 'Return to Supplier';
+          default:
+            return 'Stock Update';
+        }
+      };
+      const mapped = (list || []).map((m) => {
+        if ((m.type || '').toUpperCase() === 'ITEM_UPDATE') {
+          const fields =
+            (m.meta && m.meta.changed && Object.keys(m.meta.changed)) || [];
+          return {
+            id: m.id,
+            action: 'Item Updated',
+            item: m.itemName || m.itemId,
+            quantity: fields.length
+              ? `Fields: ${fields.join(', ')}`
+              : 'Updated',
+            timestamp: m.recordedAt || m.effectiveAt,
+            user: m.actorName || 'System',
+          };
+        }
+        const qty = Number(m.qty || 0);
+        const sign = qty > 0 ? '+' : '';
+        const unit = m.itemUnit ? ` ${m.itemUnit}` : '';
+        return {
+          id: m.id,
+          action: typeToAction(m.type),
+          item: m.itemName || m.itemId,
+          quantity: `${sign}${qty}${unit}`,
+          timestamp: m.recordedAt || m.effectiveAt,
+          user: m.actorName || 'System',
+        };
+      });
+      return { success: true, data: mapped, pagination: raw?.pagination };
+    }
+    // Mocks
     await mockDelay(800);
-
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/inventory/activities?${queryParams}`);
-
-    // Mock implementation
     return {
       success: true,
-      data: [
-        {
-          id: '1',
-          itemId: '1',
-          itemName: 'Canton Noodles',
-          action: 'restock',
-          quantityChange: 20,
-          previousQuantity: 30,
-          newQuantity: 50,
-          reason: 'Weekly restock',
-          performedBy: 'System',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-        },
-        {
-          id: '2',
-          itemId: '2',
-          itemName: 'Ground Pork',
-          action: 'usage',
-          quantityChange: -5,
-          previousQuantity: 30,
-          newQuantity: 25,
-          reason: 'Order preparation',
-          performedBy: 'Kitchen Staff',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-        },
-      ],
+      data: [],
     };
   }
 }

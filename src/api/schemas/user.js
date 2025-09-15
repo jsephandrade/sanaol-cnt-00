@@ -27,6 +27,8 @@ export const UserCreateSchema = z
     name: z.string().min(1),
     email: z.string().email(),
     role: RoleValue.default('staff'),
+    phone: z.string().optional(),
+    password: z.string().min(8).optional(),
   })
   .strict();
 
@@ -37,5 +39,6 @@ export const UserUpdateSchema = z
     phone: z.string().optional(),
     role: RoleValue.optional(),
     status: UserStatus.optional(),
+    password: z.string().min(8).optional(),
   })
   .strict();

@@ -25,6 +25,8 @@ export function userModelToCreatePayload(model) {
       name: model.name,
       email: model.email,
       role: (model.role || 'staff').toLowerCase(),
+      phone: model.phone || undefined,
+      password: model.password || undefined,
     },
     'UserCreate'
   );
@@ -40,5 +42,6 @@ export function userModelToUpdatePayload(model) {
   if (model.role !== undefined) update.role = (model.role || '').toLowerCase();
   if (model.status !== undefined)
     update.status = (model.status || '').toLowerCase();
+  if (model.password) update.password = model.password;
   return validate(UserUpdateSchema, update, 'UserUpdate');
 }

@@ -44,30 +44,7 @@ export const mockDashboardStats = {
 
 export const mockUsers = [];
 
-export const mockMenuItems = [
-  {
-    id: '1',
-    name: 'Bam-i',
-    description: 'A festive noodle dish with canton & bihon.',
-    price: 30,
-    category: 'Noodles',
-    available: true,
-    image: '/images/placeholder.jpg',
-    ingredients: ['Canton noodles', 'Bihon noodles', 'Vegetables'],
-    preparationTime: 10,
-  },
-  {
-    id: '2',
-    name: 'Bihon',
-    description: 'Stir-fried vermicelli rice noodles.',
-    price: 20,
-    category: 'Noodles',
-    available: true,
-    image: '/images/placeholder.jpg',
-    ingredients: ['Rice vermicelli', 'Vegetables', 'Sauce'],
-    preparationTime: 8,
-  },
-];
+// mockMenuItems removed — menu items now always come from backend DB
 
 export const mockInventoryItems = [
   {

@@ -42,6 +42,39 @@ Notes
 - A minimal `AppUser` model has been added under `api/models.py`. The API uses the DB when available and falls back to in-memory data if the DB is not migrated yet. On first DB access, the in-memory seed is imported automatically.
 - JWT is issued for auth flows. Configure `DJANGO_JWT_SECRET` and `DJANGO_JWT_EXP_SECONDS` in `.env` for production.
 
+## Use MySQL instead of SQLite
+
+1. Install MySQL Server and create a database and user
+
+- Example (MySQL shell):
+  - CREATE DATABASE technomart CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  - CREATE USER 'tm_user'@'%' IDENTIFIED BY 'your-strong-pass';
+  - GRANT ALL PRIVILEGES ON technomart.\* TO 'tm_user'@'%';
+  - FLUSH PRIVILEGES;
+
+2. Configure environment in `backend/.env`
+
+- Add the following keys (see `.env.example` for reference):
+  - DJANGO_DB_ENGINE=mysql
+  - DJANGO_DB_NAME=technomart
+  - DJANGO_DB_USER=tm_user
+  - DJANGO_DB_PASSWORD=your-strong-pass
+  - DJANGO_DB_HOST=127.0.0.1
+  - DJANGO_DB_PORT=3306
+  - DJANGO_DB_CONN_MAX_AGE=60
+
+3. Install the MySQL driver and apply migrations
+
+- pip install -r requirements.txt
+- python manage.py migrate
+
+If the connection fails, verify:
+
+- MySQL is running and reachable from the host defined in `DJANGO_DB_HOST`.
+- The user has privileges on the database.
+- Port 3306 is open (or adjust `DJANGO_DB_PORT`).
+- Your Python environment has `mysqlclient` installed (shown in `pip show mysqlclient`).
+
 ## Bootstrap an admin user
 
 You can quickly create or update an admin via a management command:

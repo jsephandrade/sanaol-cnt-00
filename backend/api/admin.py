@@ -4,7 +4,7 @@ from django.urls import path, reverse
 from django.http import FileResponse, Http404, HttpResponseForbidden
 from django import forms
 
-from .models import AppUser, AccessRequest
+from .models import AppUser, AccessRequest, MenuItem
 from .emails import (
     email_user_approved,
     email_user_rejected,
@@ -154,3 +154,11 @@ class AccessRequestAdmin(admin.ModelAdmin):
             except Exception:
                 continue
         self.message_user(request, f"Rejected {count} request(s).", messages.WARNING)
+
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    list_display = ("name", "category", "price", "available", "updated_at")
+    list_filter = ("available", "category")
+    search_fields = ("name", "description", "category")
+    ordering = ("name",)

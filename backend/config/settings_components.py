@@ -37,18 +37,6 @@ def get_database(BASE_DIR: Path):
                 },
             }
         }
-    elif DB_ENGINE in {"postgres", "postgresql", "psql"}:
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.postgresql",
-                "NAME": DB_NAME,
-                "USER": DB_USER,
-                "PASSWORD": DB_PASSWORD,
-                "HOST": DB_HOST or "127.0.0.1",
-                "PORT": DB_PORT or "5432",
-                "CONN_MAX_AGE": DB_CONN_MAX_AGE,
-            }
-        }
     # Default SQLite
     return {
         "default": {

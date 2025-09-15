@@ -23,6 +23,8 @@ export const EditUserModal = ({ open, onOpenChange, user, onUpdateUser }) => {
     name: '',
     email: '',
     role: 'staff',
+    phone: '',
+    password: '',
   });
 
   useEffect(() => {
@@ -31,6 +33,8 @@ export const EditUserModal = ({ open, onOpenChange, user, onUpdateUser }) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone || '',
+        password: '',
       });
     }
   }, [user]);
@@ -89,6 +93,20 @@ export const EditUserModal = ({ open, onOpenChange, user, onUpdateUser }) => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="Optional phone number"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Role
               </Label>
@@ -107,6 +125,22 @@ export const EditUserModal = ({ open, onOpenChange, user, onUpdateUser }) => {
                   <SelectItem value="staff">Staff</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                New Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="Leave blank to keep current"
+                minLength={8}
+              />
             </div>
           </div>
           <DialogFooter>

@@ -517,3 +517,201 @@ class LeaveRecord(models.Model):
             models.Index(fields=["employee", "start_date", "end_date"]),
             models.Index(fields=["status"]),
         ]
+
+
+# -----------------------------
+# Inventory
+# -----------------------------
+
+
+class InventoryItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    category = models.CharField(max_length=128, blank=True)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    unit = models.CharField(max_length=32, blank=True)
+    min_stock = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    supplier = models.CharField(max_length=255, blank=True)
+    last_restocked = models.DateTimeField(blank=True, null=True)
+    expiry_date = models.DateField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "inventory_item"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["quantity"]),
+            models.Index(fields=["min_stock"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.quantity} {self.unit})"
+
+
+class InventoryActivity(models.Model):
+    ACTION_RESTOCK = "restock"
+    ACTION_USAGE = "usage"
+    ACTION_ADJUST = "adjust"
+    ACTION_SET = "set"
+    ACTION_EXPIRY_CHECK = "expiry_check"
+    ACTION_UPDATE = "update"
+    ACTION_CHOICES = [
+        (ACTION_RESTOCK, "Restock"),
+        (ACTION_USAGE, "Usage"),
+        (ACTION_ADJUST, "Adjust"),
+        (ACTION_SET, "Set"),
+        (ACTION_EXPIRY_CHECK, "Expiry Check"),
+        (ACTION_UPDATE, "Update"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="activities")
+    action = models.CharField(max_length=32, choices=ACTION_CHOICES)
+    quantity_change = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    previous_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    new_quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    reason = models.CharField(max_length=255, blank=True)
+    performed_by = models.CharField(max_length=255, blank=True)
+    actor = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "inventory_activity"
+        indexes = [
+            models.Index(fields=["item", "created_at"]),
+            models.Index(fields=["action", "created_at"]),
+        ]
+
+
+class Location(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=128)
+    code = models.CharField(max_length=32, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "inv_location"
+        indexes = [
+            models.Index(fields=["code"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code}: {self.name}"
+
+
+class Batch(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="batches")
+    lot_code = models.CharField(max_length=64, blank=True)
+    expiry_date = models.DateField(blank=True, null=True)
+    received_at = models.DateTimeField(blank=True, null=True)
+    supplier = models.CharField(max_length=255, blank=True)
+    unit_cost = models.DecimalField(max_digits=12, decimal_places=4, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "inv_batch"
+        indexes = [
+            models.Index(fields=["item", "expiry_date"]),
+            models.Index(fields=["lot_code"]),
+        ]
+
+
+class StockMovement(models.Model):
+    TYPE_RECEIPT = "RECEIPT"
+    TYPE_SALE = "SALE"
+    TYPE_ADJUSTMENT = "ADJUSTMENT"
+    TYPE_WASTE = "WASTE"
+    TYPE_TRANSFER_IN = "TRANSFER_IN"
+    TYPE_TRANSFER_OUT = "TRANSFER_OUT"
+    TYPE_RETURN = "RETURN"
+    TYPE_CHOICES = [
+        (TYPE_RECEIPT, "Receipt"),
+        (TYPE_SALE, "Sale/Consumption"),
+        (TYPE_ADJUSTMENT, "Manual Adjustment"),
+        (TYPE_WASTE, "Waste"),
+        (TYPE_TRANSFER_IN, "Transfer In"),
+        (TYPE_TRANSFER_OUT, "Transfer Out"),
+        (TYPE_RETURN, "Return to Supplier"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="movements")
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="movements")
+    batch = models.ForeignKey(Batch, on_delete=models.SET_NULL, null=True, blank=True, related_name="movements")
+    movement_type = models.CharField(max_length=16, choices=TYPE_CHOICES)
+    qty = models.DecimalField(max_digits=14, decimal_places=4)
+    effective_at = models.DateTimeField()
+    recorded_at = models.DateTimeField()
+    actor = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+    reference_type = models.CharField(max_length=32, blank=True)
+    reference_id = models.CharField(max_length=64, blank=True)
+    reason = models.CharField(max_length=255, blank=True)
+    idempotency_key = models.CharField(max_length=64, blank=True, null=True, unique=True)
+
+    class Meta:
+        db_table = "inv_stock_movement"
+        indexes = [
+            models.Index(fields=["item", "location", "effective_at"]),
+            models.Index(fields=["batch"]),
+            models.Index(fields=["movement_type", "effective_at"]),
+            models.Index(fields=["recorded_at"]),
+            models.Index(fields=["item", "recorded_at"]),
+            models.Index(fields=["location", "recorded_at"]),
+        ]
+        constraints = [
+            models.CheckConstraint(check=~models.Q(qty=0), name="movement_qty_nonzero"),
+        ]
+
+
+class ReorderSetting(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name="reorder_settings")
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name="reorder_settings")
+    reorder_point = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    reorder_qty = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    lead_time_days = models.PositiveIntegerField(default=0)
+    low_stock_threshold = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "inv_reorder_setting"
+        constraints = [
+            models.UniqueConstraint(fields=["item", "location"], name="uniq_item_location_reorder"),
+        ]
+
+
+# -----------------------------
+# Menu Management
+# -----------------------------
+
+
+class MenuItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    category = models.CharField(max_length=128, blank=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    available = models.BooleanField(default=True)
+    image = models.ImageField(upload_to="menu_items/", blank=True, null=True)
+    ingredients = models.JSONField(default=list, blank=True)
+    preparation_time = models.PositiveIntegerField(default=0, help_text="Minutes")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "menu_item"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["available"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.category})"
+    

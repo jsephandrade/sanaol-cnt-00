@@ -99,7 +99,7 @@ const MainLayout = ({ children, title: _title }) => {
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Button variant="outline" asChild>
                 <Link to="/notifications">
                   <Bell className="h-4 w-4" />

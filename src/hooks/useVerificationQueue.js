@@ -12,6 +12,8 @@ export const useVerificationQueue = (params = {}) => {
     search: '',
     ...(params || {}),
   };
+  const enabled =
+    params?.enabled !== undefined ? Boolean(params.enabled) : true;
 
   const query = useQuery({
     queryKey: ['verify-requests', qp],
@@ -27,6 +29,7 @@ export const useVerificationQueue = (params = {}) => {
         throw new Error(err?.message || 'Failed to load verification requests');
       }
     },
+    enabled,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
     keepPreviousData: true,

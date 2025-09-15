@@ -16,6 +16,7 @@ class PendingUserGateMiddleware:
     PUBLIC_PATHS = {
         "/api/health",
         "/api/auth/login",
+        "/api/auth/logout",
         "/api/auth/register",
         "/api/auth/google",
         "/api/auth/verify-email",

@@ -8,6 +8,7 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.db import transaction
 from django.conf import settings
 import jwt
+from django.contrib.auth.hashers import make_password
 
 from .views_common import USERS, _paginate, _maybe_seed_from_memory, _safe_user_from_db, _now_iso, DEFAULT_ROLE_PERMISSIONS
 
@@ -113,6 +114,12 @@ def users(request):
         except (OperationalError, ProgrammingError):
             pass
 
+        if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+            return JsonResponse(
+                {"success": False, "message": "Service temporarily unavailable"},
+                status=503,
+            )
+
         data = USERS
         if search:
             data = [u for u in data if search in u.get("name", "").lower() or search in u.get("email", "").lower()]
@@ -146,6 +153,10 @@ def users(request):
 
         from .models import AppUser
         _maybe_seed_from_memory()
+        # Optional initial password support (admin create)
+        raw_password = (payload.get("password") or "").strip()
+        if raw_password and len(raw_password) < 8:
+            return JsonResponse({"success": False, "message": "Password must be at least 8 characters"}, status=400)
         with transaction.atomic():
             db_user = AppUser.objects.create(
                 email=(payload.get("email") or "user@example.com").lower().strip(),
@@ -154,10 +165,17 @@ def users(request):
                 status="active",
                 permissions=payload.get("permissions") or [],
                 phone=(payload.get("phone") or ""),
+                password_hash=make_password(raw_password) if raw_password else "",
             )
         return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
     except (OperationalError, ProgrammingError):
         pass
+
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse(
+            {"success": False, "message": "Service temporarily unavailable"},
+            status=503,
+        )
 
     user = {
         "id": str(uuid.uuid4()),
@@ -215,6 +233,15 @@ def user_detail(request, user_id):
         # Only admin can update user details in User Management
         # (actor already validated as admin above)
         changed = False
+        # Optional password update
+        if "password" in payload and payload["password"] is not None:
+            new_pw = (str(payload.get("password")) or "").strip()
+            if new_pw and len(new_pw) < 8:
+                return JsonResponse({"success": False, "message": "Password must be at least 8 characters"}, status=400)
+            if new_pw:
+                db_user.password_hash = make_password(new_pw)
+                changed = True
+
         for k in ["name", "email", "role", "status", "permissions", "phone"]:
             if k in payload and payload[k] is not None:
                 setattr(db_user, "email" if k == "email" else k, payload[k] if k != "role" else str(payload[k]).lower())
@@ -224,6 +251,12 @@ def user_detail(request, user_id):
         return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
     except (OperationalError, ProgrammingError):
         pass
+
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse(
+            {"success": False, "message": "Service temporarily unavailable"},
+            status=503,
+        )
 
     idx = next((i for i, u in enumerate(USERS) if u.get("id") == user_id), -1)
     if idx == -1:
@@ -284,6 +317,12 @@ def user_status(request, user_id):
         return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
     except (OperationalError, ProgrammingError):
         pass
+
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse(
+            {"success": False, "message": "Service temporarily unavailable"},
+            status=503,
+        )
 
     idx = next((i for i, u in enumerate(USERS) if u.get("id") == user_id), -1)
     if idx == -1:

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import inventoryService from '@/api/services/inventoryService';
 
@@ -222,43 +222,78 @@ export const useLowStockItems = (threshold) => {
   };
 };
 
-export const useInventoryActivities = (params = {}) => {
+// Simple in-memory cache keyed by params
+const _activityCache = new Map(); // key -> { ts: number, data: any[] }
+const _stableStringify = (obj) => {
+  try {
+    const keys = Object.keys(obj || {}).sort();
+    const sorted = {};
+    keys.forEach((k) => (sorted[k] = obj[k]));
+    return JSON.stringify(sorted);
+  } catch {
+    return JSON.stringify(obj || {});
+  }
+};
+
+export const useInventoryActivities = (params = {}, options = {}) => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { toast } = useToast();
+  const { auto = false, debounceMs = 500, cacheTtlMs = 30000 } = options || {};
+  const debounceRef = useRef(null);
 
-  const fetchInventoryActivities = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const key = useMemo(() => _stableStringify(params || {}), [params]);
 
-    try {
-      const response = await inventoryService.getInventoryActivities(params);
-
-      if (response.success) {
-        setActivities(response.data);
-      } else {
-        throw new Error('Failed to fetch inventory activities');
+  const doFetch = useCallback(
+    async (force = false) => {
+      setError(null);
+      // Cache lookup
+      const now = Date.now();
+      const cached = _activityCache.get(key);
+      if (!force && cached && now - cached.ts <= cacheTtlMs) {
+        setActivities(cached.data);
+        return;
       }
-    } catch (error) {
-      setError(error.message);
-      toast({
-        title: 'Error Loading Activities',
-        description: 'Failed to load inventory activities. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [params, toast]);
+      setLoading(true);
+      try {
+        const response = await inventoryService.getInventoryActivities(params);
+        if (response.success) {
+          const list = response.data || [];
+          _activityCache.set(key, { ts: now, data: list });
+          setActivities(list);
+        } else {
+          throw new Error('Failed to fetch inventory activities');
+        }
+      } catch (err) {
+        setError(err.message);
+        toast({
+          title: 'Error Loading Activities',
+          description: 'Failed to load inventory activities. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [params, key, cacheTtlMs, toast]
+  );
+
+  // Debounced refetch
+  const refetch = useCallback(
+    ({ force = false } = {}) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => doFetch(force), debounceMs);
+    },
+    [doFetch, debounceMs]
+  );
 
   useEffect(() => {
-    fetchInventoryActivities();
-  }, [fetchInventoryActivities]);
-
-  const refetch = () => {
-    fetchInventoryActivities();
-  };
+    if (auto) refetch({ force: false });
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [auto, refetch]);
 
   return {
     activities,

@@ -96,6 +96,12 @@ CORS_ALLOWED_ORIGINS, CORS_ALLOW_HEADERS = get_cors()
 # Django defaults
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+# Disable in-memory fallbacks for API responses outside development, unless explicitly allowed
+DISABLE_INMEM_FALLBACK = (
+    os.getenv("DJANGO_DISABLE_INMEM_FALLBACK", "0") in {"1", "true", "True", "yes", "on"}
+    or not DEBUG
+)
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

@@ -156,6 +156,10 @@ def _safe_user_from_db(db_user):
 
 def _maybe_seed_from_memory():
     try:
+        from django.conf import settings as dj_settings
+        # Do not auto-seed from in-memory fixtures when fallbacks are disabled (prod/staging)
+        if getattr(dj_settings, "DISABLE_INMEM_FALLBACK", False):
+            return
         from .models import AppUser
         if AppUser.objects.count() == 0 and USERS:
             for u in USERS:

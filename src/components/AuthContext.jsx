@@ -258,6 +258,10 @@ export function AuthProvider({ children }) {
   }, [persistAuth, refreshTokenValue]);
 
   const refreshToken = useCallback(async () => {
+    if (!refreshTokenValue) {
+      // No refresh token available; nothing to do
+      return false;
+    }
     try {
       const res = await authService.refreshToken(refreshTokenValue);
       if (res?.success && res?.token) {

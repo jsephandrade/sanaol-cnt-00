@@ -9,6 +9,23 @@ export const useMenuManagement = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
+  // Create a stable key for params to avoid infinite refetch loops on new object identities
+  const paramKey = JSON.stringify(
+    (() => {
+      try {
+        const keys = Object.keys(params || {}).sort();
+        const obj = {};
+        keys.forEach((k) => {
+          const v = params[k];
+          if (v !== undefined && v !== null && v !== '') obj[k] = v;
+        });
+        return obj;
+      } catch {
+        return params || {};
+      }
+    })()
+  );
+
   const fetchMenuItems = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -32,7 +49,7 @@ export const useMenuManagement = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [params, toast]);
+  }, [paramKey, toast]);
 
   useEffect(() => {
     fetchMenuItems();

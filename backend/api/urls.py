@@ -10,9 +10,11 @@ from . import views_notifications as notif_views
 from . import views_payments as pay_views
 from . import views_employees as emp_views
 from . import views_attendance as att_views
+from . import views_inventory as inv_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
+    path("health/db", auth_views.health_db, name="health_db"),
     path("auth/login", auth_views.auth_login, name="auth_login"),
     path("auth/logout", auth_views.auth_logout, name="auth_logout"),
     path("auth/register", auth_views.auth_register, name="auth_register"),
@@ -46,6 +48,7 @@ urlpatterns = [
     path("menu/items/<str:item_id>", menu_views.menu_item_detail, name="menu_item_detail"),
     path("menu/items/<str:item_id>/availability", menu_views.menu_item_availability, name="menu_item_availability"),
     path("menu/items/<str:item_id>/image", menu_views.menu_item_image, name="menu_item_image"),
+    path("menu/categories", menu_views.menu_categories, name="menu_categories"),
 
     # Users endpoints
     path("users", user_views.users, name="users"),
@@ -93,4 +96,20 @@ urlpatterns = [
     path("attendance/<uuid:rid>", att_views.attendance_detail, name="attendance_detail"),
     path("leaves", att_views.leaves, name="leaves"),
     path("leaves/<uuid:lid>", att_views.leave_detail, name="leave_detail"),
+    
+    # Inventory
+    path("inventory/items", inv_views.inventory_items, name="inventory_items"),
+    path("inventory/items/<uuid:iid>", inv_views.inventory_item_detail, name="inventory_item_detail"),
+    path("inventory/items/<uuid:iid>/stock", inv_views.inventory_item_stock, name="inventory_item_stock"),
+    path("inventory/low-stock", inv_views.inventory_low_stock, name="inventory_low_stock"),
+    path("inventory/activities", inv_views.inventory_activities, name="inventory_activities"),
+    path("inventory/recent-activity", inv_views.inventory_recent_activity, name="inventory_recent_activity"),
+    path("inventory/db-now", inv_views.inventory_db_now, name="inventory_db_now"),
+    path("inventory/stock", inv_views.inventory_stock, name="inventory_stock"),
+    path("inventory/expiring", inv_views.inventory_expiring, name="inventory_expiring"),
+    path("inventory/receipts", inv_views.inventory_receipts, name="inventory_receipts"),
+    path("inventory/consume", inv_views.inventory_consume, name="inventory_consume"),
+    path("inventory/transfer", inv_views.inventory_transfer, name="inventory_transfer"),
+    path("inventory/adjust", inv_views.inventory_adjust, name="inventory_adjust"),
+    path("inventory/ledger", inv_views.inventory_ledger, name="inventory_ledger"),
 ]

@@ -9,11 +9,18 @@ import { useDashboard } from '@/hooks/useDashboard';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
 import { useVerificationQueue } from '@/hooks/useVerificationQueue';
+import { useAuth } from '@/components/AuthContext';
 
 const Dashboard = () => {
   const { stats, loading, error, refetch } = useDashboard('today');
+  const { hasAnyRole, token } = useAuth();
+  const isVerifier = hasAnyRole(['admin', 'manager']);
   const { requests: pendingRequests, pagination: verifyPagination } =
-    useVerificationQueue({ status: 'pending', limit: 1 });
+    useVerificationQueue({
+      status: 'pending',
+      limit: 1,
+      enabled: isVerifier && Boolean(token),
+    });
 
   const salesTimeData = (stats?.salesByTime || []).map((item) => ({
     name: item.time,
@@ -66,11 +73,13 @@ const Dashboard = () => {
           value={stats?.orderCount ?? (stats?.recentSales?.length || 0)}
           icon={ShoppingBag}
         />
-        <StatsCard
-          title="Pending Accounts"
-          value={verifyPagination?.total ?? (pendingRequests?.length || 0)}
-          icon={ShieldCheck}
-        />
+        {isVerifier ? (
+          <StatsCard
+            title="Pending Accounts"
+            value={verifyPagination?.total ?? (pendingRequests?.length || 0)}
+            icon={ShieldCheck}
+          />
+        ) : null}
       </div>
 
       {/* Charts Row */}

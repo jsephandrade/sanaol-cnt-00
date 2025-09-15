@@ -97,7 +97,7 @@ const Users = () => {
 
   const handleAddUser = async (newUser) => {
     await createUser.mutateAsync(newUser);
-    if (newUser?.sendInvite && newUser?.email) {
+    if (newUser?.sendInvite && newUser?.email && !newUser?.password) {
       try {
         const { authService } = await import('@/api/services/authService');
         await authService.forgotPassword(newUser.email);

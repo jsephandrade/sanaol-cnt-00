@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
 
 const ItemCard = ({ item, onEdit, onDelete }) => {
-  const imageSrc = item.imageUrl || null;
+  const imageSrc = item.image || item.imageUrl || null;
 
   return (
     <Card className="overflow-hidden">
