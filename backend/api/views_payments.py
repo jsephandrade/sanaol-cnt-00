@@ -14,7 +14,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
 
-from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager
+from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
 
 
 def _serialize_db(p):
@@ -32,6 +32,7 @@ def _serialize_db(p):
 
 
 @require_http_methods(["POST"])  # /orders/<order_id>/payment
+@rate_limit(limit=20, window_seconds=60)
 def order_payment(request, order_id: str):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -50,6 +51,7 @@ def order_payment(request, order_id: str):
     method = (data.get("method") or "").lower()
     customer = (data.get("customer") or "").strip()
     reference = (data.get("reference") or "").strip()
+    idempo = (request.META.get("HTTP_IDEMPOTENCY_KEY") or "").strip()
     if not amount or not method:
         return JsonResponse({"success": False, "message": "Missing amount or method"}, status=400)
     try:
@@ -75,6 +77,27 @@ def order_payment(request, order_id: str):
             if not allowed.get(method, True):
                 return JsonResponse({"success": False, "message": f"Payment method '{method}' is disabled"}, status=400)
 
+        # Idempotency: if an Idempotency-Key header is provided and matches an existing txn for this order, return it
+        if idempo:
+            existing = PaymentTransaction.objects.filter(order_id=str(order_id), meta__idempotencyKey=idempo).first()
+            if existing:
+                return JsonResponse({"success": True, "data": _serialize_db(existing)})
+
+        # External provider for card/mobile payments (expects tokenized input)
+        if method in {PaymentTransaction.METHOD_CARD, PaymentTransaction.METHOD_MOBILE}:
+            token = (data.get("token") or data.get("paymentToken") or "").strip()
+            if not token:
+                return JsonResponse({"success": False, "message": "Missing payment token"}, status=400)
+            try:
+                from .payment_providers import get_gateway
+                gw = get_gateway()
+                res = gw.charge(order_id=str(order_id), amount=float(amt), token=token, method=method)
+                if not res.ok:
+                    return JsonResponse({"success": False, "message": res.error or "Gateway error"}, status=400)
+                reference = reference or res.reference
+            except Exception:
+                return JsonResponse({"success": False, "message": "Payment provider unavailable"}, status=502)
+
         p = PaymentTransaction.objects.create(
             order_id=str(order_id),
             amount=amt,
@@ -83,8 +106,20 @@ def order_payment(request, order_id: str):
             reference=reference,
             customer=customer,
             processed_by=actor if hasattr(actor, "id") else None,
-            meta={},
+            meta=({"idempotencyKey": idempo} if idempo else {}),
         )
+        # Update the order's payment method for consistency
+        try:
+            from .models import Order
+            o = Order.objects.filter(id=order_id).first()
+            if o and getattr(o, "payment_method", None) != method:
+                o.payment_method = method
+                try:
+                    o.save(update_fields=["payment_method", "updated_at"])
+                except Exception:
+                    o.save(update_fields=["payment_method"])  # fallback if updated_at missing
+        except Exception:
+            pass
         # Audit log
         try:
             from .utils_audit import record_audit

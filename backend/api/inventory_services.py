@@ -44,6 +44,42 @@ def _q2(val) -> Decimal:
         return DEC0
 
 
+def _maybe_notify_low_stock(item_ids: Sequence[str]):
+    """If any items are below configured low_stock_threshold, notify managers/admins.
+
+    Best-effort: failures are ignored. Uses Notification records; push is handled by utils_notify.
+    """
+    try:
+        ids = list(item_ids or [])
+        if not ids:
+            return
+        # Load thresholds
+        settings = {str(r.item_id): r.low_stock_threshold for r in ReorderSetting.objects.filter(item_id__in=ids)}
+        if not settings:
+            return
+        totals = get_current_stock(list(settings.keys()))
+        low = [iid for iid, thr in settings.items() if _as_decimal(totals.get(iid, DEC0)) <= _as_decimal(thr)]
+        if not low:
+            return
+        from .models import InventoryItem, AppUser, Notification
+        items = {str(x.id): x for x in InventoryItem.objects.filter(id__in=low)}
+        managers = list(AppUser.objects.filter(role__in=["manager", "admin"]))
+        for iid in low:
+            it = items.get(iid)
+            if not it:
+                continue
+            title = f"Low stock: {it.name}"
+            msg = f"Item '{it.name}' is at or below threshold. Current: {float(totals.get(iid, DEC0) or 0)}"
+            for u in managers:
+                try:
+                    n = Notification.objects.create(user=u, title=title, message=msg, type="warning")
+                except Exception:
+                    continue
+    except Exception:
+        # best-effort
+        return
+
+
 def get_current_stock(
     item_ids: Optional[Sequence[str]] = None,
     location_id: Optional[str] = None,
@@ -305,6 +341,8 @@ def consume_for_order(
             for iid in affected_ids:
                 total = _q2(smap.get(iid, DEC0))
                 InventoryItem.objects.filter(id=iid).update(quantity=total)
+            # Notify managers if any cross the low stock threshold
+            _maybe_notify_low_stock(list(affected_ids))
     except Exception:
         pass
     return movements
@@ -348,6 +386,7 @@ def adjust_stock(
         total_map = get_current_stock([str(item.id)], location_id=None, as_of=None)
         total = _q2(total_map.get(str(item.id), DEC0))
         InventoryItem.objects.filter(id=item.id).update(quantity=total)
+        _maybe_notify_low_stock([str(item.id)])
     except Exception:
         pass
     return mv
@@ -447,6 +486,7 @@ def transfer_stock(
         total_map = get_current_stock([str(item.id)], location_id=None, as_of=None)
         total = _q2(total_map.get(str(item.id), DEC0))
         InventoryItem.objects.filter(id=item.id).update(quantity=total)
+        _maybe_notify_low_stock([str(item.id)])
     except Exception:
         pass
     return movements

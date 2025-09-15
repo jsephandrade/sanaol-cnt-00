@@ -112,7 +112,14 @@ const MenuSelection = ({
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden flex flex-col">
-          {searchTerm.trim() ? (
+          {categories.length === 0 ? (
+            <div className="flex-1 grid place-items-center text-muted-foreground">
+              <div className="text-center">
+                <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p>No menu items available. Add items in Menu Management.</p>
+              </div>
+            </div>
+          ) : searchTerm.trim() ? (
             // Search results view
             <div className="flex-1 overflow-y-auto">
               <div className="p-4">
@@ -142,7 +149,7 @@ const MenuSelection = ({
           ) : (
             // Category tabs view
             <Tabs
-              defaultValue={categories[0].id}
+              defaultValue={categories[0]?.id || ''}
               value={activeCategory}
               onValueChange={setActiveCategory}
               className="flex-1 flex flex-col"

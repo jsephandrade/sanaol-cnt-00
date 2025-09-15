@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone as dj_timezone
 
-from .views_common import _actor_from_request, _has_permission, _paginate
+from .views_common import _actor_from_request, _has_permission, _paginate, rate_limit
 from .inventory_services import (
     get_current_stock,
     record_receipt,
@@ -54,6 +54,7 @@ def _safe_activity(a):
 
 
 @require_http_methods(["GET", "POST"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_items(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -138,6 +139,7 @@ def inventory_items(request):
 
 
 @require_http_methods(["GET", "PUT", "DELETE"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_item_detail(request, iid):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -219,6 +221,7 @@ def inventory_item_detail(request, iid):
 
 
 @require_http_methods(["PATCH"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_item_stock(request, iid):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -304,6 +307,7 @@ def inventory_item_stock(request, iid):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_low_stock(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -318,6 +322,7 @@ def inventory_low_stock(request):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_activities(request):
     # Deprecated stub: return authoritative recent activity below for compatibility
     return inventory_recent_activity(request)
@@ -327,6 +332,7 @@ from .utils_dbtime import db_now
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_db_now(request):
     # No auth needed for simple clock? Keep consistent with other endpoints: require auth
     actor, err = _actor_from_request(request)
@@ -345,6 +351,7 @@ def inventory_db_now(request):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_stock(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -369,6 +376,7 @@ def inventory_stock(request):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_expiring(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -398,6 +406,7 @@ def inventory_expiring(request):
 
 
 @require_http_methods(["POST"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_receipts(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -430,6 +439,7 @@ def inventory_receipts(request):
 
 
 @require_http_methods(["POST"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_adjust(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -456,6 +466,7 @@ def inventory_adjust(request):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_ledger(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -492,6 +503,7 @@ def inventory_ledger(request):
 
 
 @require_http_methods(["GET"]) 
+@rate_limit(limit=120, window_seconds=60)
 def inventory_recent_activity(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -589,6 +601,7 @@ def inventory_recent_activity(request):
 
 
 @require_http_methods(["POST"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_consume(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -621,6 +634,7 @@ def inventory_consume(request):
 
 
 @require_http_methods(["POST"]) 
+@rate_limit(limit=60, window_seconds=60)
 def inventory_transfer(request):
     actor, err = _actor_from_request(request)
     if not actor:

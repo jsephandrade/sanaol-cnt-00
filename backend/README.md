@@ -14,6 +14,20 @@ What's included
   - `POST /api/auth/forgot-password`
   - `POST /api/auth/reset-password`
   - `POST /api/auth/refresh-token`
+  - Orders:
+    - `GET /api/orders` list orders (filters: `status`, `search`, `page`, `limit`)
+    - `POST /api/orders` place order (items -> menuItemId, quantity)
+    - `GET /api/orders/queue` queue view (pending/in_queue/in_progress/ready)
+    - `GET /api/orders/history` history (completed/cancelled/refunded)
+    - `GET /api/orders/<id>` detail with items
+    - `PATCH /api/orders/<id>/status` status transitions (pending→in_queue→in_progress→ready→completed; completed→refunded)
+    - `POST /api/orders/<id>/payment` process payment with optional `Idempotency-Key` header
+  - Reports:
+    - `GET /api/reports/sales?range=24h|7d|30d|ISO..ISO`
+    - `GET /api/reports/inventory`
+    - `GET /api/reports/orders`
+    - `GET /api/reports/staff-attendance`
+    - `GET /api/reports/customer-history?customer=`
   - Basic rate limiting on auth endpoints (e.g., login 5/min, signup 3/min) returning HTTP 429 with `Retry-After` header
   - `POST /api/auth/google` -> verifies Google ID token or code and issues a JWT
 

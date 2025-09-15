@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { orderService } from '@/api/services/orderService';
 
 export const usePOSLogic = () => {
   const [currentOrder, setCurrentOrder] = useState([]);
@@ -93,14 +94,37 @@ export const usePOSLogic = () => {
     setDiscount({ type: 'percentage', value: 0 });
   };
 
-  const processPayment = (paymentMethod) => {
-    alert(
-      `Payment of ₱${calculateTotal().toFixed(
-        2
-      )} processed via ${paymentMethod}`
-    );
-    clearOrder();
-    return true;
+  const processPayment = async (paymentMethod) => {
+    const total = calculateTotal();
+    if (!currentOrder.length) {
+      alert('No items in order.');
+      return false;
+    }
+    try {
+      // Create order in backend
+      const payload = {
+        items: currentOrder.map((it) => ({
+          menuItemId: it.menuItemId,
+          quantity: it.quantity,
+        })),
+        discount: discount?.type === 'fixed' ? discount.value : 0,
+        type: 'walk-in',
+      };
+      const res = await orderService.createOrder(payload);
+      const orderId = res?.data?.id || res?.data?.orderId || res?.data?.orderID;
+      if (!orderId) throw new Error('Order was not created');
+      // Process payment
+      await orderService.processPayment(orderId, {
+        amount: total,
+        method: paymentMethod,
+      });
+      clearOrder();
+      return true;
+    } catch (e) {
+      console.error(e);
+      alert('Failed to process payment. Please try again.');
+      return false;
+    }
   };
 
   return {

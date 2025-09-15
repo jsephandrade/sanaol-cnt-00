@@ -10,6 +10,7 @@ Production readiness goals:
 import json
 import uuid
 from datetime import datetime
+import os
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
@@ -395,12 +396,17 @@ def menu_item_image(request, item_id):
         if not img:
             return JsonResponse({"success": False, "message": "No image uploaded"}, status=400)
         # Basic validation: type and size
-        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        allowed_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
         if getattr(img, "content_type", "") not in allowed_types:
             return JsonResponse({"success": False, "message": "Unsupported image type"}, status=400)
-        max_size = 5 * 1024 * 1024  # 5MB
+        # Configurable size limit (default 25 MB); set DJANGO_MENU_IMAGE_MAX_MB env to override
+        try:
+            max_mb = int(os.getenv("DJANGO_MENU_IMAGE_MAX_MB", "25"))
+        except Exception:
+            max_mb = 25
+        max_size = max_mb * 1024 * 1024
         if getattr(img, "size", 0) > max_size:
-            return JsonResponse({"success": False, "message": "Image too large (max 5MB)"}, status=400)
+            return JsonResponse({"success": False, "message": f"Image too large (max {max_mb}MB)"}, status=400)
         # Try to verify via Pillow
         try:
             from PIL import Image

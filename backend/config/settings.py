@@ -46,14 +46,18 @@ INSTALLED_APPS = [
 # Keep middleware lightweight; omit session/auth/csrf
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "api.middleware.SecurityHeadersMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "api.middleware.RequestIdMiddleware",
     # Gate API routes for pending/unauthorized users (JWT-aware)
     "api.middleware.PendingUserGateMiddleware",
+    "api.middleware.VersionHeaderMiddleware",
+    "api.middleware.ResponseTimingMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -185,3 +189,15 @@ WEBPUSH_VAPID_SUBJECT = os.getenv("WEBPUSH_VAPID_SUBJECT", "mailto:josephforment
 # Optional: simple guard to fail early if you forget the keys in prod
 if not DEBUG:
     assert WEBPUSH_VAPID_PUBLIC_KEY and WEBPUSH_VAPID_PRIVATE_KEY, "Missing VAPID keys"
+
+# API version
+API_VERSION = os.getenv("API_VERSION", "1")
+
+# Security hardening flags (sane defaults, can be tuned via env)
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "1") in {"1","true","True","yes","on"}
+SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "1") in {"1","true","True","yes","on"}
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "0" if DEBUG else "1") in {"1","true","True","yes","on"}
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "0" if DEBUG else "1") in {"1","true","True","yes","on"}
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "0" if DEBUG else "1") in {"1","true","True","yes","on"}
+CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o]

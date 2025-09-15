@@ -385,6 +385,27 @@ class WebPushSubscription(models.Model):
         ]
 
 
+class NotificationOutbox(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_SENT = "sent"
+    STATUS_FAILED = "failed"
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="notif_outbox")
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True)
+    status = models.CharField(max_length=16, default=STATUS_PENDING)
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "notification_outbox"
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+        ]
+
+
 # -----------------------------
 # Payments
 # -----------------------------
@@ -715,3 +736,109 @@ class MenuItem(models.Model):
     def __str__(self) -> str:
         return f"{self.name} ({self.category})"
     
+
+# -----------------------------
+# Orders
+# -----------------------------
+
+
+class Order(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_IN_QUEUE = "in_queue"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_READY = "ready"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_REFUNDED = "refunded"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_IN_QUEUE, "In Queue"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_READY, "Ready"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_REFUNDED, "Refunded"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order_number = models.CharField(max_length=32, unique=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    order_type = models.CharField(max_length=32, blank=True)  # e.g., walk-in, delivery
+    customer_name = models.CharField(max_length=255, blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    payment_method = models.CharField(max_length=16, blank=True)  # cash/card/mobile
+    placed_by = models.ForeignKey('AppUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    completed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "order"
+        indexes = [
+            models.Index(fields=["order_number"]),
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.order_number} ({self.status})"
+
+
+class OrderItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    menu_item = models.ForeignKey('MenuItem', on_delete=models.SET_NULL, null=True, blank=True)
+    item_name = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    quantity = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "order_item"
+        indexes = [
+            models.Index(fields=["order"]),
+        ]
+
+
+# -----------------------------
+# Cash handling (sessions and movements)
+# -----------------------------
+
+
+class CashSession(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_CLOSED = "closed"
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    opened_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, related_name="cash_opened")
+    closed_by = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True, related_name="cash_closed")
+    status = models.CharField(max_length=16, default=STATUS_OPEN)
+    opening_float = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    closing_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    notes = models.CharField(max_length=255, blank=True)
+    opened_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = "cash_session"
+        indexes = [models.Index(fields=["status", "opened_at"]) ]
+
+
+class CashEntry(models.Model):
+    TYPE_IN = "cash_in"
+    TYPE_OUT = "cash_out"
+    TYPE_SALE = "sale"
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    session = models.ForeignKey(CashSession, on_delete=models.CASCADE, related_name="entries")
+    type = models.CharField(max_length=16)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reference = models.CharField(max_length=128, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    actor = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = "cash_entry"
+        indexes = [models.Index(fields=["session", "created_at"]) ]

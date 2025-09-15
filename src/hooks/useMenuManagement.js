@@ -61,6 +61,13 @@ export const useMenuManagement = (params = {}) => {
 
       if (response.success) {
         setItems((prev) => [...prev, response.data]);
+        try {
+          window?.dispatchEvent?.(
+            new CustomEvent('menu.items.updated', {
+              detail: { type: 'create', item: response.data },
+            })
+          );
+        } catch {}
         toast({
           title: 'Menu Item Created',
           description: `${itemData.name} has been added to the menu.`,
@@ -89,6 +96,13 @@ export const useMenuManagement = (params = {}) => {
             item.id === itemId ? { ...item, ...response.data } : item
           )
         );
+        try {
+          window?.dispatchEvent?.(
+            new CustomEvent('menu.items.updated', {
+              detail: { type: 'update', id: itemId, updates: response.data },
+            })
+          );
+        } catch {}
         toast({
           title: 'Menu Item Updated',
           description: 'Menu item has been updated successfully.',
@@ -175,6 +189,17 @@ export const useMenuManagement = (params = {}) => {
               : item
           )
         );
+        try {
+          window?.dispatchEvent?.(
+            new CustomEvent('menu.items.updated', {
+              detail: {
+                type: 'image',
+                id: itemId,
+                imageUrl: response.data.imageUrl,
+              },
+            })
+          );
+        } catch {}
         toast({
           title: 'Image Uploaded',
           description: 'Menu item image has been updated successfully.',

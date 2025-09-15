@@ -11,6 +11,10 @@ from . import views_payments as pay_views
 from . import views_employees as emp_views
 from . import views_attendance as att_views
 from . import views_inventory as inv_views
+from . import views_orders as order_views
+from . import views_reports as rpt_views
+from . import views_cash as cash_views
+from . import views_diag as diag_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -85,6 +89,14 @@ urlpatterns = [
     path("payments/config", pay_views.payments_config, name="payments_config"),
     path("orders/<str:order_id>/payment", pay_views.order_payment, name="order_payment"),
 
+    # Orders
+    path("orders", order_views.orders, name="orders"),
+    path("orders/queue", order_views.order_queue, name="order_queue"),
+    path("orders/history", order_views.order_history, name="order_history"),
+    path("orders/bulk-progress", order_views.order_bulk_progress, name="order_bulk_progress"),
+    path("orders/<uuid:oid>", order_views.order_detail, name="order_detail"),
+    path("orders/<uuid:oid>/status", order_views.order_status, name="order_status"),
+
     # Employees & Schedule
     path("employees", emp_views.employees, name="employees"),
     path("employees/<uuid:emp_id>", emp_views.employee_detail, name="employee_detail"),
@@ -112,4 +124,30 @@ urlpatterns = [
     path("inventory/transfer", inv_views.inventory_transfer, name="inventory_transfer"),
     path("inventory/adjust", inv_views.inventory_adjust, name="inventory_adjust"),
     path("inventory/ledger", inv_views.inventory_ledger, name="inventory_ledger"),
+
+    # Reports
+    path("reports/sales", rpt_views.reports_sales, name="reports_sales"),
+    path("reports/inventory", rpt_views.reports_inventory, name="reports_inventory"),
+    path("reports/orders", rpt_views.reports_orders, name="reports_orders"),
+    path("reports/staff-attendance", rpt_views.reports_staff_attendance, name="reports_staff_attendance"),
+    path("reports/customer-history", rpt_views.reports_customer_history, name="reports_customer_history"),
+
+    # Cash handling
+    path("cash/open", cash_views.cash_open, name="cash_open"),
+    path("cash/close", cash_views.cash_close, name="cash_close"),
+    path("cash/move", cash_views.cash_move, name="cash_move"),
+    path("cash/session", cash_views.cash_session, name="cash_session"),
+
+    # Diagnostics
+    path("diagnostics/ping", diag_views.diag_ping, name="diag_ping"),
+    path("diagnostics/cash-drawer", diag_views.diag_cash_drawer, name="diag_cash_drawer"),
+    path("diagnostics/receipt", diag_views.diag_receipt, name="diag_receipt"),
+]
+
+# Diagnostics
+urlpatterns += [
+    path("diagnostics/ping", diag_views.diag_ping, name="diag_ping"),
+    path("diagnostics/media", diag_views.diag_media, name="diag_media"),
+    path("diagnostics/receipt", diag_views.diag_receipt, name="diag_receipt"),
+    path("diagnostics/cash-drawer", diag_views.diag_cash_drawer, name="diag_cash_drawer"),
 ]

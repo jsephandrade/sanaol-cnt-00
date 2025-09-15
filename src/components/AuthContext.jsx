@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import authService from '@/api/services/authService';
 import apiClient from '@/api/client';
+import { effectivePermissions } from '@/lib/permissions';
 
 // Context shape
 const AuthContext = createContext({
@@ -298,10 +299,9 @@ export function AuthProvider({ children }) {
   const hasAnyRole = (roles = []) => roles.some((r) => hasRole(r));
   const can = (permission) => {
     if (!permission) return true;
-    const perms = user?.permissions || [];
-    return (
-      perms.includes(permission) || perms.includes('*') || hasRole('admin')
-    );
+    if (hasRole('admin')) return true;
+    const perms = effectivePermissions(user);
+    return perms.includes('all') || perms.includes(permission);
   };
 
   const updateProfile = useCallback(

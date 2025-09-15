@@ -9,7 +9,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
 
-from .views_common import _actor_from_request, _has_permission
+from .views_common import _actor_from_request, _has_permission, rate_limit
 
 
 NOTIFS_MEM = []
@@ -38,6 +38,7 @@ def _serialize_mem(e):
 
 
 @require_http_methods(["GET", "POST"])  # list or create
+@rate_limit(limit=120, window_seconds=60)
 def notifications(request):
     actor, err = _actor_from_request(request)
     if not actor:
@@ -111,14 +112,15 @@ def notifications(request):
         # Always store the record
         n = Notification.objects.create(user=recip, title=title, message=message, type=ntype)
         # Optional push send according to preferences
+        # Enqueue outbox for push delivery (processed by worker/command)
         try:
             pref, _ = NotificationPreference.objects.get_or_create(user=recip)
         except Exception:
             pref = None
         try:
             if pref is None or getattr(pref, "push_enabled", False):
-                from .utils_notify import send_webpush_to_user
-                send_webpush_to_user(recip, title=title, message=message, data={"url": "/notifications"})
+                from .models import NotificationOutbox
+                NotificationOutbox.objects.create(user=recip, title=title, message=message)
         except Exception:
             pass
         return JsonResponse({"success": True, "data": _serialize_db(n)})

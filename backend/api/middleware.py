@@ -2,6 +2,8 @@ import re
 import jwt
 from django.http import JsonResponse
 from django.conf import settings
+import time
+import uuid
 
 
 class PendingUserGateMiddleware:
@@ -111,3 +113,72 @@ class PendingUserGateMiddleware:
         except Exception:
             return None
         return None
+
+
+class VersionHeaderMiddleware:
+    """Attach API version header to all /api responses."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.version = getattr(settings, "API_VERSION", "1")
+
+    def __call__(self, request):
+        resp = self.get_response(request)
+        try:
+            if getattr(request, 'path', '').startswith('/api/'):
+                resp["X-API-Version"] = str(self.version)
+        except Exception:
+            pass
+        return resp
+
+
+class RequestIdMiddleware:
+    """Assign a request ID and expose it via header for log correlation."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        rid = request.META.get('HTTP_X_REQUEST_ID') or uuid.uuid4().hex
+        request.request_id = rid
+        resp = self.get_response(request)
+        try:
+            resp['X-Request-ID'] = rid
+        except Exception:
+            pass
+        return resp
+
+
+class ResponseTimingMiddleware:
+    """Adds X-Response-Time-ms header."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        start = time.perf_counter()
+        resp = self.get_response(request)
+        try:
+            dur = int((time.perf_counter() - start) * 1000)
+            resp['X-Response-Time-ms'] = str(dur)
+        except Exception:
+            pass
+        return resp
+
+
+class SecurityHeadersMiddleware:
+    """Add common security headers (lightweight, configurable)."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        resp = self.get_response(request)
+        try:
+            resp['X-Content-Type-Options'] = 'nosniff'
+            resp['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            resp['X-Frame-Options'] = 'DENY'
+            resp['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+        except Exception:
+            pass
+        return resp

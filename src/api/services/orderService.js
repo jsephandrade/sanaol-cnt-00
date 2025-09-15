@@ -1,150 +1,177 @@
 import apiClient from '../client';
 import { mockOrders } from '../mockData';
 
+const shouldUseMocks = () =>
+  typeof import.meta !== 'undefined' &&
+  import.meta.env &&
+  (import.meta.env.VITE_ENABLE_MOCKS === 'true' ||
+    import.meta.env.VITE_ENABLE_MOCKS === '1');
+
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+// Normalize date-like fields on orders to ISO strings
+const toISO = (v) => {
+  if (v === null || v === undefined) return v ?? null;
+  const d = v instanceof Date ? v : new Date(v);
+  const t = d.getTime();
+  if (Number.isNaN(t)) return null;
+  return d.toISOString();
+};
+
+const normalizeStatus = (status) => {
+  const s = String(status || '').toLowerCase();
+  switch (s) {
+    case 'in_queue':
+      return 'pending';
+    case 'in_progress':
+      return 'preparing';
+    default:
+      return s;
+  }
+};
+
+const normalizeOrder = (order) => {
+  if (!order || typeof order !== 'object') return order;
+  return {
+    ...order,
+    status: normalizeStatus(order.status),
+    timeReceived:
+      'timeReceived' in order ? toISO(order.timeReceived) : order?.timeReceived,
+    timeCompleted:
+      'timeCompleted' in order
+        ? toISO(order.timeCompleted)
+        : order?.timeCompleted,
+    updatedAt: 'updatedAt' in order ? toISO(order.updatedAt) : order?.updatedAt,
+    createdAt: 'createdAt' in order ? toISO(order.createdAt) : order?.createdAt,
+  };
+};
+
+const normalizeApiResult = (res) => {
+  // Typical shape: { success, data, ... }
+  if (res && typeof res === 'object' && !Array.isArray(res) && 'data' in res) {
+    const d = res.data;
+    const nd = Array.isArray(d) ? d.map(normalizeOrder) : normalizeOrder(d);
+    return { ...res, data: nd };
+  }
+  // Sometimes plain arrays or objects
+  if (Array.isArray(res)) return res.map(normalizeOrder);
+  if (res && typeof res === 'object') return normalizeOrder(res);
+  return res;
+};
+
 class OrderService {
-  async getOrders(_params = {}) {
-    await mockDelay();
-
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/orders?${queryParams}`);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: mockOrders,
-      pagination: {
-        page: 1,
-        limit: 50,
-        total: mockOrders.length,
-        totalPages: 1,
-      },
-    };
+  async getOrders(params = {}) {
+    if (shouldUseMocks()) {
+      await mockDelay();
+      return normalizeApiResult({
+        success: true,
+        data: mockOrders,
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: mockOrders.length,
+          totalPages: 1,
+        },
+      });
+    }
+    const query = new URLSearchParams(params).toString();
+    const res = await apiClient.get(`/orders${query ? `?${query}` : ''}`);
+    return normalizeApiResult(res);
   }
 
   async getOrderById(orderId) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/orders/${orderId}`);
-
-    // Mock implementation
-    const order = mockOrders.find((o) => o.id === orderId);
-    if (!order) {
-      throw new Error('Order not found');
+    if (shouldUseMocks()) {
+      await mockDelay(600);
+      const order = mockOrders.find((o) => o.id === orderId);
+      if (!order) throw new Error('Order not found');
+      return normalizeApiResult({ success: true, data: order });
     }
-
-    return {
-      success: true,
-      data: order,
-    };
+    const res = await apiClient.get(`/orders/${encodeURIComponent(orderId)}`);
+    return normalizeApiResult(res);
   }
 
   async createOrder(orderData) {
-    await mockDelay(1000);
-
-    // TODO: Replace with actual API call
-    // return apiClient.post('/orders', orderData);
-
-    // Mock implementation
-    const newOrder = {
-      id: Date.now().toString(),
-      orderNumber: `W-${String(Date.now()).slice(-3)}`,
-      ...orderData,
-      status: 'pending',
-      timeReceived: new Date().toISOString(),
-      timeCompleted: null,
-    };
-
-    return {
-      success: true,
-      data: newOrder,
-    };
+    if (shouldUseMocks()) {
+      await mockDelay(1000);
+      const newOrder = {
+        id: Date.now().toString(),
+        orderNumber: `W-${String(Date.now()).slice(-3)}`,
+        ...orderData,
+        status: 'pending',
+        timeReceived: new Date().toISOString(),
+        timeCompleted: null,
+      };
+      return normalizeApiResult({ success: true, data: newOrder });
+    }
+    const res = await apiClient.post('/orders', orderData);
+    return normalizeApiResult(res);
   }
 
   async updateOrderStatus(orderId, status) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/orders/${orderId}/status`, { status });
-
-    // Mock implementation
-    const orderIndex = mockOrders.findIndex((o) => o.id === orderId);
-    if (orderIndex === -1) {
-      throw new Error('Order not found');
+    if (shouldUseMocks()) {
+      await mockDelay(600);
+      const orderIndex = mockOrders.findIndex((o) => o.id === orderId);
+      if (orderIndex === -1) throw new Error('Order not found');
+      const updatedOrder = {
+        ...mockOrders[orderIndex],
+        status,
+        timeCompleted: status === 'completed' ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString(),
+      };
+      return normalizeApiResult({ success: true, data: updatedOrder });
     }
-
-    const updatedOrder = {
-      ...mockOrders[orderIndex],
-      status,
-      timeCompleted: status === 'completed' ? new Date().toISOString() : null,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return {
-      success: true,
-      data: updatedOrder,
-    };
-  }
-
-  async cancelOrder(orderId, _reason) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.patch(`/orders/${orderId}/cancel`, { reason });
-
-    // Mock implementation
-    return this.updateOrderStatus(orderId, 'cancelled');
-  }
-
-  async getOrderQueue(_params = {}) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/orders/queue?${queryParams}`);
-
-    // Mock implementation
-    const queueOrders = mockOrders.filter((order) =>
-      ['pending', 'preparing', 'ready'].includes(order.status)
+    const serverStatus = status === 'preparing' ? 'in_progress' : status;
+    const res = await apiClient.patch(
+      `/orders/${encodeURIComponent(orderId)}/status`,
+      { status: serverStatus }
     );
-
-    return {
-      success: true,
-      data: queueOrders,
-    };
+    return normalizeApiResult(res);
   }
 
-  async getOrderHistory(_params = {}) {
-    await mockDelay(800);
+  async cancelOrder(orderId, reason) {
+    return this.updateOrderStatus(orderId, 'cancelled', { reason });
+  }
 
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/orders/history?${queryParams}`);
+  async getOrderQueue(params = {}) {
+    if (shouldUseMocks()) {
+      await mockDelay(600);
+      const queueOrders = mockOrders.filter((o) =>
+        ['pending', 'preparing', 'ready'].includes(o.status)
+      );
+      return normalizeApiResult({ success: true, data: queueOrders });
+    }
+    const query = new URLSearchParams(params).toString();
+    const res = await apiClient.get(`/orders/queue${query ? `?${query}` : ''}`);
+    return normalizeApiResult(res);
+  }
 
-    // Mock implementation
-    const historyOrders = mockOrders.filter((order) =>
-      ['completed', 'cancelled'].includes(order.status)
+  async getOrderHistory(params = {}) {
+    if (shouldUseMocks()) {
+      await mockDelay(800);
+      const historyOrders = mockOrders.filter((o) =>
+        ['completed', 'cancelled'].includes(o.status)
+      );
+      return normalizeApiResult({
+        success: true,
+        data: historyOrders,
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: historyOrders.length,
+          totalPages: 1,
+        },
+      });
+    }
+    const query = new URLSearchParams(params).toString();
+    const res = await apiClient.get(
+      `/orders/history${query ? `?${query}` : ''}`
     );
-
-    return {
-      success: true,
-      data: historyOrders,
-      pagination: {
-        page: 1,
-        limit: 20,
-        total: historyOrders.length,
-        totalPages: 1,
-      },
-    };
+    return normalizeApiResult(res);
   }
 
   async processPayment(orderId, paymentData) {
-    // Call backend to process payment (POST /orders/:id/payment)
     return apiClient.post(
       `/orders/${encodeURIComponent(orderId)}/payment`,
       paymentData
