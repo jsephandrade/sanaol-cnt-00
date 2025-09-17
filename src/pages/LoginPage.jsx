@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/auth/Header';
-import HeroImage from '@/components/auth/HeroImage';
-import AuthCard from '@/components/auth/AuthCard';
-import LoginForm from '@/components/auth/LoginForm';
-import SocialProviders from '@/components/auth/SocialProviders';
 import PageTransition from '@/components/PageTransition';
+import TestimonialSection from '@/components/auth/TestimonialSection';
+import ModernLoginForm from '@/components/auth/ModernLoginForm';
+import ModernSocialProviders from '@/components/auth/ModernSocialProviders';
 import { signInWithGoogle } from '@/lib/google';
 import {
   getRememberedEmail,
@@ -179,49 +177,66 @@ const LoginPage = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col bg-white">
-        <Header />
-
-        <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
-          <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-            <AuthCard title="Login" compact>
-              <LoginForm
-                email={email}
-                password={password}
-                pending={pending}
-                error={error}
-                emailError={emailError}
-                passwordError={passwordError}
-                remember={remember}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
-                onRememberChange={setRemember}
-                onForgotPassword={handleForgotPassword}
-                onSubmit={handleSubmit}
-              />
-
-              <SocialProviders onSocial={handleSocial} pending={pending} />
-
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="text-primary hover:text-primary-dark text-sm font-medium disabled:opacity-60"
-                  type="button"
-                  disabled={pending}
-                >
-                  Create New Account
-                </button>
+      <div className="min-h-screen flex bg-white">
+        {/* Left Side - Login Form */}
+        <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-20 xl:px-24">
+          <div className="mx-auto w-full max-w-sm lg:w-96">
+            {/* Logo */}
+            <div className="flex items-center mb-8">
+              <div className="w-8 h-8 bg-brand-teal rounded-lg flex items-center justify-center mr-3">
+                <span className="text-white font-bold text-sm">T</span>
               </div>
-            </AuthCard>
+              <span className="text-xl font-bold text-gray-900">TechnoMart</span>
+            </div>
+
+            {/* Welcome Message */}
+            <div className="mb-8">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                Welcome Back!
+              </h1>
+              <p className="text-gray-600">
+                Sign in to access your dashboard and continue optimizing your QA process.
+              </p>
+            </div>
+
+            {/* Login Form */}
+            <ModernLoginForm
+              email={email}
+              password={password}
+              pending={pending}
+              error={error}
+              emailError={emailError}
+              passwordError={passwordError}
+              remember={remember}
+              onEmailChange={setEmail}
+              onPasswordChange={setPassword}
+              onRememberChange={setRemember}
+              onForgotPassword={handleForgotPassword}
+              onSubmit={handleSubmit}
+            />
+
+            {/* Social Login */}
+            <div className="mt-6">
+              <ModernSocialProviders onSocial={handleSocial} pending={pending} />
+            </div>
+
+            {/* Sign Up Link */}
+            <div className="mt-6 text-center">
+              <span className="text-gray-600 text-sm">Don't have an Account? </span>
+              <button
+                onClick={() => navigate('/signup')}
+                className="text-brand-teal hover:text-brand-teal-light text-sm font-semibold disabled:opacity-60"
+                type="button"
+                disabled={pending}
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
+        </div>
 
-          {/* Ensure HeroImage includes meaningful alt text in its component */}
-          <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />
-        </main>
-
-        <footer className="py-6 text-gray-500 text-xs text-center border-t border-gray-100">
-          &copy; {new Date().getFullYear()} TechnoMart Canteen System
-        </footer>
+        {/* Right Side - Testimonial */}
+        <TestimonialSection />
       </div>
     </PageTransition>
   );
