@@ -179,12 +179,12 @@ const LoginPage = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col bg-white">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted/30">
         <Header />
 
-        <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
-          <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-            <AuthCard title="Login" compact>
+        <main className="flex-1 flex flex-col lg:flex-row items-center justify-center px-4 md:px-8 gap-12 max-w-7xl mx-auto w-full py-8 lg:py-16">
+          <div className="w-full lg:w-1/2 flex flex-col gap-8 max-w-md order-2 lg:order-1">
+            <AuthCard title="Sign In">
               <LoginForm
                 email={email}
                 password={password}
@@ -202,15 +202,19 @@ const LoginPage = () => {
 
               <SocialProviders onSocial={handleSocial} pending={pending} />
 
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="text-primary hover:text-primary-dark text-sm font-medium disabled:opacity-60"
-                  type="button"
-                  disabled={pending}
-                >
-                  Create New Account
-                </button>
+              <div className="mt-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Don&apos;t have an account?{' '}
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="font-semibold text-primary hover:text-primary-dark transition-colors 
+                      focus:outline-none focus:ring-2 focus:ring-ring rounded-sm disabled:opacity-60"
+                    type="button"
+                    disabled={pending}
+                  >
+                    Create Account
+                  </button>
+                </p>
               </div>
             </AuthCard>
           </div>
@@ -219,8 +223,8 @@ const LoginPage = () => {
           <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />
         </main>
 
-        <footer className="py-6 text-gray-500 text-xs text-center border-t border-gray-100">
-          &copy; {new Date().getFullYear()} TechnoMart Canteen System
+        <footer className="py-8 text-muted-foreground text-xs text-center border-t border-border/50">
+          &copy; {new Date().getFullYear()} TechnoMart Canteen System. All rights reserved.
         </footer>
       </div>
     </PageTransition>

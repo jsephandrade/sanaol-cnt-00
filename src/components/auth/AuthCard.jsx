@@ -18,12 +18,22 @@ const AuthCard = ({
       {...rest}
     >
       <div
-        className={`bg-white ${compact ? 'p-7 rounded-lg' : 'p-6 rounded-xl'} shadow-lg ${cardClassName}`}
+        className={`bg-card border border-border/50 backdrop-blur-sm ${
+          compact ? 'p-8 rounded-2xl' : 'p-8 rounded-2xl'
+        } shadow-elegant transition-all duration-300 hover:shadow-lg ${cardClassName}`}
+        style={{
+          boxShadow: 'var(--shadow-elegant)',
+        }}
       >
         {title && (
-          <h2 id={headingId} className="text-xl font-semibold mb-4">
-            {title}
-          </h2>
+          <div className="text-center mb-8">
+            <h1 id={headingId} className="text-2xl font-semibold text-foreground tracking-tight">
+              {title}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              Welcome back! Please enter your details
+            </p>
+          </div>
         )}
         {children}
       </div>

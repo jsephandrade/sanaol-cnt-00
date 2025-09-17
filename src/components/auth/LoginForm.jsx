@@ -58,7 +58,7 @@ const LoginForm = ({
     <>
       {error && (
         <div
-          className="p-3 mb-4 bg-red-50 text-red-700 rounded-md text-sm"
+          className="p-4 mb-6 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-sm"
           role="alert"
           tabIndex={-1}
           ref={alertRef}
@@ -69,11 +69,14 @@ const LoginForm = ({
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-4"
+        className="space-y-6"
         noValidate
         aria-busy={pending || undefined}
       >
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="email" className="text-sm font-medium text-foreground">
+            Email
+          </label>
           <div className="relative">
             <input
               id="email"
@@ -85,32 +88,29 @@ const LoginForm = ({
               spellCheck={false}
               value={email}
               onChange={(e) => onEmailChange?.(e.target.value)}
-              placeholder=" "
-              className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+              placeholder="Enter your email"
+              className="w-full h-12 px-4 text-sm bg-background border border-input rounded-lg 
+                focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent
+                transition-all duration-200 placeholder:text-muted-foreground
+                disabled:cursor-not-allowed disabled:opacity-50"
               required
               aria-invalid={!!emailError}
               aria-describedby={emailError ? 'email-error' : undefined}
               disabled={pending}
               autoFocus
             />
-            <label
-              htmlFor="email"
-              className="absolute left-3 text-muted-foreground pointer-events-none transition-all
-                top-0 -translate-y-1/2 text-xs px-1 bg-white
-                peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0
-                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
-            >
-              Email
-            </label>
           </div>
           {emailError && (
-            <p id="email-error" className="mt-1 text-sm text-red-700">
+            <p id="email-error" className="text-sm text-destructive">
               {emailError}
             </p>
           )}
         </div>
 
-        <div>
+        <div className="space-y-2">
+          <label htmlFor="password" className="text-sm font-medium text-foreground">
+            Password
+          </label>
           <div className="relative">
             <input
               id="password"
@@ -118,8 +118,11 @@ const LoginForm = ({
               type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => onPasswordChange?.(e.target.value)}
-              placeholder=" "
-              className="peer w-full h-10 px-3 pt-3 pb-3 pr-9 text-sm border border-gray-300 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+              placeholder="Enter your password"
+              className="w-full h-12 px-4 pr-12 text-sm bg-background border border-input rounded-lg 
+                focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent
+                transition-all duration-200 placeholder:text-muted-foreground
+                disabled:cursor-not-allowed disabled:opacity-50"
               required
               autoComplete="current-password"
               aria-invalid={!!passwordError}
@@ -127,48 +130,41 @@ const LoginForm = ({
               disabled={pending}
               minLength={8}
             />
-            <label
-              htmlFor="password"
-              className="absolute left-3 text-muted-foreground pointer-events-none transition-all
-                top-0 -translate-y-1/2 text-xs px-1 bg-white
-                peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0
-                peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
-            >
-              Password
-            </label>
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none disabled:opacity-50"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground 
+                focus:outline-none focus:ring-2 focus:ring-ring rounded-sm transition-colors disabled:opacity-50"
               disabled={pending}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
-              {!showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              {!showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
           {passwordError && (
-            <p id="password-error" className="mt-1 text-sm text-red-700">
+            <p id="password-error" className="text-sm text-destructive">
               {passwordError}
             </p>
           )}
         </div>
 
         <div className="flex items-center justify-between">
-          <label className="inline-flex items-center gap-2">
+          <label className="inline-flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="rounded border-gray-300"
+              className="w-4 h-4 rounded border-input bg-background focus:ring-2 focus:ring-ring text-primary transition-colors"
               checked={!!remember}
               onChange={(e) => onRememberChange?.(e.target.checked)}
               disabled={pending}
             />
-            <span className="text-sm text-gray-700">Remember me</span>
+            <span className="text-sm text-foreground select-none">Remember me</span>
           </label>
 
           <button
             type="button"
-            className="text-sm text-primary underline underline-offset-2 disabled:opacity-60"
+            className="text-sm font-medium text-primary hover:text-primary-dark underline underline-offset-4 
+              transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
             onClick={onForgotPassword}
             disabled={pending}
           >
@@ -179,14 +175,20 @@ const LoginForm = ({
         <button
           type="submit"
           disabled={pending}
-          className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md text-sm transition-colors duration-300 inline-flex items-center justify-center"
+          className="w-full h-12 bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed 
+            text-primary-foreground font-semibold rounded-lg text-sm transition-all duration-200 
+            inline-flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2
+            hover:shadow-md active:scale-[0.98]"
+          style={{
+            background: pending ? undefined : 'var(--gradient-primary)',
+          }}
         >
           {pending ? (
             <>
               <Spinner /> Processing...
             </>
           ) : (
-            'Login'
+            'Sign In'
           )}
         </button>
       </form>
