@@ -33,13 +33,6 @@ export default {
           dark: 'hsl(var(--primary-dark))',
           foreground: 'hsl(var(--primary-foreground))',
         },
-        brand: {
-          teal: 'hsl(var(--brand-teal))',
-          'teal-light': 'hsl(var(--brand-teal-light))',
-        },
-        testimonial: {
-          bg: 'hsl(var(--testimonial-bg))',
-        },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
