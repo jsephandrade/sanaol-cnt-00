@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/components/AuthContext';
 import {
   Card,
   CardContent,
@@ -21,6 +22,7 @@ const PaymentModal = ({
   calculateSubtotal: _calculateSubtotal,
   calculateDiscountAmount: _calculateDiscountAmount,
 }) => {
+  const { can } = useAuth();
   const [paymentAmount, setPaymentAmount] = useState('');
   const [change, setChange] = useState(0);
 
@@ -158,7 +160,7 @@ const PaymentModal = ({
           <Button
             className="flex-1"
             onClick={handleProcessPayment}
-            disabled={!isPaymentValid()}
+            disabled={!isPaymentValid() || !can('payment.process')}
           >
             Process Payment
           </Button>

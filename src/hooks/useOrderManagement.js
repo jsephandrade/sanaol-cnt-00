@@ -10,6 +10,23 @@ export const useOrderManagement = (params = {}) => {
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
 
+  // Stable param key to avoid infinite effects when callers pass inline objects
+  const ordersParamKey = JSON.stringify(
+    (() => {
+      try {
+        const keys = Object.keys(params || {}).sort();
+        const obj = {};
+        keys.forEach((k) => {
+          const v = params[k];
+          if (v !== undefined && v !== null && v !== '') obj[k] = v;
+        });
+        return obj;
+      } catch {
+        return {};
+      }
+    })()
+  );
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -33,7 +50,7 @@ export const useOrderManagement = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [params, toast]);
+  }, [ordersParamKey, toast]);
 
   useEffect(() => {
     fetchOrders();
@@ -189,6 +206,22 @@ export const useOrderQueue = (params = {}) => {
   const pollRef = useRef(null);
   const rtRef = useRef(null);
 
+  const queueParamKey = JSON.stringify(
+    (() => {
+      try {
+        const keys = Object.keys(params || {}).sort();
+        const obj = {};
+        keys.forEach((k) => {
+          const v = params[k];
+          if (v !== undefined && v !== null && v !== '') obj[k] = v;
+        });
+        return obj;
+      } catch {
+        return {};
+      }
+    })()
+  );
+
   const fetchOrderQueue = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -211,7 +244,7 @@ export const useOrderQueue = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [params, toast]);
+  }, [queueParamKey, toast]);
 
   useEffect(() => {
     fetchOrderQueue();
@@ -266,7 +299,7 @@ export const useOrderQueue = (params = {}) => {
       stopPolling();
       rtRef.current?.close?.();
     };
-  }, [params, fetchOrderQueue]);
+  }, [queueParamKey, fetchOrderQueue]);
 
   const updateOrderStatus = async (orderId, status) => {
     try {
@@ -305,14 +338,34 @@ export const useOrderQueue = (params = {}) => {
   };
 };
 
-export const useOrderHistory = (params = {}) => {
+export const useOrderHistory = (params = {}, options = {}) => {
   const [orderHistory, setOrderHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState(null);
   const { toast } = useToast();
+  const auto = options?.auto !== false; // default to true
+  const fetchRef = useRef(false);
+
+  const historyParamKey = JSON.stringify(
+    (() => {
+      try {
+        const keys = Object.keys(params || {}).sort();
+        const obj = {};
+        keys.forEach((k) => {
+          const v = params[k];
+          if (v !== undefined && v !== null && v !== '') obj[k] = v;
+        });
+        return obj;
+      } catch {
+        return {};
+      }
+    })()
+  );
 
   const fetchOrderHistory = useCallback(async () => {
+    if (fetchRef.current) return; // prevent overlapping fetches
+    fetchRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -320,8 +373,19 @@ export const useOrderHistory = (params = {}) => {
       const response = await orderService.getOrderHistory(params);
 
       if (response.success) {
-        setOrderHistory(response.data);
+        const data = response.data || [];
+        setOrderHistory(data);
         setPagination(response.pagination);
+        // Fallback: if history is empty, show recent orders regardless of status
+        if (Array.isArray(data) && data.length === 0) {
+          try {
+            const recent = await orderService.getOrders({ limit: 50 });
+            if (recent?.success && Array.isArray(recent.data)) {
+              setOrderHistory(recent.data);
+              setPagination(recent.pagination || null);
+            }
+          } catch {}
+        }
       } else {
         throw new Error('Failed to fetch order history');
       }
@@ -334,16 +398,17 @@ export const useOrderHistory = (params = {}) => {
       });
     } finally {
       setLoading(false);
+      fetchRef.current = false;
     }
-  }, [params, toast]);
+  }, [historyParamKey, toast]);
 
   useEffect(() => {
+    if (auto) fetchOrderHistory();
+  }, [auto, fetchOrderHistory]);
+
+  const refetch = useCallback(() => {
     fetchOrderHistory();
   }, [fetchOrderHistory]);
-
-  const refetch = () => {
-    fetchOrderHistory();
-  };
 
   return {
     orderHistory,

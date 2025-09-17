@@ -1,26 +1,26 @@
 import React from 'react';
 import { Clock } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 
-export const ScheduleCalendar = ({ 
-  date, 
-  onDateSelect, 
-  schedule, 
-  employees 
+export const ScheduleCalendar = ({
+  date,
+  onDateSelect,
+  schedule,
+  employees,
 }) => {
   const getDaySchedule = (selectedDate) => {
-    const dayName = selectedDate.toLocaleDateString('en-US', { 
-      weekday: 'long' 
+    const dayName = selectedDate.toLocaleDateString('en-US', {
+      weekday: 'long',
     });
-    
-    return schedule.filter(entry => entry.day === dayName);
+
+    return schedule.filter((entry) => entry.day === dayName);
   };
 
   const daySchedule = date ? getDaySchedule(date) : [];
@@ -36,7 +36,7 @@ export const ScheduleCalendar = ({
           mode="single"
           selected={date}
           onSelect={onDateSelect}
-          className="border rounded-md"
+          className="rounded-md border p-2 w-full max-w-full"
         />
 
         {date && (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { employeeService } from '@/services/employeeService';
+import { employeeService } from '@/api/services/employeeService';
 import { toast } from 'sonner';
 
 export const useEmployees = () => {
@@ -81,22 +81,24 @@ export const useEmployees = () => {
   };
 };
 
-export const useSchedule = () => {
+export const useSchedule = (initialParams = {}, options = {}) => {
+  const { autoFetch = true, suppressErrorToast = false } = options || {};
   const [schedule, setSchedule] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(autoFetch));
   const [error, setError] = useState(null);
+  const [params, setParams] = useState(initialParams || {});
 
-  const fetchSchedule = async () => {
+  const fetchSchedule = async (override = null) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await employeeService.getSchedule();
+      const data = await employeeService.getSchedule(override || params);
       setSchedule(data);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch schedule';
       setError(errorMessage);
-      toast.error(errorMessage);
+      if (!suppressErrorToast) toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -118,15 +120,46 @@ export const useSchedule = () => {
     }
   };
 
+  const addScheduleEntry = async (entry) => {
+    try {
+      const created = await employeeService.createSchedule(entry);
+      setSchedule((prev) => [...prev, created]);
+      toast.success('Schedule added successfully');
+      return created;
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to add schedule';
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
+  const deleteScheduleEntry = async (id) => {
+    try {
+      await employeeService.deleteSchedule(id);
+      setSchedule((prev) => prev.filter((s) => s.id !== id));
+      toast.success('Schedule deleted successfully');
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to delete schedule';
+      toast.error(errorMessage);
+      throw err;
+    }
+  };
+
   useEffect(() => {
-    fetchSchedule();
-  }, []);
+    if (autoFetch) fetchSchedule();
+  }, [autoFetch]);
 
   return {
     schedule,
     loading,
     error,
     updateScheduleEntry,
+    addScheduleEntry,
+    deleteScheduleEntry,
+    params,
+    setParams,
     refetch: fetchSchedule,
   };
 };

@@ -9,142 +9,426 @@ const USE_MOCKS = !(
 );
 
 class AuthService {
-  async login(email, password, options = {}) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post(
-          '/auth/login',
-          { email, password, ...options },
-          { retry: { retries: 1 } }
-        );
-        const data = res?.data || res;
-        return {
-          success: true,
-          user: data.user || {
-            id: data.userId || 'me',
-            name: data.name || email,
-            email,
-            role: (data.role || 'admin').toLowerCase(),
-          },
-          token: data.token || data.accessToken || null,
-        };
-      } catch (e) {
-        // fall back to mocks if desired
-      }
+  async loginWithGoogle(credential) {
+    if (!credential || typeof credential !== 'string') {
+      throw new Error('Missing Google credential');
     }
-    await mockDelay();
-    if (email === 'admin@canteen.com' && password === '1234') {
+    if (USE_MOCKS) {
+      await mockDelay(400);
       return {
         success: true,
-        user: { id: '1', name: 'Admin User', email, role: 'admin' },
-        token: 'mock-jwt-token-12345',
+        pending: true,
+        user: {
+          id: 'g-' + Date.now().toString(),
+          name: 'Google User',
+          email: 'user@example.com',
+          role: 'staff',
+          status: 'pending',
+          employeeId: 'emp-' + Date.now().toString(),
+        },
+        token: null,
+        verifyToken: 'mock-verify-token-' + Date.now(),
       };
     }
-    throw new Error('Invalid credentials');
-  }
-
-  async register(userData) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/register', userData, {
-          retry: { retries: 1 },
-        });
-        const data = res?.data || res;
-        return {
-          success: true,
-          user: data.user || {
-            id: data.id || String(Date.now()),
-            ...userData,
-            role: (data.role || 'staff').toLowerCase(),
-          },
-          token: data.token || data.accessToken || null,
-        };
-      } catch (e) {}
-    }
-    await mockDelay();
+    const res = await apiClient.post(
+      '/auth/google',
+      { credential },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
+    const rawUser = data.user || data;
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
-      success: true,
-      user: { id: Date.now().toString(), ...userData, role: 'staff' },
-      token: 'mock-jwt-token-' + Date.now(),
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
+    };
+  }
+  async loginWithFace(imageData, options = {}) {
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return {
+        success: true,
+        pending: false,
+        user: {
+          id: 'u-face-' + Date.now().toString(),
+          name: 'Face User',
+          email: 'face@example.com',
+          role: 'staff',
+          status: 'active',
+          employeeId: 'emp-face-' + Date.now().toString(),
+        },
+        token: 'mock-face-token-' + Date.now(),
+        refreshToken: 'mock-face-rt-' + Date.now(),
+      };
+    }
+    const remember = Boolean(options?.remember);
+    const res = await apiClient.post(
+      '/auth/face-login',
+      { image: imageData, remember },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
+    const rawUser = data.user || data;
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
+    return {
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
     };
   }
 
-  async logout() {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/logout', {});
-        return res?.data || { success: true };
-      } catch (e) {}
+  async registerFace(images) {
+    // images: array of base64 data URLs or objects with { data }
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true };
     }
-    await mockDelay(300);
-    return { success: true };
+    const payload = Array.isArray(images) ? { images } : { image: images };
+    const res = await apiClient.post('/auth/face-register', payload, {
+      retry: { retries: 1 },
+    });
+    return res?.data || res;
+  }
+  async unregisterFace() {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    try {
+      const res = await apiClient.post(
+        '/auth/face-unregister',
+        {},
+        {
+          retry: { retries: 1 },
+        }
+      );
+      return res?.data || res;
+    } catch (e1) {
+      try {
+        const res = await apiClient.delete('/auth/face-register', {
+          retry: { retries: 1 },
+        });
+        return res?.data || res;
+      } catch (e2) {
+        return {
+          success: false,
+          message: e2?.message || e1?.message || 'Failed to disable face login',
+        };
+      }
+    }
+  }
+  async login(email, password, options = {}) {
+    if (USE_MOCKS) {
+      await mockDelay();
+      // Generic mock: accept any email/password and return a basic user
+      return {
+        success: true,
+        pending: false,
+        user: {
+          id: 'u-' + Date.now().toString(),
+          name: email.split('@')[0] || 'User',
+          email,
+          role: 'staff',
+          status: 'active',
+          employeeId: 'emp-' + (email?.split('@')[0] || 'mock'),
+        },
+        token: 'mock-jwt-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now(),
+        verifyToken: null,
+      };
+    }
+    const res = await apiClient.post(
+      '/auth/login',
+      { email, password, ...options },
+      { retry: { retries: 1 } }
+    );
+    const data = res?.data || res;
+    const rawUser = data.user || {
+      id: data.userId || 'me',
+      name: data.name || email,
+      email,
+      role: (data.role || 'staff').toLowerCase(),
+      status: data.status || 'active',
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
+    return {
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
+    };
+  }
+
+  async register(userData) {
+    if (USE_MOCKS) {
+      await mockDelay();
+      return {
+        success: true,
+        pending: true,
+        user: {
+          id: Date.now().toString(),
+          ...userData,
+          role: 'staff',
+          status: 'pending',
+          employeeId: 'emp-' + Date.now().toString(),
+        },
+        token: null,
+        verifyToken: 'mock-verify-token-' + Date.now(),
+      };
+    }
+    const res = await apiClient.post('/auth/register', userData, {
+      retry: { retries: 1 },
+    });
+    const data = res?.data || res;
+    const rawUser = data.user || {
+      id: data.id || String(Date.now()),
+      ...userData,
+      role: (data.role || 'staff').toLowerCase(),
+      status: data.status || 'pending',
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
+    return {
+      success: Boolean(data?.success ?? true),
+      pending: Boolean(data?.pending ?? false),
+      user,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      verifyToken: data.verifyToken || null,
+    };
+  }
+
+  async logout(refreshToken) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/logout', { refreshToken });
+    return res?.data || { success: true };
   }
 
   async socialLogin(provider) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/social', { provider });
-        const data = res?.data || res;
-        return {
-          success: true,
-          user: data.user || {
-            id: '1',
-            name: data.name || 'Admin User',
-            email: data.email || 'admin@canteen.com',
-            role: (data.role || 'admin').toLowerCase(),
-          },
-          token: data.token || data.accessToken || null,
-        };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(500);
+      return {
+        success: true,
+        user: {
+          id: 'u-' + Date.now().toString(),
+          name: 'Social User',
+          email: 'user@example.com',
+          role: 'staff',
+          employeeId: 'emp-social-' + Date.now().toString(),
+        },
+        token: 'mock-social-token-' + Date.now(),
+      };
     }
-    await mockDelay(500);
+    const res = await apiClient.post('/auth/social', { provider });
+    const data = res?.data || res;
+    const rawUser = data.user || {
+      id: 'me',
+      name: data.name || 'User',
+      email: data.email || 'user@example.com',
+      role: (data.role || 'staff').toLowerCase(),
+    };
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
     return {
       success: true,
-      user: {
-        id: '1',
-        name: 'Admin User',
-        email: 'admin@canteen.com',
-        role: 'admin',
-      },
-      token: 'mock-social-token-' + Date.now(),
+      user,
+      token: data.token || data.accessToken || null,
     };
   }
 
   async forgotPassword(email) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/forgot-password', { email });
-        return res?.data || { success: true };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true, message: 'Password reset email sent' };
     }
-    await mockDelay(400);
-    return { success: true, message: 'Password reset email sent' };
+    const res = await apiClient.post('/auth/forgot-password', { email });
+    return res?.data || { success: true };
   }
 
   async resetPassword(token, newPassword) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/reset-password', {
-          token,
-          newPassword,
-        });
-        return res?.data || { success: true };
-      } catch (e) {}
+    if (USE_MOCKS) {
+      await mockDelay(400);
+      return { success: true, message: 'Password reset successful' };
     }
-    await mockDelay(400);
-    return { success: true, message: 'Password reset successful' };
+    const res = await apiClient.post('/auth/reset-password', {
+      token,
+      newPassword,
+    });
+    return res?.data || { success: true };
   }
 
-  async refreshToken() {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/auth/refresh-token', {});
-        const data = res?.data || res;
-        return { success: true, token: data.token || data.accessToken || null };
-      } catch (e) {}
+  async resetPasswordWithCode(email, code, newPassword) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      if (!newPassword || newPassword.length < 8) {
+        return {
+          success: false,
+          message: 'Password must be at least 8 characters',
+        };
+      }
+      return { success: true };
     }
-    await mockDelay(300);
-    return { success: true, token: 'mock-refreshed-token-' + Date.now() };
+    const res = await apiClient.post('/auth/reset-password-code', {
+      email,
+      code,
+      newPassword,
+    });
+    return res?.data || res;
+  }
+
+  async verifyResetCode(email, code) {
+    if (USE_MOCKS) {
+      await mockDelay(200);
+      return { success: true, commitToken: 'mock-commit-' + Date.now() };
+    }
+    const res = await apiClient.post('/auth/verify-reset-code', {
+      email,
+      code,
+    });
+    return res?.data || res;
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      if (!newPassword || newPassword.length < 8) {
+        return {
+          success: false,
+          message: 'Password must be at least 8 characters',
+        };
+      }
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return res?.data || res;
+  }
+
+  async refreshToken(refreshToken) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return {
+        success: true,
+        token: 'mock-refreshed-token-' + Date.now(),
+        refreshToken: 'mock-rtok-' + Date.now(),
+      };
+    }
+    const res = await apiClient.post('/auth/refresh-token', { refreshToken });
+    const data = res?.data || res;
+    return {
+      success: true,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+    };
+  }
+
+  async verifyEmail(token) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/verify-email', { token });
+    return res?.data || res;
+  }
+
+  async resendVerification(email) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/resend-verification', { email });
+    return res?.data || res;
+  }
+
+  // New OTP password reset flow
+  async requestPasswordReset(email) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true, message: 'If account exists, code sent.' };
+    }
+    const res = await apiClient.post('/auth/password-reset/request', { email });
+    return res?.data || res;
+  }
+
+  async verifyPasswordReset(email, code) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true, resetToken: 'mock-reset-' + Date.now() };
+    }
+    const res = await apiClient.post('/auth/password-reset/verify', {
+      email,
+      code,
+    });
+    return res?.data || res;
+  }
+
+  async confirmPasswordReset(resetToken, newPassword) {
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      return { success: true };
+    }
+    const res = await apiClient.post('/auth/password-reset/confirm', {
+      resetToken,
+      newPassword,
+    });
+    return res?.data || res;
   }
 }
 

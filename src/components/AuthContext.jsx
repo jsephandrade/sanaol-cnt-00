@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import authService from '@/api/services/authService';
 import apiClient from '@/api/client';
+import { effectivePermissions } from '@/lib/permissions';
 
 // Context shape
 const AuthContext = createContext({
@@ -17,6 +18,7 @@ const AuthContext = createContext({
   // actions
   login: async () => false,
   socialLogin: async () => false,
+  register: async () => false,
   logout: async () => {},
   refreshToken: async () => false,
   // role/permission helpers
@@ -30,19 +32,30 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
+  const loadFromStores = (key, parseJson = false) => {
     try {
-      const stored = localStorage.getItem('user');
-      return stored ? JSON.parse(stored) : null;
+      const lsv = localStorage.getItem(key);
+      const ssv = sessionStorage.getItem(key);
+      const raw = lsv != null ? lsv : ssv;
+      if (raw == null) return null;
+      return parseJson ? JSON.parse(raw) : raw;
     } catch {
       return null;
     }
-  });
-  const [token, setToken] = useState(() => {
+  };
+
+  const [user, setUser] = useState(() => loadFromStores('user', true));
+  const [token, setToken] = useState(() => loadFromStores('auth_token'));
+  const [refreshTokenValue, setRefreshTokenValue] = useState(() =>
+    loadFromStores('refresh_token')
+  );
+  const [rememberPref, setRememberPref] = useState(() => {
     try {
-      return localStorage.getItem('auth_token') || null;
+      // default to true to keep previous behaviour (persist between sessions)
+      const v = localStorage.getItem('remember_pref');
+      return v == null ? true : v === '1';
     } catch {
-      return null;
+      return true;
     }
   });
 
@@ -73,6 +86,10 @@ export function AuthProvider({ children }) {
           try {
             localStorage.removeItem('user');
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('refresh_token');
           } catch {}
         }
       } finally {
@@ -86,30 +103,71 @@ export function AuthProvider({ children }) {
     apiClient.setAuthToken(token);
   }, [token]);
 
-  const persistAuth = useCallback((nextUser, nextToken) => {
-    setUser(nextUser);
-    setToken(nextToken);
-    try {
-      localStorage.setItem('user', JSON.stringify(nextUser));
-      if (nextToken) {
-        localStorage.setItem('auth_token', nextToken);
-      } else {
-        localStorage.removeItem('auth_token');
-      }
-    } catch {}
-  }, []);
+  const persistAuth = useCallback(
+    (nextUser, nextToken, nextRefreshToken = null, remember = undefined) => {
+      const useRemember =
+        typeof remember === 'boolean' ? remember : Boolean(rememberPref);
+
+      setUser(nextUser);
+      setToken(nextToken);
+      setRefreshTokenValue(nextRefreshToken);
+
+      try {
+        // Choose storage target
+        const store = useRemember ? localStorage : sessionStorage;
+        const other = useRemember ? sessionStorage : localStorage;
+
+        // Clear old data from the other store to avoid confusion
+        try {
+          other.removeItem('user');
+          other.removeItem('auth_token');
+          other.removeItem('refresh_token');
+        } catch {}
+
+        // Persist to target store
+        if (nextUser) {
+          store.setItem('user', JSON.stringify(nextUser));
+        } else {
+          store.removeItem('user');
+        }
+        if (nextToken) {
+          store.setItem('auth_token', nextToken);
+        } else {
+          store.removeItem('auth_token');
+        }
+        if (nextRefreshToken) {
+          store.setItem('refresh_token', nextRefreshToken);
+        } else {
+          store.removeItem('refresh_token');
+        }
+
+        // Persist preference for next logins
+        if (typeof remember === 'boolean') {
+          localStorage.setItem('remember_pref', remember ? '1' : '0');
+          setRememberPref(remember);
+        }
+      } catch {}
+    },
+    [rememberPref]
+  );
 
   const login = useCallback(
     async (email, password, options = {}) => {
       try {
         const res = await authService.login(email, password, options);
         if (res?.success) {
-          persistAuth(res.user, res.token || null);
-          return true;
+          // Respect remember option for storage choice
+          const remember = Boolean(options?.remember);
+          persistAuth(
+            res.user,
+            res.token || null,
+            res.refreshToken || null,
+            remember
+          );
         }
-        return false;
+        return res;
       } catch (err) {
-        return false;
+        return { success: false, error: err?.message || 'Login failed' };
       }
     },
     [persistAuth]
@@ -120,7 +178,7 @@ export function AuthProvider({ children }) {
       try {
         const res = await authService.socialLogin(provider);
         if (res?.success) {
-          persistAuth(res.user, res.token || null);
+          persistAuth(res.user, res.token || null, res.refreshToken || null);
           return true;
         }
         return false;
@@ -131,20 +189,95 @@ export function AuthProvider({ children }) {
     [persistAuth]
   );
 
+  const loginWithGoogle = useCallback(
+    async (credential, options = {}) => {
+      try {
+        const res = await authService.loginWithGoogle(credential);
+        if (!res?.success) return { success: false };
+        // Only persist when we actually have a token (approved users)
+        if (res.token) {
+          const remember = Boolean(options?.remember);
+          persistAuth(res.user, res.token, res.refreshToken || null, remember);
+        }
+        return res; // { success, pending?, user, token?, verifyToken? }
+      } catch (err) {
+        return { success: false, error: err?.message || 'Login failed' };
+      }
+    },
+    [persistAuth]
+  );
+
+  const loginWithFace = useCallback(
+    async (imageData, options = {}) => {
+      try {
+        const res = await authService.loginWithFace(imageData, options);
+        if (!res?.success) return { success: false };
+        if (res.token) {
+          const remember = Boolean(options?.remember);
+          persistAuth(res.user, res.token, res.refreshToken || null, remember);
+        }
+        return res;
+      } catch (err) {
+        return { success: false, error: err?.message || 'Login failed' };
+      }
+    },
+    [persistAuth]
+  );
+
+  const register = useCallback(
+    async (userData) => {
+      try {
+        const res = await authService.register(userData);
+        // Do not persist during pending; page will route to verify
+        if (res?.success && res?.token) {
+          persistAuth(res.user, res.token, res.refreshToken || null);
+        }
+        return res;
+      } catch (err) {
+        return { success: false, error: err?.message || 'Registration failed' };
+      }
+    },
+    [persistAuth]
+  );
+
   const logout = useCallback(async () => {
     try {
-      await authService.logout();
+      await authService.logout(refreshTokenValue);
     } catch {}
-    persistAuth(null, null);
-  }, [persistAuth]);
+    // Clear from both storages on logout
+    try {
+      localStorage.removeItem('user');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('refresh_token');
+    } catch {}
+    setUser(null);
+    setToken(null);
+    setRefreshTokenValue(null);
+  }, [persistAuth, refreshTokenValue]);
 
   const refreshToken = useCallback(async () => {
+    if (!refreshTokenValue) {
+      // No refresh token available; nothing to do
+      return false;
+    }
     try {
-      const res = await authService.refreshToken();
+      const res = await authService.refreshToken(refreshTokenValue);
       if (res?.success && res?.token) {
         setToken(res.token);
+        setRefreshTokenValue(res.refreshToken || null);
         try {
-          localStorage.setItem('auth_token', res.token);
+          // Update both storages just in case
+          [localStorage, sessionStorage].forEach((store) => {
+            try {
+              store.setItem('auth_token', res.token);
+              if (res.refreshToken) {
+                store.setItem('refresh_token', res.refreshToken);
+              }
+            } catch {}
+          });
         } catch {}
         return true;
       }
@@ -153,7 +286,7 @@ export function AuthProvider({ children }) {
       await logout();
       return false;
     }
-  }, [logout]);
+  }, [logout, refreshTokenValue]);
 
   // keep latest refresh function in a ref for onUnauthorized
   useEffect(() => {
@@ -166,11 +299,28 @@ export function AuthProvider({ children }) {
   const hasAnyRole = (roles = []) => roles.some((r) => hasRole(r));
   const can = (permission) => {
     if (!permission) return true;
-    const perms = user?.permissions || [];
-    return (
-      perms.includes(permission) || perms.includes('*') || hasRole('admin')
-    );
+    if (hasRole('admin')) return true;
+    const perms = effectivePermissions(user);
+    return perms.includes('all') || perms.includes(permission);
   };
+
+  const updateProfile = useCallback(
+    async (updates) => {
+      try {
+        const nextUser = { ...(user || {}), ...(updates || {}) };
+        // Reuse current token/refresh; persist to the same store based on rememberPref
+        persistAuth(
+          nextUser,
+          tokenRef.current || token,
+          refreshTokenValue || null
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [user, persistAuth, token, refreshTokenValue]
+  );
 
   return (
     <AuthContext.Provider
@@ -179,8 +329,12 @@ export function AuthProvider({ children }) {
         token,
         login,
         socialLogin,
+        loginWithGoogle,
+        loginWithFace,
+        register,
         logout,
         refreshToken,
+        updateProfile,
         hasRole,
         hasAnyRole,
         can,

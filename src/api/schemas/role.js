@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const RoleValue = z.enum(['admin', 'manager', 'staff', 'cashier']);
+export const RoleValue = z.enum(['admin', 'manager', 'staff']);
 
 export const RoleSchema = z
   .object({
@@ -10,4 +10,3 @@ export const RoleSchema = z
     permissions: z.array(z.string()).optional().default([]),
   })
   .passthrough();
-

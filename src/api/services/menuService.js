@@ -1,151 +1,206 @@
 import apiClient from '../client';
-import { mockMenuItems } from '../mockData';
-
-// Mock delay for realistic API simulation
-const mockDelay = (ms = 800) => new Promise(resolve => setTimeout(resolve, ms));
-const USE_MOCKS = !(
-  typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_ENABLE_MOCKS === 'false' || import.meta.env.VITE_ENABLE_MOCKS === '0')
-);
 
 class MenuService {
   async getMenuItems(params = {}) {
-    if (!USE_MOCKS) {
+    const qs = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
+    });
+    const res = await apiClient.get(`/menu/items?${qs.toString()}`, {
+      retry: { retries: 1 },
+    });
+    const raw = res?.data || res;
+    const list = raw?.data || raw || [];
+    const getBackendOrigin = () => {
       try {
-        const qs = new URLSearchParams();
-        Object.entries(params || {}).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
-        });
-        const res = await apiClient.get(`/menu/items?${qs.toString()}`, { retry: { retries: 1 } });
-        const data = res?.data || res || [];
-        const pagination = res?.pagination || { page: 1, limit: Array.isArray(data) ? data.length : 0, total: Array.isArray(data) ? data.length : 0, totalPages: 1 };
-        return { success: true, data, pagination };
-      } catch (e) {
-        console.warn('getMenuItems API failed, using mocks:', e?.message);
+        const env =
+          (typeof import.meta !== 'undefined' && import.meta.env) || {};
+        const mediaBase = env?.VITE_MEDIA_BASE_URL;
+        if (typeof mediaBase === 'string' && /^https?:\/\//i.test(mediaBase)) {
+          return new URL(mediaBase).origin;
+        }
+        const apiBase = env?.VITE_API_BASE_URL || apiClient?.baseURL;
+        if (typeof apiBase === 'string' && /^https?:\/\//i.test(apiBase)) {
+          return new URL(apiBase).origin;
+        }
+      } catch {}
+      try {
+        return typeof window !== 'undefined' ? window.location.origin : '';
+      } catch {
+        return '';
       }
-    }
-    await mockDelay();
+    };
+    const absoluteUrl = (url) => {
+      if (!url || typeof url !== 'string') return '';
+      if (/^(blob:|data:|https?:\/\/)/i.test(url)) return url;
+      const path = url.startsWith('/') ? url : `/${url}`;
+      const baseOrigin = getBackendOrigin();
+      try {
+        return baseOrigin ? new URL(path, baseOrigin).toString() : path;
+      } catch {
+        return path;
+      }
+    };
+    const pickUrl = (o) => {
+      if (!o) return '';
+      const keys = [
+        'imageUrl',
+        'image_url',
+        'image',
+        'photo',
+        'picture',
+        'image_path',
+        'img',
+        'url',
+        'path',
+        'location',
+        'href',
+      ];
+      for (const k of keys) {
+        const v = o?.[k];
+        if (!v) continue;
+        if (typeof v === 'string') return v;
+        if (typeof v === 'object') {
+          const nested = pickUrl(v);
+          if (nested) return nested;
+        }
+      }
+      return '';
+    };
+    const normalizeImage = (obj) => absoluteUrl(pickUrl(obj));
+    const normalized = Array.isArray(list)
+      ? list.map((it) => ({
+          ...it,
+          image: normalizeImage(it),
+        }))
+      : [];
     return {
       success: true,
-      data: mockMenuItems,
-      pagination: {
+      data: normalized,
+      pagination: raw?.pagination || {
         page: 1,
-        limit: 50,
-        total: mockMenuItems.length,
+        limit: Array.isArray(list) ? list.length : 0,
+        total: Array.isArray(list) ? list.length : 0,
         totalPages: 1,
       },
     };
   }
 
   async getMenuItemById(itemId) {
-    await mockDelay(600);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/menu/items/${itemId}`);
-    
-    // Mock implementation
-    const item = mockMenuItems.find(i => i.id === itemId);
-    if (!item) {
-      throw new Error('Menu item not found');
-    }
-    
-    return {
-      success: true,
-      data: item
-    };
+    const res = await apiClient.get(`/menu/items/${itemId}`, {
+      retry: { retries: 1 },
+    });
+    const data = res?.data || res;
+    return { success: true, data };
   }
 
   async createMenuItem(itemData) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/menu/items', itemData, { retry: { retries: 1 } });
-        return { success: true, data: res?.data || res };
-      } catch (e) {
-        console.warn('createMenuItem API failed, using mocks:', e?.message);
-      }
-    }
-    await mockDelay(400);
-    const newItem = { id: Date.now().toString(), ...itemData, available: true, createdAt: new Date().toISOString() };
-    return { success: true, data: newItem };
+    const res = await apiClient.post('/menu/items', itemData, {
+      retry: { retries: 1 },
+    });
+    return { success: true, data: res?.data || res };
   }
 
   async updateMenuItem(itemId, updates) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.put(`/menu/items/${itemId}`, updates, { retry: { retries: 1 } });
-        return { success: true, data: res?.data || res };
-      } catch (e) {
-        console.warn('updateMenuItem API failed, using mocks:', e?.message);
-      }
-    }
-    await mockDelay(300);
-    const itemIndex = mockMenuItems.findIndex(i => i.id === itemId);
-    if (itemIndex === -1) throw new Error('Menu item not found');
-    const updatedItem = { ...mockMenuItems[itemIndex], ...updates, updatedAt: new Date().toISOString() };
-    return { success: true, data: updatedItem };
+    const res = await apiClient.put(`/menu/items/${itemId}`, updates, {
+      retry: { retries: 1 },
+    });
+    return { success: true, data: res?.data || res };
   }
 
   async deleteMenuItem(itemId) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.delete(`/menu/items/${itemId}`, { retry: { retries: 1 } });
-        return { success: true, data: res?.data || true };
-      } catch (e) {
-        console.warn('deleteMenuItem API failed, using mocks:', e?.message);
-      }
-    }
-    await mockDelay(200);
-    const item = mockMenuItems.find(i => i.id === itemId);
-    if (!item) throw new Error('Menu item not found');
-    return { success: true, message: 'Menu item deleted successfully' };
+    const res = await apiClient.delete(`/menu/items/${itemId}`, {
+      retry: { retries: 1 },
+    });
+    return { success: true, data: res?.data || true };
   }
 
   async updateItemAvailability(itemId, available) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.patch(`/menu/items/${itemId}/availability`, { available }, { retry: { retries: 1 } });
-        return { success: true, data: res?.data || res };
-      } catch (e) {
-        console.warn('updateItemAvailability API failed, using mocks:', e?.message);
-      }
-    }
-    await mockDelay(150);
-    return this.updateMenuItem(itemId, { available });
+    const res = await apiClient.patch(
+      `/menu/items/${itemId}/availability`,
+      { available },
+      { retry: { retries: 1 } }
+    );
+    return { success: true, data: res?.data || res };
   }
 
   async getCategories() {
-    await mockDelay(400);
-    
-    // TODO: Replace with actual API call
-    // return apiClient.get('/menu/categories');
-    
-    // Mock implementation
-    const categories = [...new Set(mockMenuItems.map(item => item.category))];
-    return {
-      success: true,
-      data: categories.map(name => ({
-        id: name.toLowerCase().replace(/\s+/g, '_'),
-        name,
-        itemCount: mockMenuItems.filter(item => item.category === name).length
-      }))
-    };
+    const res = await apiClient.get('/menu/categories', {
+      retry: { retries: 1 },
+    });
+    const raw = res?.data || res;
+    return { success: true, data: raw?.data || raw };
   }
 
   async uploadItemImage(itemId, imageFile) {
-    if (!USE_MOCKS) {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    const res = await apiClient.post(`/menu/items/${itemId}/image`, null, {
+      body: formData,
+      retry: { retries: 1 },
+    });
+    const getBackendOrigin = () => {
       try {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        const res = await apiClient.post(`/menu/items/${itemId}/image`, null, {
-          body: formData,
-          retry: { retries: 1 },
-        });
-        return { success: true, data: res?.data || res };
-      } catch (e) {
-        console.warn('uploadItemImage API failed, using mocks:', e?.message);
+        const env =
+          (typeof import.meta !== 'undefined' && import.meta.env) || {};
+        const mediaBase = env?.VITE_MEDIA_BASE_URL;
+        if (typeof mediaBase === 'string' && /^https?:\/\//i.test(mediaBase)) {
+          return new URL(mediaBase).origin;
+        }
+        const apiBase = env?.VITE_API_BASE_URL || apiClient?.baseURL;
+        if (typeof apiBase === 'string' && /^https?:\/\//i.test(apiBase)) {
+          return new URL(apiBase).origin;
+        }
+      } catch {}
+      try {
+        return typeof window !== 'undefined' ? window.location.origin : '';
+      } catch {
+        return '';
       }
-    }
-    await mockDelay(500);
-    return { success: true, data: { imageUrl: `/images/menu/${itemId}-${Date.now()}.jpg` } };
+    };
+    const absoluteUrl = (url) => {
+      if (!url || typeof url !== 'string') return '';
+      if (/^(blob:|data:|https?:\/\/)/i.test(url)) return url;
+      const path = url.startsWith('/') ? url : `/${url}`;
+      const baseOrigin = getBackendOrigin();
+      try {
+        return baseOrigin ? new URL(path, baseOrigin).toString() : path;
+      } catch {
+        return path;
+      }
+    };
+    const pickUrl = (o) => {
+      if (!o) return '';
+      const keys = [
+        'imageUrl',
+        'image_url',
+        'image',
+        'photo',
+        'picture',
+        'image_path',
+        'img',
+        'url',
+        'path',
+        'location',
+        'href',
+      ];
+      for (const k of keys) {
+        const v = o?.[k];
+        if (!v) continue;
+        if (typeof v === 'string') return v;
+        if (typeof v === 'object') {
+          const nested = pickUrl(v);
+          if (nested) return nested;
+        }
+      }
+      return '';
+    };
+    const raw = res?.data || res || {};
+    const imageUrlAbs = absoluteUrl(pickUrl(raw));
+    const imageUrl = imageUrlAbs
+      ? `${imageUrlAbs}${imageUrlAbs.includes('?') ? '&' : '?'}v=${Date.now()}`
+      : '';
+    return { success: true, data: { imageUrl } };
   }
 }
 

@@ -13,10 +13,15 @@ const Index = lazy(() => import('../../pages/Index'));
 const LoginPage = lazy(() => import('../../pages/LoginPage'));
 const SignupPage = lazy(() => import('../../pages/SignupPage'));
 const ForgotPasswordPage = lazy(() => import('../../pages/ForgotPasswordPage'));
+const ResetCodePage = lazy(() => import('../../pages/ResetCodePage'));
+const SetNewPasswordPage = lazy(() => import('../../pages/SetNewPasswordPage'));
+const ResetPasswordPage = lazy(() => import('../../pages/ResetPasswordPage'));
 const FaceScanPage = lazy(() => import('../../pages/FaceScanPage'));
 const FaceRegistrationPage = lazy(
   () => import('../../pages/FaceRegistrationPage')
 );
+const VerifyIdentityPage = lazy(() => import('../../pages/VerifyIdentityPage'));
+const VerifyEmailPage = lazy(() => import('../../pages/VerifyEmailPage'));
 const NotFound = lazy(() => import('../../pages/NotFound'));
 import HelpPage from '../../pages/HelpPage';
 const SettingsPage = lazy(() => import('../../pages/SettingsPage'));
@@ -53,6 +58,27 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Admin-only route wrapper
+const AdminRoute = ({ children }) => {
+  const { user, hasRole } = useAuth();
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!hasRole('admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] p-6">
+        <div className="max-w-xl w-full border rounded-lg p-6 text-center">
+          <h2 className="text-xl font-semibold mb-2">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground">
+            Your account can't access User Management, please contact the Admin
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return children;
+};
+
 // Public route wrapper (redirects to dashboard if already logged in)
 const PublicRoute = ({ children }) => {
   const { user } = useAuth();
@@ -74,11 +100,17 @@ const AppRoutes = () => {
         '/login': 'Login',
         '/signup': 'Sign Up',
         '/forgot-password': 'Forgot Password',
+        '/reset-code': 'Reset Code',
+        '/set-new-password': 'New Password',
+        '/reset-password': 'Reset Password',
         '/face-scan': 'Face Scan',
         '/face-registration': 'Face Registration',
+        '/verify': 'Verify Identity',
+        '/verify-email': 'Verify Email',
         '/menu': 'Menu Management',
-        '/sales': 'Sales Analytics',
+        '/analytics': 'Analytics',
         '/employees': 'Employee Schedule',
+
         '/feedback': 'Customer Feedback',
         '/pos': 'Point of Sale',
         '/catering': 'Catering',
@@ -128,6 +160,30 @@ const AppRoutes = () => {
             }
           />
           <Route
+            path="/reset-code"
+            element={
+              <PublicRoute>
+                <ResetCodePage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/set-new-password"
+            element={
+              <PublicRoute>
+                <SetNewPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
             path="/face-scan"
             element={
               <PublicRoute>
@@ -141,6 +197,22 @@ const AppRoutes = () => {
               <ProtectedRoute>
                 <FaceRegistrationPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verify"
+            element={
+              <PublicRoute>
+                <VerifyIdentityPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <PublicRoute>
+                <VerifyEmailPage />
+              </PublicRoute>
             }
           />
 
@@ -164,10 +236,10 @@ const AppRoutes = () => {
             }
           />
           <Route
-            path="/sales"
+            path="/analytics"
             element={
               <ProtectedRoute>
-                <MainLayout title="Sales Analytics">
+                <MainLayout title="Analytics">
                   <SalesAnalytics />
                 </MainLayout>
               </ProtectedRoute>
@@ -183,6 +255,7 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/feedback"
             element={
@@ -237,9 +310,11 @@ const AppRoutes = () => {
             path="/users"
             element={
               <ProtectedRoute>
-                <MainLayout title="User Management">
-                  <Users />
-                </MainLayout>
+                <AdminRoute>
+                  <MainLayout title="User Management">
+                    <Users />
+                  </MainLayout>
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

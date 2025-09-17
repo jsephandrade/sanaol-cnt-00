@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/auth/Header';
@@ -7,9 +7,15 @@ import AuthCard from '@/components/auth/AuthCard';
 import LoginForm from '@/components/auth/LoginForm';
 import SocialProviders from '@/components/auth/SocialProviders';
 import PageTransition from '@/components/PageTransition';
+import { signInWithGoogle } from '@/lib/google';
+import {
+  getRememberedEmail,
+  rememberEmail,
+  clearRememberedEmail,
+} from '@/lib/credentials';
 
 const LoginPage = () => {
-  const { login, socialLogin } = useAuth();
+  const { login, socialLogin, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -22,6 +28,17 @@ const LoginPage = () => {
   // field-level errors for a11y
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  // Prefill email from localStorage (we do not store passwords)
+  useEffect(() => {
+    try {
+      const savedEmail = getRememberedEmail();
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRemember(true);
+      }
+    } catch {}
+  }, []);
 
   const validate = () => {
     let ok = true;
@@ -56,28 +73,96 @@ const LoginPage = () => {
 
     setPending(true);
     try {
-      const ok = await login(email, password, { remember });
-      if (!ok) {
-        setError('Invalid credentials.');
+      const res = await login(email, password, { remember });
+      if (!res?.success) {
+        setError(res?.error || 'Invalid credentials.');
         return;
       }
-      // navigate on success if desired:
-      // navigate("/dashboard");
+      // If pending, stash verify token and route to verification
+      if (
+        res?.pending ||
+        (res?.user?.status || '').toLowerCase() !== 'active'
+      ) {
+        try {
+          sessionStorage.setItem('verify_token', res.verifyToken || '');
+          sessionStorage.setItem(
+            'pending_user',
+            JSON.stringify(res.user || {})
+          );
+        } catch {}
+        navigate('/verify');
+        return;
+      }
+      // Persist or clear remembered email based on the checkbox
+      try {
+        if (remember) {
+          rememberEmail(email);
+        } else {
+          clearRememberedEmail();
+        }
+      } catch {}
+
       navigate('/');
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setPending(false);
     }
   };
 
   // SocialProviders now calls onSocial(provider, event).
-  const handleSocial = async (provider /* , e */) => {
+  const handleSocial = async (provider, payload /* e or credential */) => {
     if (pending) return;
     setPending(true);
     setError('');
     try {
-      await socialLogin(provider);
+      if (provider === 'google-credential') {
+        const res = await loginWithGoogle(payload, { remember });
+        if (!res?.success) throw new Error('Google login failed');
+        if (res?.token) {
+          // approved path -> handled below by navigate('/')
+        } else if (res?.verifyToken) {
+          // pending path -> send to verification
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+          navigate('/verify');
+          return;
+        } else {
+          setError(
+            'Your Google account is not registered or not yet approved.'
+          );
+          return;
+        }
+      } else if (provider === 'google') {
+        const credential = await signInWithGoogle();
+        const res = await loginWithGoogle(credential, { remember });
+        if (!res?.success) throw new Error('Google login failed');
+        if (res?.token) {
+          // approved path -> continue to home
+        } else if (res?.verifyToken) {
+          try {
+            sessionStorage.setItem('verify_token', res.verifyToken || '');
+            sessionStorage.setItem(
+              'pending_user',
+              JSON.stringify(res.user || {})
+            );
+          } catch {}
+          navigate('/verify');
+          return;
+        } else {
+          setError(
+            'Your Google account is not registered or not yet approved.'
+          );
+          return;
+        }
+      } else {
+        await socialLogin(provider);
+      }
       // navigate("/dashboard");
       navigate('/');
     } catch (err) {
@@ -99,7 +184,7 @@ const LoginPage = () => {
 
         <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
           <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-            <AuthCard title="Login">
+            <AuthCard title="Login" compact>
               <LoginForm
                 email={email}
                 password={password}

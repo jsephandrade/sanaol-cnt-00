@@ -1,11 +1,11 @@
 import React from 'react';
 import { Star, ThumbsUp, ThumbsDown } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 
 export const FeedbackMetrics = ({ feedback }) => {
@@ -41,6 +41,9 @@ export const FeedbackMetrics = ({ feedback }) => {
     { positive: 0, neutral: 0, negative: 0 }
   );
 
+  const total = feedback.length || 0;
+  const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Card>
@@ -74,9 +77,11 @@ export const FeedbackMetrics = ({ feedback }) => {
                 <span>Positive</span>
               </div>
               <div className="flex items-center">
-                <span className="font-medium mr-2">{sentimentCounts.positive}</span>
+                <span className="font-medium mr-2">
+                  {sentimentCounts.positive}
+                </span>
                 <span className="text-muted-foreground text-sm">
-                  ({Math.round((sentimentCounts.positive / feedback.length) * 100)}%)
+                  ({pct(sentimentCounts.positive)}%)
                 </span>
               </div>
             </div>
@@ -87,9 +92,11 @@ export const FeedbackMetrics = ({ feedback }) => {
                 <span>Neutral</span>
               </div>
               <div className="flex items-center">
-                <span className="font-medium mr-2">{sentimentCounts.neutral}</span>
+                <span className="font-medium mr-2">
+                  {sentimentCounts.neutral}
+                </span>
                 <span className="text-muted-foreground text-sm">
-                  ({Math.round((sentimentCounts.neutral / feedback.length) * 100)}%)
+                  ({pct(sentimentCounts.neutral)}%)
                 </span>
               </div>
             </div>
@@ -100,9 +107,11 @@ export const FeedbackMetrics = ({ feedback }) => {
                 <span>Negative</span>
               </div>
               <div className="flex items-center">
-                <span className="font-medium mr-2">{sentimentCounts.negative}</span>
+                <span className="font-medium mr-2">
+                  {sentimentCounts.negative}
+                </span>
                 <span className="text-muted-foreground text-sm">
-                  ({Math.round((sentimentCounts.negative / feedback.length) * 100)}%)
+                  ({pct(sentimentCounts.negative)}%)
                 </span>
               </div>
             </div>
@@ -124,13 +133,7 @@ export const FeedbackMetrics = ({ feedback }) => {
                   {feedback.filter((f) => f.resolved).length}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  (
-                  {Math.round(
-                    (feedback.filter((f) => f.resolved).length /
-                      feedback.length) *
-                      100
-                  )}
-                  %)
+                  ({pct(feedback.filter((f) => f.resolved).length)}%)
                 </span>
               </div>
             </div>
@@ -142,13 +145,7 @@ export const FeedbackMetrics = ({ feedback }) => {
                   {feedback.filter((f) => !f.resolved).length}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  (
-                  {Math.round(
-                    (feedback.filter((f) => !f.resolved).length /
-                      feedback.length) *
-                      100
-                  )}
-                  %)
+                  ({pct(feedback.filter((f) => !f.resolved).length)}%)
                 </span>
               </div>
             </div>
@@ -157,7 +154,7 @@ export const FeedbackMetrics = ({ feedback }) => {
               <div
                 className="bg-primary h-2.5 rounded-full"
                 style={{
-                  width: `${Math.round((feedback.filter((f) => f.resolved).length / feedback.length) * 100)}%`,
+                  width: `${pct(feedback.filter((f) => f.resolved).length)}%`,
                 }}
               ></div>
             </div>

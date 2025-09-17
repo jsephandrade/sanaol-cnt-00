@@ -1,73 +1,89 @@
-import apiClient from '../client';
 import { mockFeedback } from '../mockData';
 
-const mockDelay = (ms = 500) => new Promise((r) => setTimeout(r, ms));
-const USE_MOCKS = !(
-  typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_ENABLE_MOCKS === 'false' || import.meta.env.VITE_ENABLE_MOCKS === '0')
-);
+const mockDelay = (ms = 300) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+// Normalize backend/static mock data to the shape expected by UI components
+function normalize(item) {
+  return {
+    id: String(item.id),
+    customerName: item.customerName || item.name || 'Anonymous',
+    rating: Number(item.rating || 0),
+    comment: item.comment || '',
+    // UI expects `date`; mock has `createdAt`
+    date: item.date || item.createdAt || new Date().toISOString(),
+    // UI expects boolean `resolved`; mock has `status`
+    resolved:
+      typeof item.resolved === 'boolean'
+        ? item.resolved
+        : String(item.status || '').toLowerCase() === 'resolved',
+    // Keep passthrough fields if present
+    orderNumber: item.orderNumber || null,
+    category: item.category || null,
+    email: item.email || null,
+  };
+}
+
+// In-memory store so resolve/update/create are reflected in UI
+let FEEDBACK_MEM = Array.isArray(mockFeedback)
+  ? mockFeedback.map(normalize)
+  : [];
 
 class FeedbackService {
-  async getFeedback(params = {}) {
-    if (!USE_MOCKS) {
-      try {
-        const qs = new URLSearchParams();
-        Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && v !== '') qs.append(k, String(v));
-        });
-        const res = await apiClient.get(`/feedback?${qs.toString()}`, { retry: { retries: 1 } });
-        return Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-      } catch (e) {
-        console.warn('getFeedback API failed, using mocks:', e?.message);
-      }
-    }
+  async getFeedback() {
     await mockDelay(200);
-    return mockFeedback;
+    return FEEDBACK_MEM.map((x) => ({ ...x }));
   }
 
   async markFeedbackResolved(id) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.patch(`/feedback/${id}`, { resolved: true }, { retry: { retries: 1 } });
-        return res?.data || res;
-      } catch (e) {
-        console.warn('markFeedbackResolved API failed, using mocks:', e?.message);
-      }
-    }
     await mockDelay(150);
-    const item = mockFeedback.find((f) => f.id === id);
-    if (!item) throw new Error('Feedback not found');
-    return { ...item, resolved: !item.resolved };
+    const idx = FEEDBACK_MEM.findIndex((f) => String(f.id) === String(id));
+    if (idx === -1) throw new Error('Feedback not found');
+    const updated = {
+      ...FEEDBACK_MEM[idx],
+      resolved: !FEEDBACK_MEM[idx].resolved,
+    };
+    FEEDBACK_MEM[idx] = updated;
+    return { ...updated };
   }
 
   async updateFeedback(id, updates) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.put(`/feedback/${id}`, updates, { retry: { retries: 1 } });
-        return res?.data || res;
-      } catch (e) {
-        console.warn('updateFeedback API failed, using mocks:', e?.message);
-      }
-    }
     await mockDelay(150);
-    const item = mockFeedback.find((f) => f.id === id);
-    if (!item) throw new Error('Feedback not found');
-    return { ...item, ...updates };
+    const idx = FEEDBACK_MEM.findIndex((f) => String(f.id) === String(id));
+    if (idx === -1) throw new Error('Feedback not found');
+    const merged = normalize({ ...FEEDBACK_MEM[idx], ...updates });
+    FEEDBACK_MEM[idx] = merged;
+    return { ...merged };
   }
 
-  async createFeedback(data) {
-    if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/feedback', data, { retry: { retries: 1 } });
-        return res?.data || res;
-      } catch (e) {
-        console.warn('createFeedback API failed, using mocks:', e?.message);
-      }
-    }
+  async createFeedback(feedbackData) {
+    await mockDelay(200);
+    const item = normalize({
+      id: Date.now().toString(),
+      customerName: feedbackData.customerName || 'Anonymous',
+      rating: Number(feedbackData.rating || 0),
+      comment: feedbackData.comment || '',
+      createdAt: new Date().toISOString(),
+      status: 'new',
+      email: feedbackData.email || null,
+      orderNumber: feedbackData.orderNumber || null,
+      category: feedbackData.category || null,
+    });
+    FEEDBACK_MEM.push(item);
+    return { ...item };
+  }
+
+  async getSummary() {
     await mockDelay(150);
-    return { id: Date.now().toString(), ...data, createdAt: new Date().toISOString(), resolved: false };
+    const list = FEEDBACK_MEM;
+    const count = list.length;
+    const avg =
+      count > 0
+        ? list.reduce((s, f) => s + (Number(f.rating) || 0), 0) / count
+        : 0;
+    return { success: true, data: { average: Number(avg.toFixed(2)), count } };
   }
 }
 
 export const feedbackService = new FeedbackService();
 export default feedbackService;
-

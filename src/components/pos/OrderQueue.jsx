@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -9,16 +9,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, Smartphone, Clock, Check } from 'lucide-react';
+import { useAuth } from '@/components/AuthContext';
 
 const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
+  const { can } = useAuth();
   const walkInOrders = orderQueue.filter((order) => order.type === 'walk-in');
   const onlineOrders = orderQueue.filter((order) => order.type === 'online');
 
-  const formatTimeAgo = (date) => {
-    const now = new Date();
-    const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
-    );
+  const formatTimeAgo = (input) => {
+    const d = input instanceof Date ? input : new Date(input);
+    const ts = d.getTime();
+    if (Number.isNaN(ts)) return 'Unknown';
+
+    const nowTs = Date.now();
+    const diffInMinutes = Math.floor((nowTs - ts) / (1000 * 60));
 
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes === 1) return '1 minute ago';
@@ -102,27 +106,31 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                   </div>
 
                   <div className="flex gap-2">
-                    {order.status === 'pending' && (
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => updateOrderStatus(order.id, 'preparing')}
-                      >
-                        Start Preparing
-                      </Button>
-                    )}
+                    {order.status === 'pending' &&
+                      can('order.status.update') && (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            updateOrderStatus(order.id, 'preparing')
+                          }
+                        >
+                          Start Preparing
+                        </Button>
+                      )}
 
-                    {order.status === 'preparing' && (
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => updateOrderStatus(order.id, 'ready')}
-                      >
-                        Mark Ready
-                      </Button>
-                    )}
+                    {order.status === 'preparing' &&
+                      can('order.status.update') && (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => updateOrderStatus(order.id, 'ready')}
+                        >
+                          Mark Ready
+                        </Button>
+                      )}
 
-                    {order.status === 'ready' && (
+                    {order.status === 'ready' && can('order.status.update') && (
                       <Button
                         size="sm"
                         variant="default"

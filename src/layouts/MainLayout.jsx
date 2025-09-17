@@ -16,6 +16,7 @@ import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { Link } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
+import logo from '@/assets/technomart-logo.png';
 
 // ⬇️ Add these imports
 import {
@@ -35,23 +36,25 @@ const MainLayout = ({ children, title: _title }) => {
   const { user, logout } = useAuth();
 
   const displayName = user?.name || 'Admin';
-  const displayEmail = user?.email || 'admin@canteen.com';
+  const displayRole = user?.role || 'admin';
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
 
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex h-screen w-full bg-background">
         {/* Sidebar */}
-        <Sidebar variant="sidebar">
+        <Sidebar variant="sidebar" collapsible="icon">
           <SidebarHeader>
             <div className="flex items-center justify-center p-4">
               <div className="flex items-center space-x-2">
                 <img
-                  src="/favicon.ico"
+                  src={logo}
                   alt="TechnoMart Logo"
-                  className="h-8 w-8 object-contain"
+                  className="h-8 w-8 object-contain group-data-[collapsible=icon]:hidden"
                 />
-                <span className="text-xl font-bold">TechnoMart</span>
+                <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">
+                  TechnoMart
+                </span>
               </div>
             </div>
           </SidebarHeader>
@@ -61,7 +64,8 @@ const MainLayout = ({ children, title: _title }) => {
           </SidebarContent>
 
           <SidebarFooter>
-            <div className="p-4 border-t border-sidebar-border">
+            {/* Expanded footer with name/role */}
+            <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
                   <span className="font-semibold text-sidebar-accent-foreground">
@@ -70,10 +74,19 @@ const MainLayout = ({ children, title: _title }) => {
                 </div>
                 <div>
                   <p className="font-semibold">{displayName}</p>
-                  <p className="text-sm text-sidebar-foreground/70">
-                    {displayEmail}
+                  <p className="text-sm text-sidebar-foreground/70 capitalize">
+                    {displayRole}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Collapsed footer shows only user initial */}
+            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-2 border-t border-sidebar-border">
+              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+                <span className="text-sm font-semibold text-sidebar-accent-foreground">
+                  {avatarInitial}
+                </span>
               </div>
             </div>
           </SidebarFooter>
@@ -86,7 +99,7 @@ const MainLayout = ({ children, title: _title }) => {
             <div className="flex items-center">
               <SidebarTrigger className="mr-2" />
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Button variant="outline" asChild>
                 <Link to="/notifications">
                   <Bell className="h-4 w-4" />

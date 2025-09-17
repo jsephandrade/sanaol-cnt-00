@@ -8,6 +8,9 @@ import DiscountModal from '@/components/pos/DiscountModal';
 import OrderHistoryModal from '@/components/pos/OrderHistoryModal';
 import { usePOSData } from '@/hooks/usePOSData';
 import { usePOSLogic } from '@/hooks/usePOSLogic';
+import { useOrderHistory } from '@/hooks/useOrderManagement';
+import { orderService } from '@/api/services/orderService';
+import { useEffect } from 'react';
 
 const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,13 +18,24 @@ const POS = () => {
   const [isOrderHistoryModalOpen, setIsOrderHistoryModalOpen] = useState(false);
   const [discountInput, setDiscountInput] = useState('');
   const [discountType, setDiscountType] = useState('percentage');
-  const [activeCategory, setActiveCategory] = useState('1');
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [activeCategory, setActiveCategory] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('pos');
 
   // Get data and business logic from custom hooks
-  const { orderHistory, categories, orderQueue, setOrderQueue } = usePOSData();
+  const { categories, orderQueue, setOrderQueue } = usePOSData();
+  const {
+    orderHistory,
+    loading: historyLoading,
+    error: historyError,
+    refetch: refetchHistory,
+  } = useOrderHistory({}, { auto: false });
+  useEffect(() => {
+    if (!activeCategory && categories && categories.length > 0) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
   const {
     currentOrder,
     discount,
@@ -51,15 +65,41 @@ const POS = () => {
       setIsPaymentModalOpen(false);
     }
   };
+  // Fetch order history only when modal opens
+  useEffect(() => {
+    if (isOrderHistoryModalOpen) refetchHistory();
+  }, [isOrderHistoryModalOpen, refetchHistory]);
 
-  const updateOrderStatus = (orderId, newStatus) => {
-    setOrderQueue((prevQueue) =>
-      prevQueue.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus);
+      // Refresh queue after update
+      const res = await orderService.getOrderQueue();
+      if (res?.data) setOrderQueue(res.data);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
+  // Poll queue periodically for real-time-ish updates
+  useEffect(() => {
+    let timer = null;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await orderService.getOrderQueue();
+        if (!cancelled && res?.data) setOrderQueue(res.data);
+      } catch {
+      } finally {
+        if (!cancelled) timer = setTimeout(tick, 5000);
+      }
+    };
+    tick();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [setOrderQueue]);
 
   return (
     <div className="space-y-4">
@@ -137,6 +177,9 @@ const POS = () => {
         isOpen={isOrderHistoryModalOpen}
         onClose={() => setIsOrderHistoryModalOpen(false)}
         orderHistory={orderHistory}
+        loading={historyLoading}
+        error={historyError}
+        onRefresh={refetchHistory}
       />
     </div>
   );

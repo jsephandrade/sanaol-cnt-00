@@ -1,9 +1,31 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LogIn, UserCog, ShieldAlert, Settings } from 'lucide-react';
 
-const LogSummaryCard = () => {
+const StatBox = ({ icon: Icon, label, value, color }) => (
+  <div className="rounded-lg border p-3 flex flex-col items-center">
+    <Icon className={`h-8 w-8 mb-1 ${color}`} />
+    <div className="text-2xl font-bold">{value}</div>
+    <div className="text-xs text-muted-foreground">{label}</div>
+  </div>
+);
+
+const LogSummaryCard = ({ summary }) => {
+  const today = summary?.today || {
+    login: 0,
+    action: 0,
+    security: 0,
+    system: 0,
+  };
+  const week = summary?.week || today;
+  const month = summary?.month || week;
   return (
     <Card>
       <CardHeader>
@@ -20,43 +42,89 @@ const LogSummaryCard = () => {
           <TabsContent value="today">
             <div className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border p-3 flex flex-col items-center">
-                  <LogIn className="h-8 w-8 text-blue-500 mb-1" />
-                  <div className="text-2xl font-bold">12</div>
-                  <div className="text-xs text-muted-foreground">Logins</div>
-                </div>
-                <div className="rounded-lg border p-3 flex flex-col items-center">
-                  <UserCog className="h-8 w-8 text-green-500 mb-1" />
-                  <div className="text-2xl font-bold">28</div>
-                  <div className="text-xs text-muted-foreground">Actions</div>
-                </div>
+                <StatBox
+                  icon={LogIn}
+                  label="Logins"
+                  value={today.login}
+                  color="text-blue-500"
+                />
+                <StatBox
+                  icon={UserCog}
+                  label="Actions"
+                  value={today.action}
+                  color="text-green-500"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border p-3 flex flex-col items-center">
-                  <ShieldAlert className="h-8 w-8 text-red-500 mb-1" />
-                  <div className="text-2xl font-bold">3</div>
-                  <div className="text-xs text-muted-foreground">Security</div>
-                </div>
-                <div className="rounded-lg border p-3 flex flex-col items-center">
-                  <Settings className="h-8 w-8 text-gray-500 mb-1" />
-                  <div className="text-2xl font-bold">5</div>
-                  <div className="text-xs text-muted-foreground">System</div>
-                </div>
+                <StatBox
+                  icon={ShieldAlert}
+                  label="Security"
+                  value={today.security}
+                  color="text-red-500"
+                />
+                <StatBox
+                  icon={Settings}
+                  label="System"
+                  value={today.system}
+                  color="text-gray-500"
+                />
               </div>
             </div>
           </TabsContent>
           <TabsContent value="week" className="pt-4">
-            <div className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Weekly log statistics</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <StatBox
+                icon={LogIn}
+                label="Logins"
+                value={week.login}
+                color="text-blue-500"
+              />
+              <StatBox
+                icon={UserCog}
+                label="Actions"
+                value={week.action}
+                color="text-green-500"
+              />
+              <StatBox
+                icon={ShieldAlert}
+                label="Security"
+                value={week.security}
+                color="text-red-500"
+              />
+              <StatBox
+                icon={Settings}
+                label="System"
+                value={week.system}
+                color="text-gray-500"
+              />
             </div>
           </TabsContent>
           <TabsContent value="month" className="pt-4">
-            <div className="space-y-4">
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">Monthly log statistics</p>
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <StatBox
+                icon={LogIn}
+                label="Logins"
+                value={month.login}
+                color="text-blue-500"
+              />
+              <StatBox
+                icon={UserCog}
+                label="Actions"
+                value={month.action}
+                color="text-green-500"
+              />
+              <StatBox
+                icon={ShieldAlert}
+                label="Security"
+                value={month.security}
+                color="text-red-500"
+              />
+              <StatBox
+                icon={Settings}
+                label="System"
+                value={month.system}
+                color="text-gray-500"
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -66,4 +134,3 @@ const LogSummaryCard = () => {
 };
 
 export default LogSummaryCard;
-

@@ -16,7 +16,7 @@ const ItemList = ({ items, onEdit, onDelete = false }) => {
   return (
     <div className="divide-y rounded-md border overflow-hidden bg-card">
       {items.map((item) => {
-        const imageSrc = item.imageUrl || null;
+        const imageSrc = item.image || item.imageUrl || null;
         return (
           <div key={item.id} className="flex items-center gap-3 p-3">
             <div className="shrink-0">

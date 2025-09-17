@@ -13,7 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { FeedbackMetrics } from './feedback/FeedbackMetrics';
 import { FeedbackList } from './feedback/FeedbackList';
-import { FeedbackForm } from './feedback/FeedbackForm';
 import { FeedbackReplyModal } from './feedback/FeedbackReplyModal';
 const CustomerFeedback = () => {
   const { feedback, loading, error, markResolved, refetch } = useFeedback();
@@ -113,8 +112,6 @@ const CustomerFeedback = () => {
           )}
         </CardContent>
       </Card>
-
-      <FeedbackForm />
 
       <FeedbackReplyModal
         isOpen={!!selectedFeedback}

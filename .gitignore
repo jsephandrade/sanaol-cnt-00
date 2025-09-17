@@ -28,3 +28,22 @@ bun.lockb
 .env
 .env.*
 !.env.example
+
+# Python (backend)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.pytest_cache
+
+# Virtual environments
+.venv/
+venv/
+env/
+backend/.venv/
+
+# Backend uploads and private storage
+backend/private_media/

@@ -37,7 +37,9 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
 
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-name" className="text-right">Name</Label>
+            <Label htmlFor="edit-name" className="text-right">
+              Name
+            </Label>
             <Input
               id="edit-name"
               value={item.name}
@@ -47,17 +49,23 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-description" className="text-right">Description</Label>
+            <Label htmlFor="edit-description" className="text-right">
+              Description
+            </Label>
             <Input
               id="edit-description"
               value={item.description}
-              onChange={(e) => setItem({ ...item, description: e.target.value })}
+              onChange={(e) =>
+                setItem({ ...item, description: e.target.value })
+              }
               className="col-span-3"
             />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-price" className="text-right">Price</Label>
+            <Label htmlFor="edit-price" className="text-right">
+              Price
+            </Label>
             <Input
               id="edit-price"
               type="number"
@@ -70,7 +78,9 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-category" className="text-right">Category</Label>
+            <Label htmlFor="edit-category" className="text-right">
+              Category
+            </Label>
             <Input
               id="edit-category"
               value={item.category}
@@ -80,7 +90,9 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-available" className="text-right">Available</Label>
+            <Label htmlFor="edit-available" className="text-right">
+              Available
+            </Label>
             <Switch
               id="edit-available"
               checked={item.available}
@@ -91,7 +103,9 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-image-file" className="text-right">Upload Image</Label>
+            <Label htmlFor="edit-image-file" className="text-right">
+              Upload Image
+            </Label>
             <Input
               id="edit-image-file"
               type="file"
@@ -101,12 +115,12 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
             />
           </div>
 
-          {(item.imageUrl || item.imageFile) && (
+          {(item.imageUrl || item.image || item.imageFile) && (
             <div className="grid grid-cols-4 items-start gap-4">
               <div className="text-right font-medium pt-1">Preview</div>
               <div className="col-span-3 space-y-2">
                 <img
-                  src={item.imageUrl}
+                  src={item.imageUrl || item.image}
                   alt={item.name || 'Preview'}
                   className="h-32 w-full object-cover rounded-md border"
                 />
@@ -122,7 +136,9 @@ const EditItemDialog = ({ item, setItem, onSave, onClose }) => {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={onSave}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>

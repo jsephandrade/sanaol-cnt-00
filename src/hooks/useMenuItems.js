@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { menuService } from '@/services/menuService';
+import menuService from '@/api/services/menuService';
 import { toast } from 'sonner';
 
 export const useMenuItems = () => {
@@ -11,8 +11,8 @@ export const useMenuItems = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await menuService.getMenuItems();
-      setItems(data);
+      const res = await menuService.getMenuItems();
+      setItems(res?.data || []);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to fetch menu items';
@@ -25,7 +25,8 @@ export const useMenuItems = () => {
 
   const addMenuItem = async (item) => {
     try {
-      const newItem = await menuService.createMenuItem(item);
+      const res = await menuService.createMenuItem(item);
+      const newItem = res?.data || res;
       setItems((prev) => [...prev, newItem]);
       toast.success('Menu item added successfully');
       return newItem;
@@ -39,7 +40,8 @@ export const useMenuItems = () => {
 
   const updateMenuItem = async (id, updates) => {
     try {
-      const updatedItem = await menuService.updateMenuItem(id, updates);
+      const res = await menuService.updateMenuItem(id, updates);
+      const updatedItem = res?.data || res;
       setItems((prev) =>
         prev.map((item) => (item.id === id ? updatedItem : item))
       );

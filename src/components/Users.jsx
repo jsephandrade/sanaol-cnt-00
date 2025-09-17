@@ -14,11 +14,20 @@ import { RoleManagement } from './users/RoleManagement';
 import { ActiveUsersList } from './users/ActiveUsersList';
 import { UsersHeader } from './users/UsersHeader';
 import { UsersSearch } from './users/UsersSearch';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { UsersFooter } from './users/UsersFooter';
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
+import { PendingVerifications } from './users/PendingVerifications';
 import { useDebouncedValue } from '@/hooks/useDebounce';
 import TableSkeleton from '@/components/shared/TableSkeleton';
 import ErrorState from '@/components/shared/ErrorState';
+import { useAuth } from '@/components/AuthContext';
 
 const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +38,10 @@ const Users = () => {
   const [selectedRole, setSelectedRole] = useState(null);
 
   const debouncedSearch = useDebouncedValue(searchTerm, 350);
+
+  // Keep internal state as '' for “no filter” to keep the hook simple
+  const [roleFilter, setRoleFilter] = useState('');
+
   const {
     users,
     pagination,
@@ -40,7 +53,12 @@ const Users = () => {
     updateUser,
     deleteUser,
     updateUserStatus,
-  } = useUserManagement({ search: debouncedSearch });
+  } = useUserManagement({
+    search: debouncedSearch,
+    // IMPORTANT: send '' (not a sentinel) to the hook/api
+    role: roleFilter,
+  });
+
   const {
     roles,
     loading: rolesLoading,
@@ -48,7 +66,13 @@ const Users = () => {
     updateRoleConfig,
   } = useRoles();
 
-  // Data is fetched with search term via hook; no local filtering needed
+  const { hasAnyRole } = useAuth();
+  const showVerifyQueue = hasAnyRole(['admin', 'manager']);
+  const isAdmin = hasAnyRole(['admin']);
+
+  const nonPendingUsers = Array.isArray(users)
+    ? users.filter((u) => u.status !== 'pending')
+    : [];
 
   const getRoleBadgeVariant = (role) => {
     switch (role) {
@@ -58,8 +82,6 @@ const Users = () => {
         return 'default';
       case 'staff':
         return 'secondary';
-      case 'cashier':
-        return 'outline';
       default:
         return 'secondary';
     }
@@ -75,6 +97,12 @@ const Users = () => {
 
   const handleAddUser = async (newUser) => {
     await createUser.mutateAsync(newUser);
+    if (newUser?.sendInvite && newUser?.email && !newUser?.password) {
+      try {
+        const { authService } = await import('@/api/services/authService');
+        await authService.forgotPassword(newUser.email);
+      } catch {}
+    }
   };
 
   const handleUpdateUser = async (updatedUser) => {
@@ -108,12 +136,39 @@ const Users = () => {
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
         <Card>
-          <UsersHeader onAddClick={() => setShowAddModal(true)} />
+          <UsersHeader
+            onAddClick={() => setShowAddModal(true)}
+            canAdd={hasAnyRole(['admin'])}
+          />
           <CardContent className="space-y-4">
-            <UsersSearch
-              searchTerm={searchTerm}
-              onChange={(value) => setSearchTerm(value)}
-            />
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+              <div className="flex-1 min-w-[220px]">
+                <UsersSearch
+                  searchTerm={searchTerm}
+                  onChange={(value) => setSearchTerm(value)}
+                />
+              </div>
+
+              {/* Role filter using a sentinel value "_all" for the "All" item */}
+              <div className="w-full sm:w-[220px]">
+                <Select
+                  // Show "_all" when roleFilter is '' so the All item is selected
+                  value={roleFilter === '' ? '_all' : roleFilter}
+                  // Map "_all" back to '' so the hook gets a clean empty filter
+                  onValueChange={(v) => setRoleFilter(v === '_all' ? '' : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {loading || fetching ? (
               <TableSkeleton
@@ -124,7 +179,7 @@ const Users = () => {
               <ErrorState message={error} onRetry={refetch} />
             ) : (
               <UserTable
-                users={users}
+                users={nonPendingUsers}
                 onEditUser={(user) => {
                   setSelectedUser(user);
                   setShowEditModal(true);
@@ -133,14 +188,19 @@ const Users = () => {
                 onDeleteUser={handleDeleteUser}
                 getRoleBadgeVariant={getRoleBadgeVariant}
                 getInitials={getInitials}
+                isAdmin={isAdmin}
               />
             )}
           </CardContent>
+
           <UsersFooter
-            showing={users.length}
-            total={pagination?.total || users.length}
+            showing={nonPendingUsers.length}
+            total={pagination?.total ?? nonPendingUsers.length}
           />
         </Card>
+
+        {/* Admin/Manager-only: show verification queue below the Users card */}
+        {showVerifyQueue && <PendingVerifications />}
       </div>
 
       <div className="space-y-4">
@@ -202,7 +262,10 @@ const Users = () => {
             </CardContent>
           </Card>
         ) : (
-          <ActiveUsersList users={users} getInitials={getInitials} />
+          <ActiveUsersList
+            users={nonPendingUsers.filter((u) => u.status === 'active')}
+            getInitials={getInitials}
+          />
         )}
       </div>
 

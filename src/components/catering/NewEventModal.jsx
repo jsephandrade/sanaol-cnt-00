@@ -144,7 +144,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                     selected={formData.date}
                     onSelect={(date) => updateFormData('date', date)}
                     initialFocus
-                    className="p-3 pointer-events-auto"
+                    className="p-3 w-full max-w-full pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>

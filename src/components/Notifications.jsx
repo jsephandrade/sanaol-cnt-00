@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -14,48 +14,75 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { createRealtime } from '@/lib/realtime';
+import { notificationsService } from '@/api/services/notificationsService';
+import { subscribePush, unsubscribePush } from '@/lib/push';
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      title: 'Low Inventory Alert',
-      message: 'Rice supply is below threshold (2kg remaining)',
-      time: '10 mins ago',
-      read: false,
-      type: 'warning',
-    },
-    {
-      id: '2',
-      title: 'New Order Received',
-      message: 'Catering order #2843 confirmed for tomorrow',
-      time: '25 mins ago',
-      read: false,
-      type: 'info',
-    },
-    {
-      id: '3',
-      title: 'Payment Processed',
-      message: 'Daily sales batch processed successfully',
-      time: '1 hour ago',
-      read: true,
-      type: 'success',
-    },
-    {
-      id: '4',
-      title: 'Employee Schedule Updated',
-      message: 'Chef Alex requested time off next week',
-      time: '3 hours ago',
-      read: true,
-      type: 'info',
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
   const [settings, setSettings] = useState({
-    emailNotifications: true,
-    pushNotifications: false,
-    lowStockAlerts: true,
-    orderAlerts: true,
-    paymentAlerts: true,
+    emailEnabled: true,
+    pushEnabled: false,
+    lowStock: true,
+    order: true,
+    payment: true,
   });
+
+  // Helpers
+  const fmtRelative = (iso) => {
+    try {
+      const d = new Date(iso);
+      const now = new Date();
+      const diff = Math.max(0, (now - d) / 1000);
+      if (diff < 60) return `${Math.floor(diff)}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      return d.toLocaleDateString();
+    } catch {
+      return iso || '';
+    }
+  };
+
+  const refreshList = async () => {
+    try {
+      const res = await notificationsService.getRecent(100);
+      const list = (res?.data || []).map((n) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        createdAt: n.createdAt,
+        time: fmtRelative(n.createdAt),
+        read: Boolean(n.read || n.isRead),
+        type:
+          n.type === 'low_stock'
+            ? 'warning'
+            : n.type === 'new_order'
+              ? 'info'
+              : n.type === 'payment'
+                ? 'success'
+                : n.type || 'info',
+      }));
+      setNotifications(list);
+    } catch {
+      // leave prior state
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const data = await notificationsService.getSettings();
+      setSettings({
+        emailEnabled: Boolean(data.emailEnabled),
+        pushEnabled: Boolean(data.pushEnabled),
+        lowStock: Boolean(data.lowStock),
+        order: Boolean(data.order),
+        payment: Boolean(data.payment),
+      });
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshList();
+    loadSettings();
+  }, []);
 
   // Realtime notifications with fallback
   const pollRef = useRef(null);
@@ -81,12 +108,34 @@ const Notifications = () => {
         path: '/notifications',
         onMessage: (msg) => {
           if (msg?.type === 'notification' && msg?.data) {
-            setNotifications((prev) => [{ ...msg.data, read: false }, ...prev].slice(0, 100));
+            const n = msg.data;
+            const norm = {
+              id: n.id || `${Date.now()}`,
+              title: n.title || 'Notification',
+              message: n.message || '',
+              createdAt: n.createdAt || new Date().toISOString(),
+              time: fmtRelative(n.createdAt || new Date().toISOString()),
+              read: false,
+              type:
+                n.type === 'low_stock'
+                  ? 'warning'
+                  : n.type === 'new_order'
+                    ? 'info'
+                    : n.type === 'payment'
+                      ? 'success'
+                      : n.type || 'info',
+            };
+            setNotifications((prev) => [norm, ...prev].slice(0, 100));
           }
         },
         onStatusChange: (status) => {
           if (status === 'open') stopPolling();
-          if (status === 'reconnecting' || status === 'error' || status === 'closed') startPolling();
+          if (
+            status === 'reconnecting' ||
+            status === 'error' ||
+            status === 'closed'
+          )
+            startPolling();
         },
       });
       startPolling();
@@ -99,25 +148,57 @@ const Notifications = () => {
       rt?.close?.();
     };
   }, []);
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    try {
+      await notificationsService.markAllRead?.();
+    } catch {}
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+  const markAsRead = async (id) => {
+    try {
+      await notificationsService.markRead?.(id);
+    } catch {}
     setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
-  const markAsRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+  const deleteNotification = async (id) => {
+    try {
+      await notificationsService.delete?.(id);
+    } catch {}
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
-  const deleteNotification = (id) => {
-    setNotifications((prev) =>
-      prev.filter((notification) => notification.id !== id)
-    );
-  };
-  const handleSettingChange = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleSettingChange = async (key) => {
+    // Special handling for push: request permission before enabling
+    if (key === 'pushEnabled') {
+      const next = !settings.pushEnabled;
+      if (
+        next &&
+        typeof Notification !== 'undefined' &&
+        Notification?.permission !== 'granted'
+      ) {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm !== 'granted') {
+            // Do not enable if permission denied
+            return;
+          }
+        } catch {}
+      }
+      // Register or unregister push subscription
+      try {
+        if (next) {
+          await subscribePush();
+        } else {
+          await unsubscribePush();
+        }
+      } catch {}
+    }
+    const nextState = { ...settings, [key]: !settings[key] };
+    setSettings(nextState);
+    try {
+      await notificationsService.updateSettings(nextState);
+    } catch {}
   };
   const unreadCount = notifications.filter((n) => !n.read).length;
   return (
@@ -215,6 +296,7 @@ const Notifications = () => {
               variant="outline"
               size="sm"
               className="flex items-center gap-1"
+              onClick={refreshList}
             >
               <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
@@ -237,10 +319,8 @@ const Notifications = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.emailNotifications}
-                onCheckedChange={() =>
-                  handleSettingChange('emailNotifications')
-                }
+                checked={settings.emailEnabled}
+                onCheckedChange={() => handleSettingChange('emailEnabled')}
               />
             </div>
             <Separator />
@@ -253,8 +333,8 @@ const Notifications = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.pushNotifications}
-                onCheckedChange={() => handleSettingChange('pushNotifications')}
+                checked={settings.pushEnabled}
+                onCheckedChange={() => handleSettingChange('pushEnabled')}
               />
             </div>
             <Separator />
@@ -267,8 +347,8 @@ const Notifications = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.lowStockAlerts}
-                onCheckedChange={() => handleSettingChange('lowStockAlerts')}
+                checked={settings.lowStock}
+                onCheckedChange={() => handleSettingChange('lowStock')}
               />
             </div>
             <Separator />
@@ -281,8 +361,8 @@ const Notifications = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.orderAlerts}
-                onCheckedChange={() => handleSettingChange('orderAlerts')}
+                checked={settings.order}
+                onCheckedChange={() => handleSettingChange('order')}
               />
             </div>
             <Separator />
@@ -295,8 +375,8 @@ const Notifications = () => {
                 </p>
               </div>
               <Switch
-                checked={settings.paymentAlerts}
-                onCheckedChange={() => handleSettingChange('paymentAlerts')}
+                checked={settings.payment}
+                onCheckedChange={() => handleSettingChange('payment')}
               />
             </div>
           </CardContent>

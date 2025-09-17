@@ -23,13 +23,23 @@ export const AddUserModal = ({ open, onOpenChange, onAddUser }) => {
     name: '',
     email: '',
     role: 'staff',
+    phone: '',
+    password: '',
+    sendInvite: true,
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.name && formData.email) {
       onAddUser(formData);
-      setFormData({ name: '', email: '', role: 'staff' });
+      setFormData({
+        name: '',
+        email: '',
+        role: 'staff',
+        phone: '',
+        password: '',
+        sendInvite: true,
+      });
       onOpenChange(false);
     }
   };
@@ -77,6 +87,20 @@ export const AddUserModal = ({ open, onOpenChange, onAddUser }) => {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="Optional phone number"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Role
               </Label>
@@ -93,9 +117,43 @@ export const AddUserModal = ({ open, onOpenChange, onAddUser }) => {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="cashier">Cashier</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                className="col-span-3"
+                placeholder="Optional initial password (min 8 chars)"
+                minLength={8}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="invite" className="text-right">
+                Send Invite
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <input
+                  id="invite"
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={!!formData.sendInvite}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sendInvite: e.target.checked })
+                  }
+                />
+                <span className="text-sm text-muted-foreground">
+                  Email user a password setup link
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>
