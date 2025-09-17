@@ -261,7 +261,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "order.history.view",
         # Staff and Work Scheduling
         "profile.view_roles",
-        # Staff can only view schedules
+        # Staff can view schedules and edit their own entries
         "schedule.view_edit",
         # Notifications
         "notification.send",

@@ -234,7 +234,9 @@ def schedule(request):
         # Mutations require manage permission or manager/admin role
         role_l = getattr(actor, "role", "").lower()
         if not (_has_permission(actor, "schedule.manage") or role_l in {"admin", "manager"}):
-            return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+            # Allow staff with 'schedule.view_edit' to create entries for their own schedule only
+            if not _has_permission(actor, "schedule.view_edit"):
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
     try:
         from .models import ScheduleEntry, Employee
@@ -290,6 +292,34 @@ def schedule(request):
         if not st or not et or st >= et:
             return JsonResponse({"success": False, "message": "Invalid start/end time"}, status=400)
         from .models import Employee
+        # If not manager/admin and lacks schedule.manage, restrict creation to actor's own employee record
+        role_l = getattr(actor, "role", "").lower()
+        if not (_has_permission(actor, "schedule.manage") or role_l in {"admin", "manager"}):
+            allowed_emp_id = None
+            try:
+                # Prefer user relation
+                actor_id = getattr(actor, "id", None)
+                if actor_id:
+                    e_self = Employee.objects.filter(user_id=actor_id).first()
+                    if e_self:
+                        allowed_emp_id = str(e_self.id)
+            except Exception:
+                allowed_emp_id = None
+            if not allowed_emp_id:
+                # Fallback to matching by email/contact or exact name
+                actor_email = (getattr(actor, "email", "") or "").strip().lower()
+                if actor_email:
+                    e_self = Employee.objects.filter(contact__iexact=actor_email).first()
+                    if e_self:
+                        allowed_emp_id = str(e_self.id)
+            if not allowed_emp_id:
+                actor_name = (getattr(actor, "name", "") or "").strip()
+                if actor_name:
+                    e_self = Employee.objects.filter(name__iexact=actor_name).first()
+                    if e_self:
+                        allowed_emp_id = str(e_self.id)
+            if not allowed_emp_id or str(emp_id) != allowed_emp_id:
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
         emp = Employee.objects.filter(id=emp_id).first()
         if not emp:
             return JsonResponse({"success": False, "message": "Employee not found"}, status=404)
@@ -305,15 +335,36 @@ def schedule_detail(request, sid):
     actor, err = _actor_from_request(request)
     if not actor:
         return err
-    # Mutations require manage permission or manager/admin role
+    # Mutations require manage permission or manager/admin role.
+    # Allow staff with 'schedule.view_edit' to edit/delete their own entries only.
     role_l = getattr(actor, "role", "").lower()
-    if not (_has_permission(actor, "schedule.manage") or role_l in {"admin", "manager"}):
-        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    can_manage_any = _has_permission(actor, "schedule.manage") or role_l in {"admin", "manager"}
     try:
         from .models import ScheduleEntry, Employee
         s = ScheduleEntry.objects.select_related("employee").filter(id=sid).first()
         if not s:
             return JsonResponse({"success": False, "message": "Not found"}, status=404)
+        if not can_manage_any:
+            if not _has_permission(actor, "schedule.view_edit"):
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+            # Check ownership: actor must map to s.employee
+            owns = False
+            try:
+                actor_id = getattr(actor, "id", None)
+                if actor_id and getattr(s.employee, "user_id", None) == actor_id:
+                    owns = True
+            except Exception:
+                owns = False
+            if not owns:
+                actor_email = (getattr(actor, "email", "") or "").strip().lower()
+                if actor_email and (getattr(s.employee, "contact", "") or "").strip().lower() == actor_email:
+                    owns = True
+            if not owns:
+                actor_name = (getattr(actor, "name", "") or "").strip()
+                if actor_name and getattr(s.employee, "name", "").strip() == actor_name:
+                    owns = True
+            if not owns:
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
         if request.method == "DELETE":
             s.delete()
             return JsonResponse({"success": True})

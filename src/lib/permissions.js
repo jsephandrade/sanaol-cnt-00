@@ -1,5 +1,6 @@
 // Default role permissions map mirrored from backend (views_common.DEFAULT_ROLE_PERMISSIONS)
 // Keep minimal and focused to gate UI controls only.
+// Note: 'schedule.view_edit' lets staff view schedules and edit their own entries.
 
 export const DEFAULT_ROLE_PERMISSIONS = {
   admin: ['all'],

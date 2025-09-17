@@ -22,3 +22,8 @@ Notes
 - Server enforces RBAC; frontend uses the same map for UI gating (src/lib/permissions.js).
 - Admin has wildcard `all`.
 - Explicit per-user permissions are unioned with role defaults in both backend and frontend.
+
+Details
+
+- Staff schedule access: `schedule.view_edit` allows viewing schedule and editing own entries. Creating/updating/deleting entries for other employees requires `schedule.manage` (granted to manager/admin by default).
+- Manager schedule access: `schedule.manage` allows creating/updating/deleting schedule entries for any employee. Managers also have `schedule.view_edit` for parity in UI.
