@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import Header from '@/components/auth/Header';
-import HeroImage from '@/components/auth/HeroImage';
-import AuthCard from '@/components/auth/AuthCard';
 import LoginForm from '@/components/auth/LoginForm';
 import SocialProviders from '@/components/auth/SocialProviders';
 import PageTransition from '@/components/PageTransition';
+import AuthCard from '@/components/auth/AuthCard';
+import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import { signInWithGoogle } from '@/lib/google';
 import {
   getRememberedEmail,
@@ -29,6 +29,21 @@ const LoginPage = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  const resolveLoginErrorMessage = (result) => {
+    const status = result?.status ?? null;
+    const raw = result?.error || result?.message || '';
+    if (status === 401 || status === 404)
+      return 'Incorrect account credentials.';
+    if (typeof raw === 'string') {
+      if (/invalid credentials/i.test(raw))
+        return 'Incorrect account credentials.';
+      if (/account not found/i.test(raw))
+        return 'Incorrect account credentials.';
+      if (/service temporarily unavailable/i.test(raw))
+        return 'Incorrect account credentials.';
+    }
+    return raw || 'Something went wrong. Please try again.';
+  };
   // Prefill email from localStorage (we do not store passwords)
   useEffect(() => {
     try {
@@ -75,7 +90,7 @@ const LoginPage = () => {
     try {
       const res = await login(email, password, { remember });
       if (!res?.success) {
-        setError(res?.error || 'Invalid credentials.');
+        setError(resolveLoginErrorMessage(res));
         return;
       }
       if (res?.otpRequired) {
@@ -127,7 +142,12 @@ const LoginPage = () => {
 
       navigate('/');
     } catch (err) {
-      setError(err?.message || 'Something went wrong. Please try again.');
+      setError(
+        resolveLoginErrorMessage({
+          error: err?.message,
+          status: err?.status ?? null,
+        })
+      );
     } finally {
       setPending(false);
     }
@@ -189,7 +209,7 @@ const LoginPage = () => {
       // navigate("/dashboard");
       navigate('/');
     } catch (err) {
-      setError('Social login failed. Please try again.');
+      setError(err?.message || 'Social login failed. Please try again.');
     } finally {
       setPending(false);
     }
@@ -200,53 +220,60 @@ const LoginPage = () => {
     navigate('/forgot-password');
   };
 
+  const loginCard = (
+    <AuthCard
+      title="Login"
+      compact
+      className="mx-auto"
+      cardClassName="shadow-2xl"
+    >
+      <LoginForm
+        email={email}
+        password={password}
+        pending={pending}
+        error={error}
+        emailError={emailError}
+        passwordError={passwordError}
+        remember={remember}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onRememberChange={setRemember}
+        onForgotPassword={handleForgotPassword}
+        onSubmit={handleSubmit}
+      />
+
+      <SocialProviders onSocial={handleSocial} pending={pending} />
+
+      <p className="mt-6 text-sm text-gray-600 text-center">
+        Don't have an account yet?{' '}
+        <button
+          onClick={() => navigate('/signup')}
+          className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+          type="button"
+          disabled={pending}
+        >
+          Sign up now
+        </button>
+      </p>
+    </AuthCard>
+  );
+
+  const welcomeIntro = (
+    <AuthBrandIntro
+      title="Welcome back"
+      description="Sign in to manage orders, inventory, and your team for a smooth day at the canteen."
+    />
+  );
+
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col bg-white">
-        <Header />
-
-        <main className="flex-1 flex flex-col md:flex-row items-center px-4 md:px-6 gap-8 max-w-7xl mx-auto w-full py-8">
-          <div className="w-full md:w-1/2 flex flex-col gap-6 max-w-lg order-2 md:order-1">
-            <AuthCard title="Login" compact>
-              <LoginForm
-                email={email}
-                password={password}
-                pending={pending}
-                error={error}
-                emailError={emailError}
-                passwordError={passwordError}
-                remember={remember}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
-                onRememberChange={setRemember}
-                onForgotPassword={handleForgotPassword}
-                onSubmit={handleSubmit}
-              />
-
-              <SocialProviders onSocial={handleSocial} pending={pending} />
-
-              <p className="mt-6 text-sm text-gray-600 text-center">
-                Don't have an account yet?{' '}
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
-                  type="button"
-                  disabled={pending}
-                >
-                  Sign up now
-                </button>
-              </p>
-            </AuthCard>
-          </div>
-
-          {/* Ensure HeroImage includes meaningful alt text in its component */}
-          <HeroImage src="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png" />
-        </main>
-
-        <footer className="py-6 text-gray-500 text-xs text-center border-t border-gray-100">
-          &copy; {new Date().getFullYear()} TechnoMart Canteen System
-        </footer>
-      </div>
+      <AuthPageShell
+        backgroundImage="/images/campus-building.png"
+        waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
+        formWrapperClassName="max-w-md ml-auto md:ml-0 md:mr-[min(8rem,14vw)]"
+        formSlot={loginCard}
+        asideSlot={welcomeIntro}
+      />
     </PageTransition>
   );
 };

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Header from '@/components/auth/Header';
 import PageTransition from '@/components/PageTransition';
+import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import {
   Card,
   CardHeader,
@@ -53,9 +54,9 @@ const VerifyIdentityPage = () => {
       const video = cameraRef.current?.getVideoRef();
       if (video) video.srcObject = stream;
       // give camera a moment to initialize
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const shot = cameraRef.current?.captureImage(0);
-      stream.getTracks().forEach((t) => t.stop());
+      stream.getTracks().forEach((track) => track.stop());
       if (!shot?.data) throw new Error('Failed to capture image');
       setImageData(shot.data);
       setStep('processing');
@@ -73,115 +74,133 @@ const VerifyIdentityPage = () => {
       } else {
         throw new Error(res?.message || 'Upload failed');
       }
-    } catch (e) {
+    } catch (err) {
       setStep('error');
-      setError(e?.message || 'Could not complete verification.');
+      setError(err?.message || 'Could not complete verification.');
     }
   };
 
+  const formContent = (
+    <div className="space-y-6">
+      <Link
+        to="/login"
+        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
+      </Link>
+
+      <Card className="shadow-2xl">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
+            <ShieldCheck className="h-6 w-6 text-primary" /> Verify Your
+            Identity
+          </CardTitle>
+          <CardDescription>
+            For security, we need a headshot to complete access approval.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-2">
+              We will collect a photo of your face to verify your identity. This
+              is only used for manual approval by an administrator.
+            </p>
+            <ul className="list-disc space-y-1 pl-5">
+              <li>Purpose: account verification only</li>
+              <li>Access: authorized admin reviewers</li>
+              <li>Storage: securely in private storage</li>
+              <li>Retention: deleted after review per policy</li>
+            </ul>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="consent"
+              checked={consent}
+              onCheckedChange={(value) => setConsent(Boolean(value))}
+            />
+            <label htmlFor="consent" className="text-sm">
+              I consent to the collection and processing of my photo for
+              verification.
+            </label>
+          </div>
+
+          <div className="relative">
+            <CameraCapture
+              ref={cameraRef}
+              step={
+                step === 'initial'
+                  ? 'initial'
+                  : step === 'scanning'
+                    ? 'scanning'
+                    : step === 'processing'
+                      ? 'processing'
+                      : 'initial'
+              }
+              currentPosition={{ instruction: 'Look straight at the camera' }}
+              capturedImages={imageData ? [{ data: imageData }] : []}
+              capturePositions={[{ name: 'Center' }]}
+            />
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/login')}
+              disabled={step === 'processing'}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={startCapture}
+              disabled={!consent || step === 'processing'}
+            >
+              {step === 'processing' ? 'Submitting...' : 'Capture & Submit'}
+            </Button>
+          </div>
+
+          {step === 'done' && (
+            <div className="text-center text-sm text-muted-foreground">
+              Your submission has been received. You will be notified after
+              approval. You can close this page.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const introContent = (
+    <AuthBrandIntro
+      title="Thanks for helping us keep accounts secure"
+      description="Upload a clear headshot so the admin team can confirm your identity and activate your account."
+    >
+      {pendingUser?.email ? (
+        <p className="text-xs text-muted-foreground">
+          Signed in as{' '}
+          <span className="font-medium text-foreground">
+            {pendingUser.email}
+          </span>
+        </p>
+      ) : null}
+    </AuthBrandIntro>
+  );
+
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <Header />
-        <div className="flex items-center justify-center px-4 py-12">
-          <div className="w-full max-w-xl space-y-6">
-            <Link
-              to="/login"
-              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" /> Back to Login
-            </Link>
-
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle className="flex items-center justify-center gap-2">
-                  <ShieldCheck className="w-6 h-6 text-primary" /> Verify Your
-                  Identity
-                </CardTitle>
-                <CardDescription>
-                  For security, we need a headshot to complete access approval.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">
-                    We will collect a photo of your face to verify your
-                    identity. This is only used for manual approval by an
-                    administrator.
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>Purpose: account verification only</li>
-                    <li>Access: authorized admin reviewers</li>
-                    <li>Storage: securely in private storage</li>
-                    <li>Retention: deleted after review per policy</li>
-                  </ul>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="consent"
-                    checked={consent}
-                    onCheckedChange={(v) => setConsent(Boolean(v))}
-                  />
-                  <label htmlFor="consent" className="text-sm">
-                    I consent to the collection and processing of my photo for
-                    verification.
-                  </label>
-                </div>
-
-                <div className="relative">
-                  <CameraCapture
-                    ref={cameraRef}
-                    step={
-                      step === 'initial'
-                        ? 'initial'
-                        : step === 'scanning'
-                          ? 'scanning'
-                          : step === 'processing'
-                            ? 'processing'
-                            : 'initial'
-                    }
-                    currentPosition={{
-                      instruction: 'Look straight at the camera',
-                    }}
-                    capturedImages={imageData ? [{ data: imageData }] : []}
-                    capturePositions={[{ name: 'Center' }]}
-                  />
-                </div>
-
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="flex justify-end gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/login')}
-                    disabled={step === 'processing'}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={startCapture}
-                    disabled={!consent || step === 'processing'}
-                  >
-                    {step === 'processing' ? 'Submitting…' : 'Capture & Submit'}
-                  </Button>
-                </div>
-
-                {step === 'done' && (
-                  <div className="text-sm text-center text-muted-foreground">
-                    Your submission has been received. You will be notified
-                    after approval. You can close this page.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+      <AuthPageShell
+        backgroundImage="/images/campus-building.png"
+        waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
+        formWrapperClassName="max-w-xl mr-auto md:mr-[min(8rem,14vw)] md:ml-0"
+        formSlot={formContent}
+        asideSlot={introContent}
+      />
     </PageTransition>
   );
 };

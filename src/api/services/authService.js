@@ -56,6 +56,7 @@ class AuthService {
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
+      message: data?.message || null,
     };
   }
   async loginWithFace(imageData, options = {}) {
@@ -101,6 +102,7 @@ class AuthService {
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
+      message: data?.message || null,
     };
   }
 
@@ -206,6 +208,7 @@ class AuthService {
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
+      message: data?.message || null,
       otpRequired: Boolean(data?.otpRequired ?? false),
       otpToken: data.otpToken || null,
       otpExpiresIn: data.expiresIn ?? data.otpExpiresIn ?? null,

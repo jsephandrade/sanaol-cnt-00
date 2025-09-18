@@ -163,7 +163,13 @@ export function AuthProvider({ children }) {
         }
         return res;
       } catch (err) {
-        return { success: false, error: err?.message || 'Login failed' };
+        return {
+          success: false,
+          error: err?.message || 'Login failed',
+          status: err?.status ?? null,
+          code: err?.code ?? null,
+          details: err?.details ?? null,
+        };
       }
     },
     [persistAuth]

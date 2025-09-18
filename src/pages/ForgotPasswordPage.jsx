@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import PageTransition from '@/components/PageTransition';
+import AuthCard from '@/components/auth/AuthCard';
+import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import authService from '@/api/services/authService';
 
 const Spinner = () => (
@@ -81,101 +85,120 @@ const ForgotPasswordPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4">
-      <div className="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
-        <h1 className="text-2xl font-semibold mb-2">Forgot Password</h1>
-        <p className="text-sm text-gray-600 mb-4">
-          Enter your email and we’ll send you a link to reset your password.
-        </p>
+  const formCard = (
+    <AuthCard
+      title="Forgot Password"
+      compact
+      className="mx-auto"
+      cardClassName="shadow-2xl"
+    >
+      <p className="text-sm text-gray-600 mb-4">
+        Enter your email address and we will send you a link to reset your
+        password.
+      </p>
 
-        {(error || success) && (
-          <div
-            className={`p-3 mb-4 rounded-lg text-sm ${
-              success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-            }`}
-            role="alert"
-            tabIndex={-1}
-            ref={alertRef}
-          >
-            {success || error}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4"
-          noValidate
-          aria-busy={pending || undefined}
+      {(error || success) && (
+        <div
+          className={`p-3 mb-4 rounded-lg text-sm ${
+            success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}
+          role="alert"
+          tabIndex={-1}
+          ref={alertRef}
         >
-          <div>
-            <label className="sr-only" htmlFor="email">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              inputMode="email"
-              autoComplete="username email"
-              autoCapitalize="none"
-              spellCheck={false}
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (emailError) setEmailError('');
-              }}
-              placeholder="Email"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
-              required
-              aria-invalid={!!emailError}
-              aria-describedby={emailError ? 'email-error' : undefined}
-              disabled={pending}
-              autoFocus
-            />
-            {emailError && (
-              <p id="email-error" className="mt-1 text-sm text-red-700">
-                {emailError}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-300 inline-flex items-center justify-center"
-          >
-            {pending ? (
-              <>
-                <Spinner /> Sending…
-              </>
-            ) : (
-              'Send reset link'
-            )}
-          </button>
-        </form>
-
-        {debugLink ? (
-          <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded text-xs break-all">
-            Developer only: Reset link
-            <div className="mt-1">
-              <a href={debugLink} className="underline break-all">
-                {debugLink}
-              </a>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <Link
-            to="/login"
-            className="text-primary underline underline-offset-2"
-          >
-            Back to Login
-          </Link>
+          {success || error}
         </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        noValidate
+        aria-busy={pending || undefined}
+      >
+        <div>
+          <label className="sr-only" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="username email"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (emailError) setEmailError('');
+            }}
+            placeholder="Email"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+            required
+            aria-invalid={!!emailError}
+            aria-describedby={emailError ? 'email-error' : undefined}
+            disabled={pending}
+            autoFocus
+          />
+          {emailError && (
+            <p id="email-error" className="mt-1 text-sm text-red-700">
+              {emailError}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors duration-300 inline-flex items-center justify-center"
+        >
+          {pending ? (
+            <>
+              <Spinner /> Sending...
+            </>
+          ) : (
+            'Send reset link'
+          )}
+        </button>
+      </form>
+
+      {debugLink ? (
+        <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 rounded text-xs break-all">
+          Developer only: Reset link
+          <div className="mt-1">
+            <a href={debugLink} className="underline break-all">
+              {debugLink}
+            </a>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-4 text-sm text-gray-600 text-center">
+        <Link to="/login" className="text-primary underline underline-offset-2">
+          Back to Login
+        </Link>
       </div>
-    </div>
+    </AuthCard>
+  );
+
+  const introContent = (
+    <AuthBrandIntro
+      title="Reset your password"
+      description="We will email you a secure link so you can set a new password and get back to serving customers."
+    />
+  );
+
+  return (
+    <PageTransition>
+      <AuthPageShell
+        backgroundImage="/images/campus-building.png"
+        waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
+        formWrapperClassName="max-w-md mr-auto md:mr-[min(8rem,14vw)] md:ml-0"
+        formSlot={formCard}
+        asideSlot={introContent}
+      />
+    </PageTransition>
   );
 };
 

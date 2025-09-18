@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Header from '@/components/auth/Header';
+import { Link, useNavigate } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
+import AuthCard from '@/components/auth/AuthCard';
+import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import { useAuth } from '@/components/AuthContext';
 
 const STORAGE_KEY = 'login_otp_context';
@@ -28,8 +30,9 @@ const formatCountdown = (ms) => {
 const OtpVerificationPage = () => {
   const { verifyLoginOtp, resendLoginOtp } = useAuth();
   const navigate = useNavigate();
+
   const alertRef = useRef(null);
-  const inputRefs = useRef([]);
+  const inputRefs = useRef(Array(DIGIT_COUNT).fill(null));
   const lastSubmittedRef = useRef('');
 
   const [context, setContext] = useState(() => {
@@ -66,9 +69,7 @@ const OtpVerificationPage = () => {
 
   useEffect(() => {
     if (!expiresAt) return undefined;
-    const tick = () => {
-      setRemaining(Math.max(0, expiresAt - Date.now()));
-    };
+    const tick = () => setRemaining(Math.max(0, expiresAt - Date.now()));
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
@@ -79,7 +80,7 @@ const OtpVerificationPage = () => {
     if (target) {
       try {
         target.focus({ preventScroll: true });
-      } catch (err) {
+      } catch {
         target.focus();
       }
       target.select?.();
@@ -88,7 +89,7 @@ const OtpVerificationPage = () => {
 
   useEffect(() => {
     if (!expired && context?.otpToken) {
-      setTimeout(() => moveFocus(0), 0);
+      moveFocus(0);
     }
   }, [context, expired, moveFocus]);
 
@@ -98,20 +99,76 @@ const OtpVerificationPage = () => {
     }
   }, [error, info]);
 
+  const handleDigitInput = useCallback(
+    (index, value) => {
+      if (pending || resendPending || expired) return;
+      const sanitized = value.replace(/\D/g, '');
+      setDigits((prev) => {
+        const next = [...prev];
+        next[index] = sanitized ? sanitized.slice(-1) : '';
+        return next;
+      });
+      if (sanitized) {
+        moveFocus(Math.min(DIGIT_COUNT - 1, index + 1));
+      }
+    },
+    [expired, moveFocus, pending, resendPending]
+  );
+
+  const handleKeyDown = useCallback(
+    (index, event) => {
+      if (event.key === 'Backspace' && !digits[index]) {
+        event.preventDefault();
+        handleDigitInput(index, '');
+        moveFocus(Math.max(0, index - 1));
+      } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveFocus(Math.max(0, index - 1));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveFocus(Math.min(DIGIT_COUNT - 1, index + 1));
+      }
+    },
+    [digits, handleDigitInput, moveFocus]
+  );
+
+  const handlePaste = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (pending || resendPending || expired) return;
+      const pasted = event.clipboardData?.getData('text') ?? '';
+      if (!pasted) return;
+      const numeric = pasted.replace(/\D/g, '').slice(0, DIGIT_COUNT).split('');
+      if (!numeric.length) return;
+      setDigits((prev) => {
+        const next = [...prev];
+        numeric.forEach((digit, idx) => {
+          next[idx] = digit;
+        });
+        return next;
+      });
+      moveFocus(Math.min(DIGIT_COUNT - 1, numeric.length));
+    },
+    [expired, moveFocus, pending, resendPending]
+  );
+
   const verifyCode = useCallback(async () => {
-    if (pending || expired) return;
+    if (pending || resendPending) return;
+    if (expired) {
+      setError('The code has expired. Please request a new one.');
+      return;
+    }
     if (!context?.otpToken) {
       setError('Session expired. Please log in again.');
       return;
     }
-    if (code.length !== DIGIT_COUNT) {
-      return;
-    }
+    if (code.length !== DIGIT_COUNT) return;
+    if (code === lastSubmittedRef.current) return;
 
     lastSubmittedRef.current = code;
+    setPending(true);
     setError('');
     setInfo('');
-    setPending(true);
     try {
       const res = await verifyLoginOtp({
         email: context.email,
@@ -120,116 +177,43 @@ const OtpVerificationPage = () => {
         remember: context.remember,
       });
       if (!res?.success || !res?.token) {
-        setError(res?.message || 'Invalid or expired code.');
+        setError(res?.message || res?.error || 'Invalid or expired code.');
         return;
       }
       try {
         sessionStorage.removeItem(STORAGE_KEY);
       } catch {}
-      setInfo('Verification successful. Redirecting...');
-      navigate('/', { replace: true });
+      navigate('/');
     } catch (err) {
-      setError(err?.message || 'Could not verify the code.');
+      setError(err?.message || 'Verification failed. Try again.');
     } finally {
       setPending(false);
     }
-  }, [code, context, expired, navigate, pending, verifyLoginOtp]);
+  }, [
+    code,
+    context,
+    expired,
+    navigate,
+    pending,
+    resendPending,
+    verifyLoginOtp,
+  ]);
 
   useEffect(() => {
-    if (
-      code.length === DIGIT_COUNT &&
-      !pending &&
-      !expired &&
-      code !== lastSubmittedRef.current
-    ) {
+    if (code.length !== DIGIT_COUNT) return undefined;
+    if (pending || resendPending) return undefined;
+    if (code === lastSubmittedRef.current) return undefined;
+    if (code === lastSubmittedRef.current) return undefined;
+
+    const id = window.setTimeout(() => {
       verifyCode();
-    }
-  }, [code, expired, pending, verifyCode]);
+    }, 150);
 
-  useEffect(() => {
-    if (code.length < DIGIT_COUNT) {
-      lastSubmittedRef.current = code;
-    }
-  }, [code]);
-
-  const handleDigitInput = (index, value) => {
-    const sanitized = (value || '').replace(/\D/g, '');
-    if (!sanitized) {
-      setDigits((prev) => {
-        const next = [...prev];
-        next[index] = '';
-        return next;
-      });
-      return;
-    }
-
-    const chars = sanitized.slice(0, DIGIT_COUNT - index).split('');
-    setDigits((prev) => {
-      const next = [...prev];
-      chars.forEach((char, offset) => {
-        const pos = index + offset;
-        if (pos < DIGIT_COUNT) {
-          next[pos] = char;
-        }
-      });
-      return next;
-    });
-    setTimeout(() => {
-      const targetIndex = Math.min(DIGIT_COUNT - 1, index + chars.length);
-      moveFocus(targetIndex);
-    }, 0);
-  };
-
-  const handleKeyDown = (index, event) => {
-    if (event.key === 'Backspace') {
-      event.preventDefault();
-      const hasValue = Boolean(digits[index]);
-      setDigits((prev) => {
-        const next = [...prev];
-        if (hasValue) {
-          next[index] = '';
-        } else if (index > 0) {
-          next[index - 1] = '';
-        }
-        return next;
-      });
-      const nextFocus = hasValue ? index : Math.max(0, index - 1);
-      setTimeout(() => moveFocus(nextFocus), 0);
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      if (index > 0) moveFocus(index - 1);
-    } else if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      if (index < DIGIT_COUNT - 1) moveFocus(index + 1);
-    }
-  };
-
-  const handlePaste = (event) => {
-    const text = event.clipboardData?.getData('text') || '';
-    const sanitized = text.replace(/\D/g, '').slice(0, DIGIT_COUNT);
-    if (!sanitized) {
-      return;
-    }
-    event.preventDefault();
-    const chars = sanitized.split('');
-    setDigits(() => {
-      const next = Array(DIGIT_COUNT).fill('');
-      chars.forEach((char, idx) => {
-        next[idx] = char;
-      });
-      return next;
-    });
-    lastSubmittedRef.current = '';
-    const focusIndex = Math.min(chars.length, DIGIT_COUNT - 1);
-    setTimeout(() => moveFocus(focusIndex), 0);
-  };
+    return () => window.clearTimeout(id);
+  }, [code, pending, resendPending, verifyCode]);
 
   const handleResend = useCallback(async () => {
-    if (pending || resendPending) return;
-    if (!context?.email || !context?.otpToken) {
-      setError('Session expired. Please log in again.');
-      return;
-    }
+    if (!context?.otpToken || resendPending) return;
     setError('');
     setInfo('');
     setResendPending(true);
@@ -240,11 +224,10 @@ const OtpVerificationPage = () => {
         remember: context.remember,
       });
       if (!res?.success || !res?.otpToken) {
-        setError(res?.message || 'Could not resend the code.');
+        setError(res?.message || res?.error || 'Could not resend the code.');
         return;
       }
-      const expiresIn = Number(res.expiresIn || res.otpExpiresIn || 60);
-      const ttlSeconds = Math.max(30, expiresIn);
+      const ttlSeconds = Math.max(30, Number(res.expiresIn || 0));
       const updated = {
         ...context,
         otpToken: res.otpToken,
@@ -258,122 +241,133 @@ const OtpVerificationPage = () => {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {}
       setInfo('A new code was sent to your email.');
-      setTimeout(() => moveFocus(0), 0);
+      moveFocus(0);
     } catch (err) {
       setError(err?.message || 'Could not resend the code.');
     } finally {
       setResendPending(false);
     }
-  }, [context, moveFocus, pending, resendLoginOtp, resendPending]);
+  }, [context, moveFocus, resendLoginOtp, resendPending]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     try {
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {}
     navigate('/login');
-  };
+  }, [navigate]);
+
+  const otpCard = (
+    <AuthCard
+      title="Verify your login"
+      compact
+      className="mx-auto"
+      cardClassName="shadow-2xl"
+    >
+      <p className="text-sm text-gray-600 mb-4">
+        Enter the 6-digit code we sent to{' '}
+        <span className="font-medium">{maskEmail(context?.email || '')}</span>.
+      </p>
+      {expiresAt && (
+        <p className="text-xs text-gray-500 mb-4">
+          Code expires in {formatCountdown(remaining)}
+        </p>
+      )}
+
+      {(error || info) && (
+        <div
+          className={`p-3 mb-4 rounded-lg text-sm ${
+            info ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+          }`}
+          role="alert"
+          tabIndex={-1}
+          ref={alertRef}
+        >
+          {info || error}
+        </div>
+      )}
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          verifyCode();
+        }}
+        className="space-y-3"
+        noValidate
+        aria-busy={pending || resendPending || undefined}
+      >
+        <div className="flex justify-between gap-2" onPaste={handlePaste}>
+          {digits.map((digit, index) => (
+            <input
+              key={index}
+              ref={(element) => {
+                inputRefs.current[index] = element;
+              }}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete={index === 0 ? 'one-time-code' : 'off'}
+              aria-label={`Digit ${index + 1}`}
+              value={digit}
+              onChange={(event) => handleDigitInput(index, event.target.value)}
+              onKeyDown={(event) => handleKeyDown(index, event)}
+              disabled={pending || resendPending || expired}
+              maxLength={1}
+              className="w-12 h-12 text-center text-xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+            />
+          ))}
+        </div>
+        {pending && (
+          <p className="text-xs text-gray-500 text-center">Verifying...</p>
+        )}
+        {resendPending && (
+          <p className="text-xs text-gray-500 text-center">
+            Sending new code...
+          </p>
+        )}
+      </form>
+
+      {expired && (
+        <p className="text-xs text-red-600 mt-3">
+          The code has expired. Return to the login page to request a new one.
+        </p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="text-primary underline underline-offset-2"
+        >
+          Back to Login
+        </button>
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={pending || resendPending || expired}
+          className="text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Resend Code
+        </button>
+      </div>
+    </AuthCard>
+  );
+
+  const otpIntro = (
+    <AuthBrandIntro
+      title="Secure verification"
+      description="Enter the one-time passcode so we can confirm it's really you."
+    />
+  );
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex flex-col bg-white">
-        <Header />
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
-          <div className="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
-            <h1 className="text-2xl font-semibold mb-2">Verify your login</h1>
-            <p className="text-sm text-gray-600 mb-4">
-              Enter the 6-digit code we sent to{' '}
-              <span className="font-medium">
-                {maskEmail(context?.email || '')}
-              </span>
-              .
-            </p>
-            {expiresAt && (
-              <p className="text-xs text-gray-500 mb-4">
-                Code expires in {formatCountdown(remaining)}
-              </p>
-            )}
-
-            {(error || info) && (
-              <div
-                className={`p-3 mb-4 rounded-lg text-sm ${
-                  info ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}
-                role="alert"
-                tabIndex={-1}
-                ref={alertRef}
-              >
-                {info || error}
-              </div>
-            )}
-
-            <form
-              onSubmit={(event) => event.preventDefault()}
-              className="space-y-3"
-              noValidate
-              aria-busy={pending || resendPending || undefined}
-            >
-              <div className="flex justify-between gap-2" onPaste={handlePaste}>
-                {digits.map((digit, idx) => (
-                  <input
-                    key={idx}
-                    ref={(el) => {
-                      inputRefs.current[idx] = el;
-                    }}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    autoComplete={idx === 0 ? 'one-time-code' : 'off'}
-                    aria-label={`Digit ${idx + 1}`}
-                    value={digit}
-                    onChange={(event) =>
-                      handleDigitInput(idx, event.target.value)
-                    }
-                    onKeyDown={(event) => handleKeyDown(idx, event)}
-                    disabled={pending || resendPending || expired}
-                    maxLength={1}
-                    className="w-12 h-12 text-center text-xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
-                  />
-                ))}
-              </div>
-              {pending && (
-                <p className="text-xs text-gray-500 text-center">
-                  Verifying...
-                </p>
-              )}
-              {resendPending && (
-                <p className="text-xs text-gray-500 text-center">
-                  Sending new code...
-                </p>
-              )}
-            </form>
-
-            {expired && (
-              <p className="text-xs text-red-600 mt-3">
-                The code has expired. Return to the login page to request a new
-                one.
-              </p>
-            )}
-
-            <div className="mt-4 flex items-center justify-between text-sm">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="text-primary underline underline-offset-2"
-              >
-                Back to Login
-              </button>
-              <button
-                type="button"
-                onClick={handleResend}
-                disabled={pending || resendPending}
-                className="text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Resend Code
-              </button>
-            </div>
-          </div>
-        </main>
-      </div>
+      <AuthPageShell
+        backgroundImage="/images/campus-building.png"
+        waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
+        formWrapperClassName="max-w-md mr-auto md:mr-[min(8rem,14vw)] md:ml-0"
+        formSlot={otpCard}
+        asideSlot={otpIntro}
+      />
     </PageTransition>
   );
 };
