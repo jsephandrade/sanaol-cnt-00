@@ -78,6 +78,29 @@ const LoginPage = () => {
         setError(res?.error || 'Invalid credentials.');
         return;
       }
+      if (res?.otpRequired) {
+        try {
+          const expiresIn = Number(res?.otpExpiresIn || res?.expiresIn || 60);
+          const payload = {
+            email,
+            otpToken: res?.otpToken || '',
+            remember,
+            user: res?.user || null,
+            expiresAt:
+              Date.now() + Math.max(30, Number(expiresIn || 60)) * 1000,
+          };
+          sessionStorage.setItem('login_otp_context', JSON.stringify(payload));
+        } catch {}
+        try {
+          if (remember) {
+            rememberEmail(email);
+          } else {
+            clearRememberedEmail();
+          }
+        } catch {}
+        navigate('/otp');
+        return;
+      }
       // If pending, stash verify token and route to verification
       if (
         res?.pending ||
@@ -202,16 +225,17 @@ const LoginPage = () => {
 
               <SocialProviders onSocial={handleSocial} pending={pending} />
 
-              <div className="mt-6 text-center">
+              <p className="mt-6 text-sm text-gray-600 text-center">
+                Don't have an account yet?{' '}
                 <button
                   onClick={() => navigate('/signup')}
-                  className="text-primary hover:text-primary-dark text-sm font-medium disabled:opacity-60"
+                  className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
                   type="button"
                   disabled={pending}
                 >
-                  Create New Account
+                  Sign up now
                 </button>
-              </div>
+              </p>
             </AuthCard>
           </div>
 

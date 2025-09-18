@@ -16,6 +16,9 @@ const ForgotPasswordPage = lazy(() => import('../../pages/ForgotPasswordPage'));
 const ResetCodePage = lazy(() => import('../../pages/ResetCodePage'));
 const SetNewPasswordPage = lazy(() => import('../../pages/SetNewPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../../pages/ResetPasswordPage'));
+const OtpVerificationPage = lazy(
+  () => import('../../pages/OtpVerificationPage')
+);
 const FaceScanPage = lazy(() => import('../../pages/FaceScanPage'));
 const FaceRegistrationPage = lazy(
   () => import('../../pages/FaceRegistrationPage')
@@ -103,6 +106,7 @@ const AppRoutes = () => {
         '/reset-code': 'Reset Code',
         '/set-new-password': 'New Password',
         '/reset-password': 'Reset Password',
+        '/otp': 'OTP Verification',
         '/face-scan': 'Face Scan',
         '/face-registration': 'Face Registration',
         '/verify': 'Verify Identity',
@@ -180,6 +184,14 @@ const AppRoutes = () => {
             element={
               <PublicRoute>
                 <ResetPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/otp"
+            element={
+              <PublicRoute>
+                <OtpVerificationPage />
               </PublicRoute>
             }
           />

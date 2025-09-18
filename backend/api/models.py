@@ -185,6 +185,33 @@ class PasswordResetCode(models.Model):
         return timezone.now() < self.expires_at
 
 
+class LoginOTP(models.Model):
+    """One-time login verification code delivered via email."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="login_otps")
+    code_hash = models.CharField(max_length=128)
+    remember = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(blank=True, null=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+
+    class Meta:
+        db_table = "login_otp"
+        indexes = [
+            models.Index(fields=["user", "expires_at", "consumed_at"]),
+        ]
+
+    @property
+    def is_active(self) -> bool:
+        if self.consumed_at:
+            return False
+        return timezone.now() < self.expires_at
+
+
 def _facetpl_upload_path(instance, filename):
     base, ext = os.path.splitext(filename or "")
     ext = ext if ext else ".jpg"

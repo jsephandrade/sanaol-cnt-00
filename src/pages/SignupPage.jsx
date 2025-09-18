@@ -270,15 +270,16 @@ const SignupPage = () => {
                   providers={['google']}
                 />
 
-                <div className="mt-4 text-center">
+                <p className="mt-4 text-sm text-gray-600 text-center">
+                  Already have an account?{' '}
                   <button
                     onClick={() => navigate('/login')}
-                    className="text-primary hover:text-primary-dark text-sm font-medium"
+                    className="font-semibold text-primary hover:text-primary-dark"
                     type="button"
                   >
-                    Already have an account? Log in
+                    Log in here
                   </button>
-                </div>
+                </p>
               </AuthCard>
             </div>
           </div>

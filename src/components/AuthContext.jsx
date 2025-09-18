@@ -17,6 +17,8 @@ const AuthContext = createContext({
   token: null,
   // actions
   login: async () => false,
+  verifyLoginOtp: async () => false,
+  resendLoginOtp: async () => false,
   socialLogin: async () => false,
   register: async () => false,
   logout: async () => {},
@@ -155,15 +157,9 @@ export function AuthProvider({ children }) {
     async (email, password, options = {}) => {
       try {
         const res = await authService.login(email, password, options);
-        if (res?.success) {
-          // Respect remember option for storage choice
+        if (res?.success && res?.token) {
           const remember = Boolean(options?.remember);
-          persistAuth(
-            res.user,
-            res.token || null,
-            res.refreshToken || null,
-            remember
-          );
+          persistAuth(res.user, res.token, res.refreshToken || null, remember);
         }
         return res;
       } catch (err) {
@@ -171,6 +167,44 @@ export function AuthProvider({ children }) {
       }
     },
     [persistAuth]
+  );
+
+  const verifyLoginOtp = useCallback(
+    async ({ email, otpToken, code, remember } = {}) => {
+      try {
+        const res = await authService.verifyLoginOtp({
+          email,
+          otpToken,
+          code,
+          remember,
+        });
+        if (res?.success && res?.token) {
+          const rememberChoice =
+            typeof remember === 'boolean' ? remember : Boolean(res?.remember);
+          persistAuth(
+            res.user,
+            res.token,
+            res.refreshToken || null,
+            rememberChoice
+          );
+        }
+        return res;
+      } catch (err) {
+        return { success: false, error: err?.message || 'Verification failed' };
+      }
+    },
+    [persistAuth]
+  );
+
+  const resendLoginOtp = useCallback(
+    async ({ email, otpToken, remember } = {}) => {
+      try {
+        return await authService.resendLoginOtp({ email, otpToken, remember });
+      } catch (err) {
+        return { success: false, error: err?.message || 'Resend failed' };
+      }
+    },
+    []
   );
 
   const socialLogin = useCallback(
@@ -328,6 +362,8 @@ export function AuthProvider({ children }) {
         user,
         token,
         login,
+        verifyLoginOtp,
+        resendLoginOtp,
         socialLogin,
         loginWithGoogle,
         loginWithFace,

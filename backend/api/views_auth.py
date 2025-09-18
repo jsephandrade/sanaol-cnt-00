@@ -37,6 +37,12 @@ from .views_common import (
     _issue_verify_token_from_dict,
 )
 from .utils_audit import record_audit
+from .utils_login_otp import (
+    create_login_otp,
+    verify_login_otp as _verify_login_otp,
+    get_login_otp_ttl_seconds,
+)
+from .emails import email_user_login_otp
 
 
 @require_http_methods(["GET"]) 
@@ -225,25 +231,52 @@ def auth_login(request):
                     **({"verifyToken": vtok} if vtok else {}),
                 })
 
-            # Active: issue tokens
-            db_user.last_login = dj_timezone.now()
-            db_user.save(update_fields=["last_login"])
-            token = _issue_jwt(db_user, exp_seconds=exp_seconds)
-            refresh_token = _issue_refresh_token_db(db_user, remember=remember, request=request)
+            # Active: require OTP verification before issuing tokens
+            try:
+                code, otp = create_login_otp(
+                    db_user,
+                    remember=remember,
+                    ip_address=ip or "",
+                    user_agent=request.META.get("HTTP_USER_AGENT", "") or "",
+                )
+            except Exception:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Could not initiate verification. Please try again.",
+                    },
+                    status=500,
+                )
+
+            ttl_seconds = get_login_otp_ttl_seconds()
+            try:
+                email_user_login_otp(db_user, code, expires_minutes=max(1, int(ttl_seconds / 60)))
+            except Exception:
+                pass
+
             _lockout_check_and_touch(email, ip, success=True)
-            payload = {"success": True, "user": safe_user, "token": token, "refreshToken": refresh_token}
             try:
                 record_audit(
                     request,
                     user=db_user,
                     type="login",
-                    action="Login success",
+                    action="Login OTP sent",
                     details="Password login",
                     severity="info",
+                    meta={"otpId": str(otp.id)},
                 )
             except Exception:
                 pass
-            return JsonResponse(payload)
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "otpRequired": True,
+                    "otpToken": str(otp.id),
+                    "expiresIn": ttl_seconds,
+                    "user": safe_user,
+                }
+            )
     except (OperationalError, ProgrammingError):
         pass
 
@@ -357,6 +390,185 @@ def auth_login(request):
     if not user_exists:
         return JsonResponse({"success": False, "message": "Account not found"}, status=404)
     return JsonResponse({"success": False, "message": "Invalid credentials"}, status=401)
+
+
+@rate_limit(limit=10, window_seconds=60, key_fn=_login_rate_key)
+@require_http_methods(["POST"]) 
+
+def auth_login_verify_otp(request):
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        data = {}
+
+    email = (data.get("email") or "").lower().strip()
+    otp_token = (data.get("otpToken") or data.get("otpId") or "").strip()
+    code = (data.get("code") or data.get("otp") or "").strip()
+    if not email or not otp_token or not code:
+        return JsonResponse({"success": False, "message": "Missing verification details."}, status=400)
+
+    from .views_common import _client_ip
+
+    ip = _client_ip(request)
+    success, otp, message = _verify_login_otp(otp_token, code, email=email)
+    if not success or not otp or not getattr(otp, "user", None):
+        try:
+            record_audit(
+                request,
+                actor_email=email,
+                type="login",
+                action="Login OTP failed",
+                details="OTP verification",
+                severity="warning",
+                meta={"reason": message},
+            )
+        except Exception:
+            pass
+        _lockout_check_and_touch(email, ip, success=False)
+        return JsonResponse({"success": False, "message": message or "Invalid code."}, status=401)
+
+    db_user = otp.user
+    status_l = (getattr(db_user, "status", "") or "").lower()
+    if status_l == "deactivated":
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Your account is currently deactivated, to activate please contact the admin.",
+            },
+            status=403,
+        )
+    if status_l != "active":
+        return JsonResponse({"success": False, "message": "Account not active."}, status=403)
+
+    remember = bool(getattr(otp, "remember", False))
+    exp_seconds = getattr(settings, "JWT_REMEMBER_EXP_SECONDS", 30 * 24 * 60 * 60) if remember else getattr(settings, "JWT_EXP_SECONDS", 3600)
+
+    db_user.last_login = dj_timezone.now()
+    try:
+        db_user.save(update_fields=["last_login"])
+    except Exception:
+        pass
+
+    token = _issue_jwt(db_user, exp_seconds=exp_seconds)
+    refresh_token = _issue_refresh_token_db(db_user, remember=remember, request=request)
+    safe_user = _safe_user_from_db(db_user)
+
+    _lockout_check_and_touch(email, ip, success=True)
+    try:
+        record_audit(
+            request,
+            user=db_user,
+            type="login",
+            action="Login success",
+            details="OTP verified",
+            severity="info",
+            meta={"otpId": str(otp.id)},
+        )
+    except Exception:
+        pass
+
+    return JsonResponse(
+        {
+            "success": True,
+            "user": safe_user,
+            "token": token,
+            "refreshToken": refresh_token,
+        }
+    )
+
+
+@rate_limit(limit=5, window_seconds=60, key_fn=_login_rate_key)
+@require_http_methods(["POST"]) 
+def auth_login_resend_otp(request):
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        data = {}
+
+    email = (data.get("email") or "").lower().strip()
+    otp_token = (data.get("otpToken") or data.get("otpId") or "").strip()
+    remember_override = data.get("remember")
+
+    if not email or not otp_token:
+        return JsonResponse({"success": False, "message": "Missing verification details."}, status=400)
+
+    from .views_common import _client_ip
+
+    ip = _client_ip(request)
+    user_agent = request.META.get("HTTP_USER_AGENT", "") or ""
+
+    try:
+        from .models import LoginOTP
+    except Exception:
+        return JsonResponse({"success": False, "message": "Verification unavailable."}, status=503)
+
+    now = dj_timezone.now()
+    otp = (
+        LoginOTP.objects.select_related("user")
+        .filter(id=otp_token)
+        .order_by("-created_at")
+        .first()
+    )
+
+    if not otp or not getattr(otp, "user", None):
+        return JsonResponse({"success": False, "message": "Session expired. Please log in again."}, status=410)
+
+    user = otp.user
+    if (user.email or "").lower().strip() != email:
+        return JsonResponse({"success": False, "message": "Session expired. Please log in again."}, status=410)
+
+    expired_original = otp.expires_at <= now
+
+    remember = bool(otp.remember)
+    if isinstance(remember_override, bool):
+        remember = remember_override
+    elif isinstance(remember_override, str):
+        remember = remember_override.strip().lower() in {"1", "true", "yes", "on"}
+
+    if not otp.consumed_at:
+        otp.consumed_at = now
+        otp.save(update_fields=["consumed_at"])
+
+    try:
+        code, new_otp = create_login_otp(
+            user,
+            remember=remember,
+            ip_address=ip,
+            user_agent=user_agent,
+        )
+    except Exception:
+        return JsonResponse({"success": False, "message": "Could not resend code. Try again."}, status=500)
+
+    ttl_seconds = get_login_otp_ttl_seconds()
+    try:
+        email_user_login_otp(
+            user,
+            code,
+            expires_minutes=max(1, int(ttl_seconds / 60)),
+        )
+    except Exception:
+        pass
+
+    try:
+        record_audit(
+            request,
+            user=user,
+            type="login",
+            action="Login OTP resent",
+            details="Password login",
+            severity="info",
+            meta={"otpId": str(new_otp.id), "previousOtpId": str(otp.id), "previousExpired": bool(expired_original)},
+        )
+    except Exception:
+        pass
+
+    return JsonResponse(
+        {
+            "success": True,
+            "otpToken": str(new_otp.id),
+            "expiresIn": ttl_seconds,
+        }
+    )
 
 
 @require_http_methods(["POST"]) 

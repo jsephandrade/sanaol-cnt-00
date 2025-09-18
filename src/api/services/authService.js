@@ -8,6 +8,8 @@ const USE_MOCKS = !(
     import.meta.env.VITE_ENABLE_MOCKS === '0')
 );
 
+const mockLoginOtps = new Map();
+
 class AuthService {
   async loginWithGoogle(credential) {
     if (!credential || typeof credential !== 'string') {
@@ -143,30 +145,42 @@ class AuthService {
     }
   }
   async login(email, password, options = {}) {
+    const remember = Boolean(options?.remember);
     if (USE_MOCKS) {
       await mockDelay();
-      // Generic mock: accept any email/password and return a basic user
+      const user = {
+        id: 'u-' + Date.now().toString(),
+        name: email.split('@')[0] || 'User',
+        email,
+        role: 'staff',
+        status: 'active',
+        employeeId: 'emp-' + (email?.split('@')[0] || 'mock'),
+      };
+      const otpToken = 'mock-login-otp-' + Date.now();
+      const ttl = 60;
+      mockLoginOtps.set(otpToken, {
+        email: email.toLowerCase(),
+        code: '123456',
+        user,
+        remember,
+        expiresAt: Date.now() + ttl * 1000,
+      });
       return {
         success: true,
         pending: false,
-        user: {
-          id: 'u-' + Date.now().toString(),
-          name: email.split('@')[0] || 'User',
-          email,
-          role: 'staff',
-          status: 'active',
-          employeeId: 'emp-' + (email?.split('@')[0] || 'mock'),
-        },
-        token: 'mock-jwt-token-' + Date.now(),
-        refreshToken: 'mock-refresh-token-' + Date.now(),
+        user,
+        otpRequired: true,
+        otpToken,
+        otpExpiresIn: ttl,
+        token: null,
+        refreshToken: null,
         verifyToken: null,
       };
     }
-    const res = await apiClient.post(
-      '/auth/login',
-      { email, password, ...options },
-      { retry: { retries: 1 } }
-    );
+    const payload = { email, password, ...options, remember };
+    const res = await apiClient.post('/auth/login', payload, {
+      retry: { retries: 1 },
+    });
     const data = res?.data || res;
     const rawUser = data.user || {
       id: data.userId || 'me',
@@ -192,6 +206,111 @@ class AuthService {
       token: data.token || data.accessToken || null,
       refreshToken: data.refreshToken || null,
       verifyToken: data.verifyToken || null,
+      otpRequired: Boolean(data?.otpRequired ?? false),
+      otpToken: data.otpToken || null,
+      otpExpiresIn: data.expiresIn ?? data.otpExpiresIn ?? null,
+    };
+  }
+
+  async resendLoginOtp({ email, otpToken, remember } = {}) {
+    const normalizedEmail = (email || '').toLowerCase();
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      const entry = mockLoginOtps.get(otpToken);
+      if (!entry || entry.email !== normalizedEmail) {
+        return {
+          success: false,
+          message: 'Session expired. Please login again.',
+        };
+      }
+      const newToken = 'mock-login-otp-' + Date.now();
+      const ttl = 60;
+      mockLoginOtps.delete(otpToken);
+      mockLoginOtps.set(newToken, {
+        email: normalizedEmail,
+        code: '123456',
+        user: entry.user,
+        remember: typeof remember === 'boolean' ? remember : entry.remember,
+        expiresAt: Date.now() + ttl * 1000,
+      });
+      return {
+        success: true,
+        otpToken: newToken,
+        expiresIn: ttl,
+      };
+    }
+    const payload = {
+      email: normalizedEmail,
+      otpToken,
+    };
+    if (typeof remember === 'boolean') {
+      payload.remember = remember;
+    }
+    const res = await apiClient.post('/auth/login/resend-otp', payload, {
+      retry: { retries: 1 },
+    });
+    const data = res?.data || res;
+    return {
+      success: Boolean(data?.success ?? true),
+      otpToken: data.otpToken || null,
+      expiresIn: data.expiresIn ?? data.otpExpiresIn ?? null,
+      message: data.message || null,
+    };
+  }
+
+  async verifyLoginOtp({ email, otpToken, code, remember } = {}) {
+    const normalizedEmail = (email || '').toLowerCase();
+    const rememberFlag = typeof remember === 'boolean' ? remember : undefined;
+    if (USE_MOCKS) {
+      await mockDelay(300);
+      const entry = mockLoginOtps.get(otpToken);
+      if (
+        !entry ||
+        (normalizedEmail && entry.email !== normalizedEmail) ||
+        !code ||
+        String(code).trim() !== entry.code
+      ) {
+        return { success: false, message: 'Invalid or expired code.' };
+      }
+      mockLoginOtps.delete(otpToken);
+      return {
+        success: true,
+        user: entry.user,
+        token: 'mock-jwt-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now(),
+        remember: entry.remember,
+      };
+    }
+    const payload = {
+      email: normalizedEmail,
+      otpToken,
+      code,
+    };
+    if (typeof rememberFlag === 'boolean') {
+      payload.remember = rememberFlag;
+    }
+    const res = await apiClient.post('/auth/login/verify-otp', payload, {
+      retry: { retries: 1 },
+    });
+    const data = res?.data || res;
+    const rawUser = data.user || data;
+    const user = {
+      ...rawUser,
+      employeeId:
+        rawUser?.employeeId ??
+        rawUser?.employee_id ??
+        rawUser?.employee?.id ??
+        data.employeeId ??
+        data.employee_id ??
+        null,
+    };
+    return {
+      success: Boolean(data?.success ?? true),
+      user,
+      token: data.token || data.accessToken || null,
+      refreshToken: data.refreshToken || null,
+      message: data.message || null,
+      remember: rememberFlag,
     };
   }
 
