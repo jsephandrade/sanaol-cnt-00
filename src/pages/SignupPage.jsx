@@ -3,7 +3,9 @@ import { useAuth } from '@/components/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import SocialProviders from '@/components/auth/SocialProviders';
 import AuthCard from '@/components/auth/AuthCard';
-import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthPageShell, {
+  AUTH_PAGE_DEFAULT_BACKGROUND,
+} from '@/components/auth/AuthPageShell';
 import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import { Eye, EyeOff } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
@@ -14,14 +16,11 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [contactNumber, setContactNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(''); // 🔹 error state
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,15 +32,10 @@ const SignupPage = () => {
       return;
     }
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match!');
-      return;
-    }
-
     setPending(true);
     try {
       const name = `${firstName} ${lastName}`.trim();
-      const res = await register({ name, email, password, contactNumber });
+      const res = await register({ name, email, password });
       if (res?.success && res?.pending) {
         try {
           sessionStorage.setItem('verify_token', res.verifyToken || '');
@@ -157,23 +151,6 @@ const SignupPage = () => {
         </div>
         <div className="relative">
           <input
-            id="contactNumber"
-            type="tel"
-            value={contactNumber}
-            onChange={(e) => setContactNumber(e.target.value)}
-            placeholder=" "
-            className="peer w-full h-10 px-3 pt-3 pb-3 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-            required
-          />
-          <label
-            htmlFor="contactNumber"
-            className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
-          >
-            Contact Number
-          </label>
-        </div>
-        <div className="relative">
-          <input
             id="email"
             type="email"
             value={email}
@@ -217,33 +194,7 @@ const SignupPage = () => {
         <p className="text-xs text-muted-foreground">
           The password should be at least 8 characters.
         </p>
-        <div>
-          <div className="relative">
-            <input
-              id="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder=" "
-              className="peer w-full h-10 px-3 pt-3 pb-3 pr-9 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary"
-              required
-            />
-            <label
-              htmlFor="confirmPassword"
-              className="absolute left-3 text-muted-foreground pointer-events-none transition-all top-0 -translate-y-1/2 text-xs px-1 bg-white peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-sm peer-placeholder-shown:px-0 peer-focus:top-0 peer-focus:-translate-y-1/2 peer-focus:text-xs peer-focus:px-1 peer-focus:bg-white"
-            >
-              Confirm Password
-            </label>
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-            >
-              {!showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-        </div>
+        {error && <p className="text-sm text-red-500">{error}</p>}
         <button
           type="submit"
           disabled={pending}
@@ -282,7 +233,7 @@ const SignupPage = () => {
   return (
     <PageTransition>
       <AuthPageShell
-        backgroundImage="/images/campus-building.png"
+        backgroundImage={AUTH_PAGE_DEFAULT_BACKGROUND}
         waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
         formWrapperClassName="max-w-md mr-auto md:mr-[min(8rem,14vw)] md:ml-0"
         formSlot={signupCard}

@@ -106,6 +106,23 @@ const Payments = () => {
     }
   };
 
+  const formatPaymentDate = (value) => {
+    if (!value) {
+      return '';
+    }
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   // total computed via totalForSelectedStatus (memoized)
 
   const filteredPayments = useMemo(() => {
@@ -248,10 +265,12 @@ const Payments = () => {
                           className="border-b transition-colors hover:bg-muted/50"
                         >
                           <td className="p-4 align-middle font-medium">
-                            {payment.orderId}
+                            {payment.orderId
+                              ? `${payment.orderId}`.slice(0, 6)
+                              : ''}
                           </td>
                           <td className="p-4 align-middle whitespace-nowrap">
-                            {payment.date.split(' ')[0]}
+                            {formatPaymentDate(payment.date)}
                           </td>
                           <td className="p-4 align-middle">
                             <div className="flex items-center gap-2">
@@ -373,7 +392,11 @@ const Payments = () => {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{payment.orderId}</span>
+                          <span className="font-medium">
+                            {payment.orderId
+                              ? `${payment.orderId}`.slice(0, 6)
+                              : ''}
+                          </span>
                           <CustomBadge
                             variant={getStatusBadgeVariant(payment.status)}
                             className="capitalize text-xs"

@@ -4,7 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 // Normalize params to stable queryKey
 const normalizeParams = (params) => {
-  const def = { page: 1, limit: 20, search: '', role: '', status: '', sortBy: 'name', sortDir: 'asc' };
+  const def = {
+    page: 1,
+    limit: 20,
+    search: '',
+    role: '',
+    status: '',
+    sortBy: 'name',
+    sortDir: 'asc',
+  };
   return { ...def, ...(params || {}) };
 };
 
@@ -26,27 +34,49 @@ export const useUserManagement = (params = {}) => {
     refetchOnWindowFocus: false,
   });
 
-  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] });
+  const invalidateUsers = () =>
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  const broadcastUsersUpdated = (detail) => {
+    try {
+      window?.dispatchEvent?.(
+        new CustomEvent('users.updated', { detail: detail || null })
+      );
+    } catch {}
+  };
 
   const createUser = useMutation({
     mutationFn: (userData) => userService.createUser(userData),
     onSuccess: () => {
       invalidateUsers();
+      broadcastUsersUpdated({ type: 'create' });
       toast({ title: 'User Created', description: 'User added successfully.' });
     },
     onError: (err) => {
-      toast({ title: 'Error Creating User', description: err?.message || 'Failed to create user', variant: 'destructive' });
+      toast({
+        title: 'Error Creating User',
+        description: err?.message || 'Failed to create user',
+        variant: 'destructive',
+      });
     },
   });
 
   const updateUser = useMutation({
-    mutationFn: ({ userId, updates }) => userService.updateUser(userId, updates),
+    mutationFn: ({ userId, updates }) =>
+      userService.updateUser(userId, updates),
     onSuccess: () => {
       invalidateUsers();
-      toast({ title: 'User Updated', description: 'User information has been updated.' });
+      broadcastUsersUpdated({ type: 'update' });
+      toast({
+        title: 'User Updated',
+        description: 'User information has been updated.',
+      });
     },
     onError: (err) => {
-      toast({ title: 'Error Updating User', description: err?.message || 'Failed to update user', variant: 'destructive' });
+      toast({
+        title: 'Error Updating User',
+        description: err?.message || 'Failed to update user',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -54,22 +84,44 @@ export const useUserManagement = (params = {}) => {
     mutationFn: (userId) => userService.deleteUser(userId),
     onSuccess: () => {
       invalidateUsers();
-      toast({ title: 'User Deleted', description: 'User removed from the system.', variant: 'destructive' });
+      broadcastUsersUpdated({ type: 'delete' });
+      toast({
+        title: 'User Deleted',
+        description: 'User removed from the system.',
+        variant: 'destructive',
+      });
     },
     onError: (err) => {
-      toast({ title: 'Error Deleting User', description: err?.message || 'Failed to delete user', variant: 'destructive' });
+      toast({
+        title: 'Error Deleting User',
+        description: err?.message || 'Failed to delete user',
+        variant: 'destructive',
+      });
     },
   });
 
   const updateUserStatus = useMutation({
-    mutationFn: ({ userId, status }) => userService.updateUserStatus(userId, status),
+    mutationFn: ({ userId, status }) =>
+      userService.updateUserStatus(userId, status),
     onSuccess: (_, variables) => {
       invalidateUsers();
+      broadcastUsersUpdated({
+        type: 'status',
+        userId: variables.userId,
+        status: variables.status,
+      });
       const label = variables.status === 'active' ? 'Activated' : 'Deactivated';
-      toast({ title: `User ${label}`, description: `User status updated to ${variables.status}.` });
+      toast({
+        title: `User ${label}`,
+        description: `User status updated to ${variables.status}.`,
+      });
     },
     onError: (err) => {
-      toast({ title: 'Error Updating Status', description: err?.message || 'Failed to update status', variant: 'destructive' });
+      toast({
+        title: 'Error Updating Status',
+        description: err?.message || 'Failed to update status',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -77,16 +129,29 @@ export const useUserManagement = (params = {}) => {
     mutationFn: ({ userId, role }) => userService.updateUserRole(userId, role),
     onSuccess: () => {
       invalidateUsers();
-      toast({ title: 'Role Updated', description: 'User role has been updated.' });
+      broadcastUsersUpdated({ type: 'role' });
+      toast({
+        title: 'Role Updated',
+        description: 'User role has been updated.',
+      });
     },
     onError: (err) => {
-      toast({ title: 'Error Updating Role', description: err?.message || 'Failed to update role', variant: 'destructive' });
+      toast({
+        title: 'Error Updating Role',
+        description: err?.message || 'Failed to update role',
+        variant: 'destructive',
+      });
     },
   });
 
   return {
     users: usersQuery.data?.data || [],
-    pagination: usersQuery.data?.pagination || { page: qp.page, limit: qp.limit, total: 0, totalPages: 0 },
+    pagination: usersQuery.data?.pagination || {
+      page: qp.page,
+      limit: qp.limit,
+      total: 0,
+      totalPages: 0,
+    },
     loading: usersQuery.isLoading,
     fetching: usersQuery.isFetching,
     error: usersQuery.error?.message || null,
@@ -117,15 +182,26 @@ export const useRoles = () => {
     mutationFn: (roleConfig) => userService.updateRoleConfig(roleConfig),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['roles'] });
-      toast({ title: 'Role Updated', description: 'Role configuration has been saved.' });
+      toast({
+        title: 'Role Updated',
+        description: 'Role configuration has been saved.',
+      });
     },
     onError: (err) => {
-      toast({ title: 'Error Updating Role', description: err?.message || 'Failed to update role configuration', variant: 'destructive' });
+      toast({
+        title: 'Error Updating Role',
+        description: err?.message || 'Failed to update role configuration',
+        variant: 'destructive',
+      });
     },
   });
 
   if (query.error) {
-    toast({ title: 'Error Loading Roles', description: query.error.message, variant: 'destructive' });
+    toast({
+      title: 'Error Loading Roles',
+      description: query.error.message,
+      variant: 'destructive',
+    });
   }
 
   return {

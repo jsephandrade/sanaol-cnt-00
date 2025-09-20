@@ -1,9 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+export const AUTH_BRAND_BADGE_IMAGE = '/src/assets/technomart-logo.png';
+
 const AuthBrandIntro = ({
-  badgeText = 'TM',
-  badgeClassName = 'inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10',
+  badgeImageSrc = AUTH_BRAND_BADGE_IMAGE,
+  badgeImageAlt = 'Technomart logo',
+  badgeImageClassName = 'h-12 w-12 object-contain rounded-xl',
+  badgeText = '',
+  badgeClassName = 'h-12 w-12',
   badgeTextClassName = 'text-primary font-semibold text-xl',
   title,
   description,
@@ -11,13 +16,25 @@ const AuthBrandIntro = ({
   contentClassName = 'space-y-2',
   children,
 }) => {
+  const badgeImageClasses = [badgeClassName, badgeImageClassName]
+    .filter(Boolean)
+    .join(' ');
+  const badgeTextClasses = [badgeClassName, badgeTextClassName]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div className={className}>
-      {badgeText && (
-        <div className={badgeClassName}>
-          <span className={badgeTextClassName}>{badgeText}</span>
-        </div>
-      )}
+      {(badgeImageSrc || badgeText) &&
+        (badgeImageSrc ? (
+          <img
+            src={badgeImageSrc}
+            alt={badgeImageAlt}
+            className={badgeImageClasses}
+          />
+        ) : (
+          <span className={badgeTextClasses}>{badgeText}</span>
+        ))}
       <div className={contentClassName}>
         {title && (
           <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900">
@@ -36,6 +53,9 @@ const AuthBrandIntro = ({
 };
 
 AuthBrandIntro.propTypes = {
+  badgeImageSrc: PropTypes.string,
+  badgeImageAlt: PropTypes.string,
+  badgeImageClassName: PropTypes.string,
   badgeText: PropTypes.string,
   badgeClassName: PropTypes.string,
   badgeTextClassName: PropTypes.string,

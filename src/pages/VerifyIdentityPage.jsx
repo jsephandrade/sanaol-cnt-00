@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
-import AuthPageShell from '@/components/auth/AuthPageShell';
+import AuthPageShell, {
+  AUTH_PAGE_DEFAULT_BACKGROUND,
+} from '@/components/auth/AuthPageShell';
 import AuthBrandIntro from '@/components/auth/AuthBrandIntro';
 import {
   Card,
@@ -195,7 +197,7 @@ const VerifyIdentityPage = () => {
   return (
     <PageTransition>
       <AuthPageShell
-        backgroundImage="/images/campus-building.png"
+        backgroundImage={AUTH_PAGE_DEFAULT_BACKGROUND}
         waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
         formWrapperClassName="max-w-xl mr-auto md:mr-[min(8rem,14vw)] md:ml-0"
         formSlot={formContent}

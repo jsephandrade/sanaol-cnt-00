@@ -1,11 +1,12 @@
 import React, { useId } from 'react';
 import PropTypes from 'prop-types';
 
+export const AUTH_PAGE_DEFAULT_BACKGROUND = '/src/assets/admin-MAIN.png';
 const baseWavePrimaryPath = 'M0 0H800V800H0C180 550 320 350 0 160Z';
 const baseWaveSecondaryPath = 'M200 0H800V800H120C340 630 460 330 200 120Z';
 
 const AuthPageShell = ({
-  backgroundImage,
+  backgroundImage = AUTH_PAGE_DEFAULT_BACKGROUND,
   overlayClassName = 'bg-white/80',
   waveImage,
   waveClassName = 'pointer-events-none absolute right-0 inset-y-0 w-[65%] max-w-[620px]',
@@ -87,7 +88,7 @@ const AuthPageShell = ({
       )}
 
       <div
-        className={`relative z-10 w-full max-w-5xl grid gap-10 md:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-center px-4 md:px-0 ${gridClassName}`.trim()}
+        className={`relative z-10 w-full max-w-5xl grid md:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-center px-4 md:px-0 ${gridClassName}`.trim()}
       >
         {formSlot && (
           <div className={`w-full ${formWrapperClassName}`.trim()}>

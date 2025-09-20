@@ -51,6 +51,8 @@ const POS = () => {
     processPayment,
   } = usePOSLogic();
 
+  const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
+
   const handleApplyDiscount = () => {
     const success = applyDiscount(discountInput, discountType);
     if (success) {
@@ -114,9 +116,12 @@ const POS = () => {
         </TabsList>
 
         <TabsContent value="pos">
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          <div
+            className={`grid gap-4 grid-cols-1 ${hasOrderItems ? 'md:grid-cols-3' : 'md:grid-cols-1'}`}
+          >
             <MenuSelection
               categories={categories}
+              occupyFullWidth={!hasOrderItems}
               activeCategory={activeCategory}
               setActiveCategory={setActiveCategory}
               searchTerm={searchTerm}
