@@ -136,6 +136,8 @@ Copy `backend/.env.example` to `backend/.env` and set:
 
 ### Database
 
+> **Using an external MySQL instance?** Update `backend/.env` with your connection details (e.g., `DJANGO_DB_HOST=host.docker.internal`, `DJANGO_DB_NAME=<db>`, `DJANGO_DB_USER=<user>`, `DJANGO_DB_PASSWORD=<pass>`). When running via Docker, removing the `mysql` service or leaving it unused are both fine; the API will honour whatever you set in `.env`.
+
 The project exclusively targets MySQL 8. Default dev credentials are baked into `.env.example` and `docker-compose.yml`:
 
 ```

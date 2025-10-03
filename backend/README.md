@@ -4,6 +4,8 @@ The Django service powers the REST API shared by the web dashboard and the upcom
 
 ## Quick start (Docker Compose)
 
+> To point the API at a different MySQL instance (e.g., one you manage in MySQL Workbench), edit `backend/.env` and set `DJANGO_DB_HOST`, `DJANGO_DB_NAME`, `DJANGO_DB_USER`, and `DJANGO_DB_PASSWORD` to your values. When using Docker on Windows/macOS, `host.docker.internal` lets the container reach your host MySQL server.
+
 1. Copy environment templates
    - `cp backend/.env.example backend/.env`
    - Adjust credentials only if you do not want to use the default dev values.
