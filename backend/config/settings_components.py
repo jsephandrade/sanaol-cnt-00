@@ -10,38 +10,30 @@ def _env_bool(key: str, default: bool = False) -> bool:
 
 
 def get_database(BASE_DIR: Path):
-    DB_ENGINE = (os.getenv("DJANGO_DB_ENGINE", "") or "").strip().lower()
-    DB_NAME = os.getenv("DJANGO_DB_NAME", str(BASE_DIR / "db.sqlite3"))
-    DB_USER = os.getenv("DJANGO_DB_USER", "")
-    DB_PASSWORD = os.getenv("DJANGO_DB_PASSWORD", "")
-    DB_HOST = os.getenv("DJANGO_DB_HOST", "")
-    DB_PORT = os.getenv("DJANGO_DB_PORT", "")
+    """Return the MySQL database configuration used across all environments."""
+    DB_NAME = os.getenv("DJANGO_DB_NAME", "technomart")
+    DB_USER = os.getenv("DJANGO_DB_USER", "tm_user")
+    DB_PASSWORD = os.getenv("DJANGO_DB_PASSWORD", "tm_password")
+    DB_HOST = os.getenv("DJANGO_DB_HOST", "mysql")  # default to docker-compose service name
+    DB_PORT = os.getenv("DJANGO_DB_PORT", "3306")
     try:
-        DB_CONN_MAX_AGE = int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60"))
+        DB_CONN_MAX_AGE = int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60") or 60)
     except Exception:
         DB_CONN_MAX_AGE = 60
 
-    if DB_ENGINE in {"mysql", "mariadb"}:
-        return {
-            "default": {
-                "ENGINE": "django.db.backends.mysql",
-                "NAME": DB_NAME,
-                "USER": DB_USER,
-                "PASSWORD": DB_PASSWORD,
-                "HOST": DB_HOST or "127.0.0.1",
-                "PORT": DB_PORT or "3306",
-                "CONN_MAX_AGE": DB_CONN_MAX_AGE,
-                "OPTIONS": {
-                    "charset": "utf8mb4",
-                    "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-                },
-            }
-        }
-    # Default SQLite
     return {
         "default": {
-            "ENGINE": "django.db.backends.sqlite3",
+            "ENGINE": "django.db.backends.mysql",
             "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT,
+            "CONN_MAX_AGE": DB_CONN_MAX_AGE,
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
         }
     }
 
@@ -152,3 +144,13 @@ def get_email():
     }
     return cfg
 
+def get_channel_layers():
+    redis_url = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+    return {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [redis_url],
+            },
+        }
+    }

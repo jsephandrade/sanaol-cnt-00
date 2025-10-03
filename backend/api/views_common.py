@@ -297,6 +297,40 @@ def _has_permission(user_or_dict, perm_code: str) -> bool:
     return "all" in perms or perm_code in perms
 
 
+def _actor_from_token(token: str):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except Exception:
+        return None
+
+    email = (payload.get("email") or "").lower().strip()
+    sub = str(payload.get("sub") or "")
+
+    try:
+        from .models import AppUser
+        _maybe_seed_from_memory()
+        actor = None
+        if sub:
+            actor = AppUser.objects.filter(id=sub).first()
+        if not actor and email:
+            actor = AppUser.objects.filter(email=email).first()
+        if actor:
+            return actor
+    except Exception:
+        pass
+
+    if email:
+        actor = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
+        if actor:
+            return actor
+    if sub:
+        actor = next((u for u in USERS if str(u.get("id")) == sub), None)
+        if actor:
+            return actor
+    return None
+
 def _actor_from_request(request):
     """Extract the authenticated actor from Authorization header.
 
@@ -307,35 +341,9 @@ def _actor_from_request(request):
     if not auth.startswith("Bearer "):
         return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
     token = auth.split(" ", 1)[1].strip()
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-    except Exception:
-        return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
-
-    email = (payload.get("email") or "").lower().strip()
-    sub = str(payload.get("sub") or "")
-    # Try DB
-    try:
-        from .models import AppUser
-        _maybe_seed_from_memory()
-        actor = None
-        if sub:
-            actor = AppUser.objects.filter(id=sub).first()
-        if not actor and email:
-            actor = AppUser.objects.filter(email=email).first()
-        if actor:
-            return actor, None
-    except Exception:
-        pass
-    # Fallback to in-memory USERS
-    if email:
-        actor = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
-        if actor:
-            return actor, None
-    if sub:
-        actor = next((u for u in USERS if str(u.get("id")) == sub), None)
-        if actor:
-            return actor, None
+    actor = _actor_from_token(token)
+    if actor:
+        return actor, None
     return None, JsonResponse({"success": False, "message": "Unauthorized"}, status=401)
 
 

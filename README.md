@@ -44,7 +44,7 @@ This repo contains both the React frontend (Vite) and the Django backend API.
   - python-dotenv: .env loading for settings and secrets.
   - cryptography: crypto primitives used by dependencies.
   - requests: OAuth code exchange (Google) and HTTP utilities.
-  - Database: SQLite by default; MySQL/Postgres supported via env (optional drivers).
+  - Database: MySQL 8 (docker compose or external instance); configured via env.
 
 - Developer Tooling
   - ESLint (flat config), Prettier: code quality and formatting.
@@ -66,7 +66,7 @@ This repo contains both the React frontend (Vite) and the Django backend API.
 - Customer feedback: collection, metrics, reply workflow.
 - Authentication: email/password; Google sign‑in (GIS/One‑Tap supported).
 - Access control & onboarding: pending verification with headshot capture and admin approval.
-- Notifications & realtime hooks (extensible via WS).
+- Notifications & realtime via Django Channels + Redis (`ws/events/`).
 
 ---
 
@@ -84,7 +84,17 @@ This repo contains both the React frontend (Vite) and the Django backend API.
 
 ## Backend Setup
 
-Prereqs: Python 3.11+ recommended.
+**Option A - Docker Compose (recommended)**
+
+1. Copy `backend/.env.example` to `backend/.env` and `.env.example` to `.env` (adjust secrets as needed).
+2. Run `docker compose up --build` from the repository root. This brings up the Django API, MySQL, Redis, and the Vite dev server.
+3. Apply migrations with `docker compose exec api python manage.py migrate`.
+4. Visit http://localhost:8080 to load the frontend and http://localhost:8000/api/health/ to confirm the API is running.
+5. (Optional) Bootstrap an admin account: `docker compose exec api python manage.py bootstrap_admin --email "your-email@example.com" --password "your-strong-pass" --name "Admin" --role admin`.
+
+**Option B - Native Python environment**
+
+Prereqs: Python 3.11+, MySQL 8 instance (local or remote), and `mysqlclient` build tooling.
 
 ```powershell
 cd backend
@@ -94,14 +104,14 @@ python -m venv .venv
 pip install -U pip setuptools wheel
 pip install -r requirements.txt
 
-# Migrate and run
+# Ensure backend/.env is configured with MySQL credentials
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
 Health check: http://localhost:8000/api/health/
 
-Bootstrap an admin AppUser (in‑app admin used by the SPA):
+Bootstrap an admin AppUser (in-app admin used by the SPA):
 
 ```powershell
 python manage.py bootstrap_admin --email "your-email@example.com" --password "your-strong-pass" --name "Admin" --role admin
@@ -120,40 +130,25 @@ Copy `backend/.env.example` to `backend/.env` and set:
 - Core: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`
 - Google OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - JWT: `DJANGO_JWT_SECRET`, `DJANGO_JWT_ALG`, `DJANGO_JWT_EXP_SECONDS`
+- Database: `DJANGO_DB_NAME`, `DJANGO_DB_USER`, `DJANGO_DB_PASSWORD`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT`
+- Realtime: `REDIS_URL` (defaults to `redis://redis:6379/0` in docker-compose)
 - Email: `DJANGO_EMAIL_BACKEND` (defaults to console), `DJANGO_DEFAULT_FROM_EMAIL`, SMTP vars (`DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_USE_SSL`), `DJANGO_ADMINS`
-- Database (optional): see Database below
 
 ### Database
 
-Default is SQLite file at `backend/db.sqlite3`.
-
-To use MySQL (wired; driver not installed by default):
+The project exclusively targets MySQL 8. Default dev credentials are baked into `.env.example` and `docker-compose.yml`:
 
 ```
 DJANGO_DB_ENGINE=mysql
 DJANGO_DB_NAME=technomart
 DJANGO_DB_USER=tm_user
-DJANGO_DB_PASSWORD=strong-pass
-DJANGO_DB_HOST=127.0.0.1
+DJANGO_DB_PASSWORD=tm_password
+DJANGO_DB_HOST=mysql  # use 127.0.0.1 if running MySQL outside Docker
 DJANGO_DB_PORT=3306
 DJANGO_DB_CONN_MAX_AGE=60
 ```
 
-Install a driver: `pip install mysqlclient` (or `PyMySQL` + adapter).
-
-To use Postgres:
-
-```
-DJANGO_DB_ENGINE=postgres
-DJANGO_DB_NAME=technomart
-DJANGO_DB_USER=tm_user
-DJANGO_DB_PASSWORD=strong-pass
-DJANGO_DB_HOST=127.0.0.1
-DJANGO_DB_PORT=5432
-DJANGO_DB_CONN_MAX_AGE=60
-```
-
-Install a driver: `pip install psycopg2-binary` (or `psycopg`).
+Ensure the MySQL server is running with UTF8MB4 character set and that the user has full privileges on the database.
 
 ### Email Notifications
 
@@ -188,6 +183,10 @@ Key endpoints (backend):
 ---
 
 ## Frontend Setup
+
+If you are using Docker Compose (Option A), the frontend runs automatically at http://localhost:8080.
+
+**Option B - Manual Vite dev server (without Docker)**
 
 Prereqs: Node.js 18+ and npm.
 

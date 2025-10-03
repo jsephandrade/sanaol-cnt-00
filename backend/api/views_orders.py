@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.utils import timezone as dj_tz
 
+from .events import publish_event
 from .views_common import _actor_from_request, _has_permission, rate_limit
 
 
@@ -193,7 +194,9 @@ def orders(request):
             # Auto enqueue
             o.status = "in_queue"
             o.save(update_fields=["status", "updated_at"])
-        return JsonResponse({"success": True, "data": _safe_order(o)})
+        order_payload = _safe_order(o)
+        publish_event("order.created", {"order": order_payload}, roles={"admin", "manager", "staff"}, user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None)
+        return JsonResponse({"success": True, "data": order_payload})
     except Exception:
         return JsonResponse({"success": False, "message": "Failed to create order"}, status=500)
 
@@ -339,7 +342,9 @@ def order_status(request, oid):
             )
         except Exception:
             pass
-        return JsonResponse({"success": True, "data": _safe_order(o)})
+        order_payload = _safe_order(o)
+        publish_event("order.status_changed", {"order": order_payload, "status": new_status}, roles={"admin", "manager", "staff"}, user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None)
+        return JsonResponse({"success": True, "data": order_payload})
     except Exception:
         return JsonResponse({"success": False, "message": "Server error"}, status=500)
 
