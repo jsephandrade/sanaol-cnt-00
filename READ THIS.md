@@ -1,0 +1,3 @@
+Based on this repo, our adviser said that we should start finalizing our mobile app and web dashboard for our capstone canteen management system, he said we should connect our mobile app and web through single or one database as single source of truth. We are now still developing, and we have no plan to deploy everything yet in production or online. Now, what credible and sufficient software engineering plan you've got for these two platforms connect to each other esp. in terms of real-time updates on both platforms? Can you make UPDATED PLAN.md file for the whole plan?
+
+TAKE NOTE: NO NEED TO OVER-ENGINEER THIS PLAN.

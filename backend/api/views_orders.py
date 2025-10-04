@@ -8,6 +8,7 @@ Permissions mapping (from views_common.DEFAULT_ROLE_PERMISSIONS):
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from uuid import UUID
 from decimal import Decimal
@@ -18,6 +19,9 @@ from django.utils import timezone as dj_tz
 
 from .events import publish_event
 from .views_common import _actor_from_request, _has_permission, rate_limit
+
+
+logger = logging.getLogger(__name__)
 
 
 ORDER_STATES = [
@@ -133,7 +137,8 @@ def orders(request):
                 },
             })
         except Exception:
-            return JsonResponse({"success": True, "data": [], "pagination": {"page": 1, "limit": 50, "total": 0, "totalPages": 1}})
+            logger.exception("Failed to list orders")
+            return JsonResponse({"success": False, "message": "Unable to fetch orders"}, status=500)
 
     # POST create (place order)
     if not _has_permission(actor, "order.place"):
@@ -198,6 +203,7 @@ def orders(request):
         publish_event("order.created", {"order": order_payload}, roles={"admin", "manager", "staff"}, user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None)
         return JsonResponse({"success": True, "data": order_payload})
     except Exception:
+        logger.exception("Failed to create order")
         return JsonResponse({"success": False, "message": "Failed to create order"}, status=500)
 
 
@@ -214,7 +220,8 @@ def order_queue(request):
         qs = Order.objects.filter(status__in=["pending", "in_queue", "in_progress", "ready"]).order_by("created_at")
         return JsonResponse({"success": True, "data": [_safe_order(x) for x in qs]})
     except Exception:
-        return JsonResponse({"success": True, "data": []})
+        logger.exception("Failed to fetch order queue")
+        return JsonResponse({"success": False, "message": "Failed to fetch queue"}, status=500)
 
 
 @require_http_methods(["GET"])  # history
@@ -228,7 +235,8 @@ def order_history(request):
         qs = Order.objects.filter(status__in=["completed", "cancelled", "refunded"]).order_by("-created_at")
         return JsonResponse({"success": True, "data": [_safe_order(x) for x in qs]})
     except Exception:
-        return JsonResponse({"success": True, "data": []})
+        logger.exception("Failed to fetch order history")
+        return JsonResponse({"success": False, "message": "Failed to fetch history"}, status=500)
 
 
 @require_http_methods(["GET"])  # bulk progress by IDs
@@ -252,7 +260,8 @@ def order_bulk_progress(request):
         data = [{"id": str(x.id), "status": x.status, "updatedAt": x.updated_at.isoformat() if x.updated_at else None} for x in qs]
         return JsonResponse({"success": True, "data": data})
     except Exception:
-        return JsonResponse({"success": True, "data": []})
+        logger.exception("Failed to fetch bulk order progress")
+        return JsonResponse({"success": False, "message": "Failed to fetch orders"}, status=500)
 
 
 @require_http_methods(["GET"])  # detail
@@ -268,6 +277,7 @@ def order_detail(request, oid):
             return JsonResponse({"success": False, "message": "Not found"}, status=404)
         return JsonResponse({"success": True, "data": _safe_order(o)})
     except Exception:
+        logger.exception("Failed to fetch order detail")
         return JsonResponse({"success": False, "message": "Server error"}, status=500)
 
 

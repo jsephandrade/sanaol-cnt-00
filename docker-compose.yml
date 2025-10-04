@@ -1,18 +1,28 @@
+version: "3.9"
+
 services:
   api:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
     env_file:
       - ./backend/.env
+    environment:
+      DJANGO_WAIT_FOR_DB: "1"   # optional; only useful if your entrypoint uses it
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   mysql:
     image: mysql:8.0
@@ -23,14 +33,21 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: technomart
-      MYSQL_USER: tm_user
-      MYSQL_PASSWORD: tm_password
-      MYSQL_ROOT_PASSWORD: root_password_change_me
+      MYSQL_DATABASE: technomart_db
+      MYSQL_USER: technomart_user
+      MYSQL_PASSWORD: technomart_4
+      MYSQL_ROOT_PASSWORD: pransocool
     volumes:
       - mysql-data:/var/lib/mysql
+    # Internal port is 3306 for containers; host can reach DB via 127.0.0.1:3307
     ports:
-      - "3306:3306"
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -51,7 +68,8 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     working_dir: /workspace
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 8080"
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 8080"
     env_file:
       - ./.env
     environment:
@@ -64,7 +82,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - api
+      api:
+        condition: service_started
 
 volumes:
   mysql-data:

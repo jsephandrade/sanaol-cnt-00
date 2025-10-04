@@ -1,6 +1,7 @@
 """Inventory endpoints: items CRUD, stock adjustments, low stock, activities."""
 
 import json
+import logging
 from datetime import datetime
 from uuid import UUID
 from django.http import JsonResponse
@@ -21,6 +22,9 @@ from .inventory_services import (
     transfer_stock,
     get_recent_activity,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_item(i, stock_qty: float | None = None):
@@ -96,7 +100,8 @@ def inventory_items(request):
             }
             return JsonResponse({"success": True, "data": items, "pagination": pagination})
         except Exception:
-            return JsonResponse({"success": True, "data": [], "pagination": {"page": 1, "limit": 50, "total": 0, "totalPages": 1}})
+            logger.exception("Failed to list inventory items")
+            return JsonResponse({"success": False, "message": "Unable to fetch inventory items"}, status=500)
 
     # POST: Manager/Admin required (or explicit inventory.menu.manage)
     if not (_has_permission(actor, "inventory.menu.manage") or _has_permission(actor, "inventory.update") or getattr(actor, "role", "").lower() in {"admin", "manager"}):
@@ -115,6 +120,8 @@ def inventory_items(request):
                 expiry_date = datetime.fromisoformat(str(expiry_date)).date()
             except Exception:
                 expiry_date = None
+        changed = False
+        changes = {}
         item = InventoryItem.objects.create(
             name=name,
             category=(data.get("category") or "").strip(),
@@ -125,6 +132,7 @@ def inventory_items(request):
             last_restocked=dj_timezone.now() if qty > 0 else None,
             expiry_date=expiry_date,
         )
+        changed = True
         # If initial quantity provided, mirror it into the ledger as a receipt
         try:
             if qty > 0:
@@ -139,6 +147,7 @@ def inventory_items(request):
             publish_event("inventory.updated", {"item": item_payload, "changes": changes}, roles={"admin", "manager", "staff"})
         return JsonResponse({"success": True, "data": item_payload})
     except Exception:
+        logger.exception("Failed to create inventory item")
         return JsonResponse({"success": False, "message": "Failed to create item"}, status=500)
 
 

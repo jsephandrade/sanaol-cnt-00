@@ -6,11 +6,15 @@ Focuses on read-only aggregation using existing models. Keep responses simple an
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_tz
 
 from .views_common import _actor_from_request, _has_permission
+
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_range(val: str | None):
@@ -58,7 +62,8 @@ def reports_sales(request):
             },
         })
     except Exception:
-        return JsonResponse({"success": True, "data": {"total": 0, "byMethod": {}, "range": None}})
+        logger.exception("Failed to generate sales report")
+        return JsonResponse({"success": False, "message": "Unable to generate sales report"}, status=500)
 
 
 @require_http_methods(["GET"])  # /reports/inventory
@@ -84,7 +89,8 @@ def reports_inventory(request):
         ]
         return JsonResponse({"success": True, "data": data})
     except Exception:
-        return JsonResponse({"success": True, "data": []})
+        logger.exception("Failed to generate inventory report")
+        return JsonResponse({"success": False, "message": "Unable to generate inventory report"}, status=500)
 
 
 @require_http_methods(["GET"])  # /reports/orders
@@ -100,7 +106,8 @@ def reports_orders(request):
         rows = Order.objects.values("status").annotate(count=Count("id"))
         return JsonResponse({"success": True, "data": {r["status"]: r["count"] for r in rows}})
     except Exception:
-        return JsonResponse({"success": True, "data": {}})
+        logger.exception("Failed to generate orders report")
+        return JsonResponse({"success": False, "message": "Unable to generate orders report"}, status=500)
 
 
 @require_http_methods(["GET"])  # /reports/staff-attendance
@@ -116,7 +123,8 @@ def reports_staff_attendance(request):
         rows = AttendanceRecord.objects.values("status").annotate(count=Count("id"))
         return JsonResponse({"success": True, "data": {r["status"]: r["count"] for r in rows}})
     except Exception:
-        return JsonResponse({"success": True, "data": {}})
+        logger.exception("Failed to generate staff attendance report")
+        return JsonResponse({"success": False, "message": "Unable to generate staff attendance report"}, status=500)
 
 
 @require_http_methods(["GET"])  # /reports/customer-history?customer=
@@ -148,7 +156,8 @@ def reports_customer_history(request):
         ]
         return JsonResponse({"success": True, "data": data})
     except Exception:
-        return JsonResponse({"success": True, "data": []})
+        logger.exception("Failed to generate customer history report")
+        return JsonResponse({"success": False, "message": "Unable to generate customer history report"}, status=500)
 
 
 __all__ = [
