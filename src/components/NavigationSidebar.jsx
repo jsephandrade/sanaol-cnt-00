@@ -1,9 +1,12 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
@@ -20,97 +23,203 @@ import {
   FileText,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
+
 export const NavigationSidebar = () => {
   const location = useLocation();
   const { hasRole } = useAuth();
   const isAdmin = hasRole('admin');
+  const isStaff = hasRole('staff');
 
-  const navigationItems = [
+  const navigationGroups = [
     {
-      name: 'Dashboard',
-      href: '/',
-      icon: LayoutDashboard,
+      key: 'account-management',
+      label: 'Account Management',
+      items: [
+        {
+          key: 'dashboard',
+          name: 'Dashboard',
+          href: '/',
+          icon: LayoutDashboard,
+        },
+        {
+          key: 'users',
+          name: 'User Management',
+          href: '/users',
+          icon: Users,
+          adminOnly: true,
+        },
+      ],
     },
     {
-      name: 'Menu Management',
-      href: '/menu',
-      icon: Menu,
+      key: 'inventory-management',
+      label: 'Inventory Management',
+      items: [
+        {
+          key: 'menu',
+          name: 'Menu Management',
+          href: '/menu',
+          icon: Menu,
+        },
+        {
+          key: 'inventory',
+          name: 'Inventory',
+          href: '/inventory',
+          icon: Package,
+        },
+      ],
     },
     {
-      name: 'Point of Sale',
-      href: '/pos',
-      icon: ShoppingCart,
+      key: 'order-handling',
+      label: 'Order Handling',
+      items: [
+        {
+          key: 'pos',
+          name: 'Point of Sale',
+          href: '/pos',
+          icon: ShoppingCart,
+        },
+        {
+          key: 'catering',
+          name: 'Catering',
+          href: '/catering',
+          icon: Utensils,
+        },
+      ],
     },
     {
-      name: 'Catering',
-      href: '/catering',
-      icon: Utensils,
+      key: 'payments-transactions',
+      label: 'Payment and Transactions',
+      items: [
+        {
+          key: 'payments',
+          name: 'Payments',
+          href: '/payments',
+          icon: CreditCard,
+        },
+      ],
     },
     {
-      name: 'Inventory',
-      href: '/inventory',
-      icon: Package,
+      key: 'staff-scheduling',
+      label: 'Staff and Work Scheduling',
+      items: [
+        {
+          key: 'employees',
+          name: 'Employee Management',
+          href: '/employees',
+          icon: CalendarClock,
+        },
+      ],
     },
     {
-      name: 'Analytics',
-      href: '/analytics',
-      icon: TrendingUp,
+      key: 'reports-analytics',
+      label: 'Reports and Analytics',
+      items: [
+        {
+          key: 'analytics',
+          name: 'Analytics',
+          href: '/analytics',
+          icon: TrendingUp,
+        },
+        {
+          key: 'logs',
+          name: 'Activity Logs',
+          href: '/logs',
+          icon: FileText,
+        },
+        {
+          key: 'feedback',
+          name: 'Customer Feedback',
+          href: '/feedback',
+          icon: MessageSquare,
+        },
+      ],
     },
     {
-      name: 'Employee Management',
-      href: '/employees',
-      icon: CalendarClock,
-    },
-    {
-      name: 'Payments',
-      href: '/payments',
-      icon: CreditCard,
-    },
-    {
-      name: 'Users',
-      href: '/users',
-      icon: Users,
-      adminOnly: true,
-    },
-    {
-      name: 'Activity Logs',
-      href: '/logs',
-      icon: FileText,
-    },
-    {
-      name: 'Notifications',
-      href: '/notifications',
-      icon: Bell,
-    },
-    {
-      name: 'Customer Feedback',
-      href: '/feedback',
-      icon: MessageSquare,
+      key: 'notifications',
+      label: 'Notifications',
+      items: [
+        {
+          key: 'notifications',
+          name: 'Notifications',
+          href: '/notifications',
+          icon: Bell,
+        },
+      ],
     },
   ];
-  // Hide admin-only items for non-admin users
-  const visibleItems = navigationItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
+
+  const restrictedForStaff = new Set([
+    'menu',
+    'catering',
+    'inventory',
+    'analytics',
+    'payments',
+    'logs',
+    'feedback',
+  ]);
+
+  const computeVisibleItems = (items = []) =>
+    items
+      .map((item) =>
+        item.key === 'employees' && isStaff
+          ? { ...item, name: 'Employee Attendance' }
+          : item
+      )
+      .filter(
+        (item) =>
+          (!item.adminOnly || isAdmin) &&
+          !(isStaff && restrictedForStaff.has(item.key))
+      );
+
+  const visibleGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: computeVisibleItems(group.items),
+    }))
+    .filter((group) => group.items.length > 0);
 
   return (
-    <div className="px-2 py-2">
-      <SidebarMenu>
-        {visibleItems.map((item) => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton
-              asChild
-              isActive={location.pathname === item.href}
-              tooltip={item.name}
-            >
-              <Link to={item.href} className="flex items-center space-x-3">
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ))}
-      </SidebarMenu>
+    <div className="px-2 py-2 space-y-2">
+      {visibleGroups.map((group) => (
+        <SidebarGroup key={group.key}>
+          <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map((item) => {
+                const isAttendanceShortcut =
+                  isStaff && item.key === 'employees';
+
+                const isActive = location.pathname === item.href;
+                const attendanceLink = {
+                  pathname: item.href,
+                  search: '?attendance=1',
+                  state: { openAttendance: true },
+                };
+
+                return (
+                  <SidebarMenuItem key={item.key}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.name}
+                    >
+                      <Link
+                        to={isAttendanceShortcut ? attendanceLink : item.href}
+                        className="flex items-center space-x-3"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
     </div>
   );
 };
+
+export default NavigationSidebar;

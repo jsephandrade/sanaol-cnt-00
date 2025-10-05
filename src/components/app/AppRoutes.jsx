@@ -61,6 +61,15 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Role restriction helper
+const RoleGuard = ({ disallowRoles = [], redirectTo = '/', children }) => {
+  const { hasRole } = useAuth();
+  if (disallowRoles.some((role) => hasRole(role))) {
+    return <Navigate to={redirectTo} replace />;
+  }
+  return children;
+};
+
 // Admin-only route wrapper
 const AdminRoute = ({ children }) => {
   const { user, hasRole } = useAuth();
@@ -241,9 +250,11 @@ const AppRoutes = () => {
             path="/menu"
             element={
               <ProtectedRoute>
-                <MainLayout title="Menu Management">
-                  <MenuManagement />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Menu Management">
+                    <MenuManagement />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -251,9 +262,11 @@ const AppRoutes = () => {
             path="/analytics"
             element={
               <ProtectedRoute>
-                <MainLayout title="Analytics">
-                  <SalesAnalytics />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Analytics">
+                    <SalesAnalytics />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -272,9 +285,11 @@ const AppRoutes = () => {
             path="/feedback"
             element={
               <ProtectedRoute>
-                <MainLayout title="Customer Feedback">
-                  <CustomerFeedback />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Customer Feedback">
+                    <CustomerFeedback />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -292,9 +307,11 @@ const AppRoutes = () => {
             path="/catering"
             element={
               <ProtectedRoute>
-                <MainLayout title="Catering Management">
-                  <Catering />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Catering Management">
+                    <Catering />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -302,9 +319,11 @@ const AppRoutes = () => {
             path="/inventory"
             element={
               <ProtectedRoute>
-                <MainLayout title="Inventory Management">
-                  <Inventory />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Inventory Management">
+                    <Inventory />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -312,9 +331,11 @@ const AppRoutes = () => {
             path="/payments"
             element={
               <ProtectedRoute>
-                <MainLayout title="Payment Management">
-                  <Payments />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Payment Management">
+                    <Payments />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
@@ -334,9 +355,11 @@ const AppRoutes = () => {
             path="/logs"
             element={
               <ProtectedRoute>
-                <MainLayout title="Activity Logs">
-                  <UserLogs />
-                </MainLayout>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Activity Logs">
+                    <UserLogs />
+                  </MainLayout>
+                </RoleGuard>
               </ProtectedRoute>
             }
           />
