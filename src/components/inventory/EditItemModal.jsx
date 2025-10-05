@@ -143,7 +143,7 @@ const EditItemModal = ({ open, onOpenChange, item, onEditItem }) => {
               )}
             </div>
             <div>
-              <Label htmlFor="minThreshold">Min Threshold</Label>
+              <Label htmlFor="minThreshold">Minimum Stock</Label>
               <Input
                 id="minThreshold"
                 type="number"

@@ -11,6 +11,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+const formatOrderId = (orderId) => {
+  if (!orderId) return '—';
+  const value = String(orderId);
+  return value.slice(0, 6).toUpperCase();
+};
+
+const formatPaymentDate = (rawDate) => {
+  if (!rawDate) return '—';
+  const date = new Date(rawDate);
+  if (Number.isNaN(date.getTime())) return rawDate;
+  return date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+};
+
 const PaymentsTable = ({
   sortedPayments,
   getPaymentMethodIcon,
@@ -45,11 +61,11 @@ const PaymentsTable = ({
                   key={payment.id}
                   className="border-b transition-colors hover:bg-muted/50"
                 >
-                  <td className="p-4 align-middle font-medium">
-                    {payment.orderId}
+                  <td className="p-4 align-middle font-medium font-mono">
+                    {formatOrderId(payment.orderId)}
                   </td>
                   <td className="p-4 align-middle whitespace-nowrap">
-                    {payment.date.split(' ')[0]}
+                    {formatPaymentDate(payment.date)}
                   </td>
                   <td className="p-4 align-middle">
                     <div className="flex items-center gap-2">
@@ -57,7 +73,9 @@ const PaymentsTable = ({
                       <span className="capitalize">{payment.method}</span>
                     </div>
                   </td>
-                  <td className="p-4 align-middle">�,�{payment.amount.toFixed(2)}</td>
+                  <td className="p-4 align-middle">
+                    ₱{payment.amount.toFixed(2)}
+                  </td>
                   <td className="p-4 align-middle">
                     <CustomBadge
                       variant={getStatusBadgeVariant(payment.status)}
@@ -81,12 +99,14 @@ const PaymentsTable = ({
                         </DropdownMenuItem>
                         {payment.status === 'completed' && (
                           <DropdownMenuItem>
-                            <ArrowDownUp className="mr-2 h-4 w-4" /> Process Refund
+                            <ArrowDownUp className="mr-2 h-4 w-4" /> Process
+                            Refund
                           </DropdownMenuItem>
                         )}
                         {payment.status === 'failed' && (
                           <DropdownMenuItem>
-                            <ArrowDownUp className="mr-2 h-4 w-4" /> Retry Payment
+                            <ArrowDownUp className="mr-2 h-4 w-4" /> Retry
+                            Payment
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>

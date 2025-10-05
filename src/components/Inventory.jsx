@@ -27,8 +27,13 @@ const Inventory = () => {
     }),
     [searchTerm, selectedCategory]
   );
-  const { items, createInventoryItem, updateInventoryItem, updateStock } =
-    useInventoryManagement(listParams);
+  const {
+    items,
+    createInventoryItem,
+    updateInventoryItem,
+    updateStock,
+    refetch: refetchInventory,
+  } = useInventoryManagement(listParams);
   const [disabledMap, setDisabledMap] = useState({});
 
   // Recent activity (DB)
@@ -42,6 +47,11 @@ const Inventory = () => {
     debounceMs: 400,
     cacheTtlMs: 30000,
   });
+
+  const refreshInventoryData = useCallback(() => {
+    refetchInventory();
+    refetchActivities({ force: true });
+  }, [refetchInventory, refetchActivities]);
 
   const categories = [
     'Grains',
@@ -106,10 +116,11 @@ const Inventory = () => {
         supplier: newItem.supplier,
       };
       const created = await createInventoryItem(payload);
+      refreshInventoryData();
       // No extra call needed since backend mirrors initial quantity into ledger and response includes authoritative quantity
       return created;
     },
-    [createInventoryItem]
+    [createInventoryItem, refreshInventoryData]
   );
 
   const handleEditItem = useCallback((item) => {
@@ -136,8 +147,9 @@ const Inventory = () => {
       if (!Number.isNaN(newQty) && newQty !== prevQty) {
         await updateStock(updatedItem.id, newQty, 'set');
       }
+      refreshInventoryData();
     },
-    [updateInventoryItem, editingItem]
+    [updateInventoryItem, editingItem, refreshInventoryData]
   );
 
   const handleDisableItem = useCallback((itemId, itemName) => {

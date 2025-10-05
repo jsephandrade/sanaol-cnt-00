@@ -16,9 +16,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, Users, MapPin, User, Phone } from 'lucide-react';
+import { CalendarIcon, Users, MapPin, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+const MODAL_SCROLLBAR_STYLES = `
+  .modal-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .modal-scroll::-webkit-scrollbar {
+    display: none;
+  }
+`;
 
 export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
   const [formData, setFormData] = useState({
@@ -33,39 +44,13 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
     contactPhone: '',
     notes: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const updateFormData = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-    if (
-      !formData.name ||
-      !formData.client ||
-      !formData.date ||
-      !formData.startTime ||
-      !formData.endTime
-    ) {
-      return;
-    }
-
-    const newEvent = {
-      id: Date.now().toString(),
-      name: formData.name,
-      client: formData.client,
-      date: format(formData.date, 'yyyy-MM-dd'),
-      time: `${formData.startTime} - ${formData.endTime}`,
-      location: formData.location,
-      attendees: parseInt(formData.attendees) || 0,
-      status: 'scheduled',
-      total: (parseInt(formData.attendees) || 0) * 25.0, // Default price per person
-      contactPerson: {
-        name: formData.contactName,
-        phone: formData.contactPhone,
-      },
-    };
-
-    onCreateEvent(newEvent);
-
-    // Reset form
+  const resetForm = () => {
     setFormData({
       name: '',
       client: '',
@@ -78,17 +63,42 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
       contactPhone: '',
       notes: '',
     });
-
-    onOpenChange(false);
   };
 
-  const updateFormData = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+
+    if (
+      !formData.name ||
+      !formData.client ||
+      !formData.date ||
+      !formData.startTime ||
+      !formData.endTime
+    ) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        date: format(formData.date, 'yyyy-MM-dd'),
+      };
+      const success = await onCreateEvent(payload);
+      if (success) {
+        resetForm();
+        onOpenChange(false);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <style>{MODAL_SCROLLBAR_STYLES}</style>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto modal-scroll">
         <DialogHeader>
           <DialogTitle>Create New Catering Event</DialogTitle>
         </DialogHeader>
@@ -103,6 +113,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 onChange={(e) => updateFormData('name', e.target.value)}
                 placeholder="Corporate Lunch Meeting"
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -114,6 +125,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 onChange={(e) => updateFormData('client', e.target.value)}
                 placeholder="ABC Technologies"
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -129,6 +141,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                       'w-full justify-start text-left font-normal',
                       !formData.date && 'text-muted-foreground'
                     )}
+                    disabled={isSubmitting}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formData.date ? (
@@ -158,6 +171,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 value={formData.startTime}
                 onChange={(e) => updateFormData('startTime', e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
 
@@ -169,6 +183,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 value={formData.endTime}
                 onChange={(e) => updateFormData('endTime', e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -183,6 +198,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 onChange={(e) => updateFormData('location', e.target.value)}
                 placeholder="Conference Room B, ABC Technologies HQ"
                 className="pl-10"
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -198,26 +214,22 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 onChange={(e) => updateFormData('attendees', e.target.value)}
                 placeholder="25"
                 className="pl-10"
-                min="1"
+                min={0}
+                disabled={isSubmitting}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="contact-name">Contact Person</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="contact-name"
-                  value={formData.contactName}
-                  onChange={(e) =>
-                    updateFormData('contactName', e.target.value)
-                  }
-                  placeholder="John Smith"
-                  className="pl-10"
-                />
-              </div>
+              <Label htmlFor="contact-name">Contact Name</Label>
+              <Input
+                id="contact-name"
+                value={formData.contactName}
+                onChange={(e) => updateFormData('contactName', e.target.value)}
+                placeholder="John Smith"
+                disabled={isSubmitting}
+              />
             </div>
 
             <div className="space-y-2">
@@ -226,13 +238,13 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="contact-phone"
-                  type="tel"
                   value={formData.contactPhone}
                   onChange={(e) =>
                     updateFormData('contactPhone', e.target.value)
                   }
-                  placeholder="555-123-4567"
+                  placeholder="(555) 123-4567"
                   className="pl-10"
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -244,20 +256,26 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
               id="notes"
               value={formData.notes}
               onChange={(e) => updateFormData('notes', e.target.value)}
-              placeholder="Special dietary requirements, setup preferences, etc."
-              rows={3}
+              placeholder="Any special requests or requirements"
+              disabled={isSubmitting}
             />
           </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                resetForm();
+                onOpenChange(false);
+              }}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button type="submit">Create Event</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Event'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

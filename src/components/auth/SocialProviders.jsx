@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { renderGoogleButton } from '@/lib/google';
+import { renderGoogleButton, isGoogleSignInAvailable } from '@/lib/google';
 
 const Divider = () => (
   <div className="mt-5">
@@ -184,14 +184,22 @@ const SocialProviders = ({
   providers = ['google', 'facescan'],
   showDivider = true,
 }) => {
-  const enabled = providers.filter((p) => ['google', 'facescan'].includes(p));
+  const supported = providers.filter((p) => ['google', 'facescan'].includes(p));
+  const googleAvailable = isGoogleSignInAvailable();
+  const showGoogle = googleAvailable && supported.includes('google');
+  const showFaceScan = supported.includes('facescan');
   const gridCols = 'grid-cols-1';
+  const shouldShowDivider = showDivider && (showGoogle || showFaceScan);
+
+  if (!showGoogle && !showFaceScan) {
+    return null;
+  }
 
   return (
     <>
-      {showDivider && <Divider />}
+      {shouldShowDivider && <Divider />}
       <div className={`mt-4 grid ${gridCols} gap-3`}>
-        {enabled.includes('google') && (
+        {showGoogle && (
           <GoogleButton
             onClick={onSocial}
             onCredential={
@@ -202,7 +210,7 @@ const SocialProviders = ({
             pending={pending}
           />
         )}
-        {enabled.includes('facescan') && (
+        {showFaceScan && (
           <div className="w-full flex justify-center">
             <div className="max-w-[320px] w-full">
               <FaceScanButton onClick={onSocial} pending={pending} />

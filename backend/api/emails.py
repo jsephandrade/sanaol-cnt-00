@@ -125,6 +125,45 @@ def email_user_password_reset(email: str, reset_link: str, code: str | None = No
         html_message=html,
     )
 
+def email_user_login_otp(app_user, code: str, expires_minutes: int = 5):
+    """Send a login verification code via email."""
+
+    email = getattr(app_user, "email", None)
+    if not email:
+        return
+
+    display_name = (getattr(app_user, "name", "") or "").strip() or "there"
+    subject = "Your login verification code"
+    message = (
+        f"Hello {display_name},\n\n"
+        "Here is your 6-digit verification code to finish signing in.\n"
+        f"Code: {code}\n"
+        f"This code expires in approximately {expires_minutes} minutes.\n\n"
+        "If you didn't try to sign in, you can ignore this email."
+    )
+    try:
+        html = render_to_string(
+            "email/login_otp.html",
+            {
+                "code": code,
+                "expires_minutes": expires_minutes,
+                "brand": getattr(settings, "EMAIL_SUBJECT_PREFIX", ""),
+                "user": app_user,
+            },
+        )
+    except Exception:
+        html = None
+    _safe_send(
+        send_mail,
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=True,
+        html_message=html,
+    )
+
+
 def email_user_email_verification(email: str, verify_link: str):
     """Send an email address verification link."""
     if not email:

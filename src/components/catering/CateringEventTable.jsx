@@ -17,11 +17,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const CateringEventTable = ({ 
-  events, 
-  onViewDetails, 
-  onMenuItems, 
-  onCancelEvent 
+export const CateringEventTable = ({
+  events,
+  onViewDetails,
+  onMenuItems,
+  onCancelEvent,
 }) => {
   return (
     <div className="rounded-md border">
@@ -54,7 +54,7 @@ export const CateringEventTable = ({
                   <div className="flex flex-col">
                     <div className="flex items-center gap-1">
                       <CalendarDays className="h-3 w-3" />
-                      <span>{event.date}</span>
+                      <span>{event.dateLabel || event.date}</span>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Clock className="h-3 w-3" />

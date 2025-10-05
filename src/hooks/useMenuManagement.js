@@ -218,9 +218,19 @@ export const useMenuManagement = (params = {}) => {
     }
   };
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
     fetchMenuItems();
-  };
+  }, [fetchMenuItems]);
+
+  useEffect(() => {
+    const handler = () => {
+      fetchMenuItems();
+    };
+    window?.addEventListener?.('menu.items.updated', handler);
+    return () => {
+      window?.removeEventListener?.('menu.items.updated', handler);
+    };
+  }, [fetchMenuItems]);
 
   return {
     items,
@@ -270,9 +280,19 @@ export const useMenuCategories = () => {
     fetchCategories();
   }, [fetchCategories]);
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
     fetchCategories();
-  };
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    const handler = () => {
+      fetchCategories();
+    };
+    window?.addEventListener?.('menu.items.updated', handler);
+    return () => {
+      window?.removeEventListener?.('menu.items.updated', handler);
+    };
+  }, [fetchCategories]);
 
   return {
     categories,

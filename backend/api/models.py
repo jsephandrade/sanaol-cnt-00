@@ -185,6 +185,33 @@ class PasswordResetCode(models.Model):
         return timezone.now() < self.expires_at
 
 
+class LoginOTP(models.Model):
+    """One-time login verification code delivered via email."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE, related_name="login_otps")
+    code_hash = models.CharField(max_length=128)
+    remember = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    consumed_at = models.DateTimeField(blank=True, null=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+
+    class Meta:
+        db_table = "login_otp"
+        indexes = [
+            models.Index(fields=["user", "expires_at", "consumed_at"]),
+        ]
+
+    @property
+    def is_active(self) -> bool:
+        if self.consumed_at:
+            return False
+        return timezone.now() < self.expires_at
+
+
 def _facetpl_upload_path(instance, filename):
     base, ext = os.path.splitext(filename or "")
     ext = ext if ext else ".jpg"
@@ -735,7 +762,103 @@ class MenuItem(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.category})"
-    
+
+
+# -----------------------------
+# Catering Events
+# -----------------------------
+
+
+class CateringEvent(models.Model):
+    STATUS_SCHEDULED = "scheduled"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_CHOICES = [
+        (STATUS_SCHEDULED, "Scheduled"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    client_name = models.CharField(max_length=255)
+    client_email = models.EmailField(blank=True, null=True)
+    contact_name = models.CharField(max_length=255, blank=True)
+    contact_phone = models.CharField(max_length=64, blank=True)
+    contact_email = models.EmailField(blank=True, null=True)
+    event_date = models.DateField()
+    start_time = models.TimeField(blank=True, null=True)
+    end_time = models.TimeField(blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True)
+    guest_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_SCHEDULED)
+    notes = models.TextField(blank=True)
+    estimated_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    created_by = models.ForeignKey(
+        AppUser,
+        on_delete=models.SET_NULL,
+        related_name="catering_events",
+        null=True,
+        blank=True,
+    )
+    updated_by = models.ForeignKey(
+        AppUser,
+        on_delete=models.SET_NULL,
+        related_name="catering_events_updated",
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "catering_event"
+        indexes = [
+            models.Index(fields=["event_date", "status"]),
+            models.Index(fields=["client_name"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} on {self.event_date}" if self.event_date else self.name
+
+
+class CateringEventItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    event = models.ForeignKey(
+        CateringEvent,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    menu_item = models.ForeignKey(
+        MenuItem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="catering_items",
+    )
+    name = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "catering_event_item"
+        indexes = [
+            models.Index(fields=["event"]),
+        ]
+
+    @property
+    def total_price(self):
+        from decimal import Decimal
+
+        qty = Decimal(self.quantity or 0)
+        price = Decimal(self.unit_price or 0)
+        return (qty * price).quantize(Decimal("0.01"))
+
 
 # -----------------------------
 # Orders

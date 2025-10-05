@@ -1,18 +1,11 @@
 import React from 'react';
-import { 
-  CalendarDays, 
-  Map, 
-  Users, 
-  Phone, 
-  User, 
-  Banknote 
-} from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import { CalendarDays, Map, Users, Phone, User, Banknote } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card';
 import { CustomBadge } from '@/components/ui/custom-badge';
 
@@ -47,7 +40,7 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
                 Date & Time
               </div>
               <p className="text-sm">
-                {event.date}
+                {event.dateLabel || event.date}
                 <br />
                 {event.time}
               </p>
@@ -91,16 +84,26 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
                 <div className="flex items-center gap-2">
                   <Banknote className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    Total: <span className="font-medium">${event.total.toFixed(2)}</span>
+                    Total:{' '}
+                    <span className="font-medium">
+                      ${event.total.toFixed(2)}
+                    </span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Banknote className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    Deposit: <span className="font-medium">${(event.deposit || event.total * 0.5).toFixed(2)}</span>
-                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                      event.depositPaid ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
+                    Deposit:{' '}
+                    <span className="font-medium">
+                      ${(event.deposit || event.total * 0.5).toFixed(2)}
+                    </span>
+                    <span
+                      className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                        event.depositPaid
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
                       {event.depositPaid ? 'Paid' : 'Unpaid'}
                     </span>
                   </span>

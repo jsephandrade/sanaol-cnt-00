@@ -33,7 +33,10 @@ export function useAttendance(initialParams = {}) {
 
   const createRecord = async (payload) => {
     const created = await attendanceService.createAttendance(payload);
-    setRecords((prev) => [created, ...prev]);
+    setRecords((prev) => {
+      const filtered = prev.filter((r) => r.id !== created.id);
+      return [created, ...filtered];
+    });
     return created;
   };
   const updateRecord = async (id, updates) => {

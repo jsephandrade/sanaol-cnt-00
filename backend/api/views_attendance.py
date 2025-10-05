@@ -66,20 +66,105 @@ def _safe_leave(l):
     }
 
 
+def _employee_for_actor(actor, *, create_if_missing=False):
+    """Resolve the employee profile linked to the authenticated actor.
+
+    Optionally creates a lightweight Employee entry when none exists so staff
+    can record attendance without admin intervention.
+    """
+
+    if not actor:
+        return None
+
+    try:
+        from .models import Employee
+    except Exception:
+        return None
+
+    # Prefer direct relation via AppUser
+    try:
+        actor_id = getattr(actor, "id", None)
+        actor_email = (getattr(actor, "email", "") or "").strip()
+        actor_name = (getattr(actor, "name", "") or "").strip()
+    except Exception:
+        actor_id = None
+        actor_email = ""
+        actor_name = ""
+
+    try:
+        if actor_id:
+            emp = Employee.objects.filter(user_id=actor_id).first()
+            if emp:
+                return emp
+            if create_if_missing and getattr(actor, "id", None):
+                emp = Employee.objects.create(
+                    user=actor,
+                    name=actor_name or actor_email or "Staff Member",
+                    contact=actor_email,
+                    position="Staff",
+                    status="active",
+                )
+                return emp
+    except Exception:
+        pass
+
+    # Fallback lookups (email, then name)
+    try:
+        if actor_email:
+            emp = Employee.objects.filter(contact__iexact=actor_email).first()
+            if emp:
+                return emp
+            if create_if_missing:
+                emp = Employee.objects.create(
+                    name=actor_name or actor_email or "Staff Member",
+                    contact=actor_email,
+                    position="Staff",
+                    status="active",
+                )
+                return emp
+    except Exception:
+        pass
+
+    try:
+        if actor_name:
+            emp = Employee.objects.filter(name__iexact=actor_name).first()
+            if emp:
+                return emp
+            if create_if_missing:
+                emp = Employee.objects.create(
+                    name=actor_name,
+                    contact=actor_email,
+                    position="Staff",
+                    status="active",
+                )
+                return emp
+    except Exception:
+        pass
+
+    return None
+
+
 @require_http_methods(["GET", "POST"])
 def attendance(request):
     actor, err = _actor_from_request(request)
     if not actor:
         return err
     try:
-        from .models import AttendanceRecord
+        from .models import AttendanceRecord, Employee
         if request.method == "GET":
             employee_id = request.GET.get("employeeId")
             dfrom = _parse_date(request.GET.get("from"))
             dto = _parse_date(request.GET.get("to"))
             status = (request.GET.get("status") or "").lower()
             qs = AttendanceRecord.objects.select_related("employee").all()
-            if employee_id:
+            can_manage = _has_permission(actor, "attendance.manage")
+            self_employee = None
+            if not can_manage:
+                self_employee = _employee_for_actor(actor, create_if_missing=True)
+                if not self_employee:
+                    return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+                qs = qs.filter(employee_id=self_employee.id)
+            elif employee_id:
                 qs = qs.filter(employee_id=employee_id)
             if dfrom:
                 qs = qs.filter(date__gte=dfrom)
@@ -91,27 +176,63 @@ def attendance(request):
             data = [_safe_att(x) for x in qs]
             return JsonResponse({"success": True, "data": data})
 
-        # POST (manager/admin)
-        if not _has_permission(actor, "attendance.manage"):
-            return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+        can_manage = _has_permission(actor, "attendance.manage")
+        self_employee = None
+        actor_id = getattr(actor, "id", None)
+        if not can_manage:
+            self_employee = _employee_for_actor(actor, create_if_missing=True)
+            if not self_employee:
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
         except Exception:
             payload = {}
+
         emp_id = payload.get("employeeId")
         d = _parse_date(payload.get("date"))
-        if not emp_id or not d:
-            return JsonResponse({"success": False, "message": "employeeId and date are required"}, status=400)
+        if not d:
+            return JsonResponse({"success": False, "message": "date is required"}, status=400)
+
+        if not can_manage:
+            if emp_id and str(emp_id) not in {str(self_employee.id), str(actor_id or "")}:
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+            emp = self_employee
+            emp_id = str(self_employee.id)
+        else:
+            if not emp_id:
+                return JsonResponse({"success": False, "message": "employeeId is required"}, status=400)
+            emp = Employee.objects.filter(id=emp_id).first()
+            if not emp:
+                return JsonResponse({"success": False, "message": "Employee not found"}, status=404)
+
         ci = _parse_time(payload.get("checkIn")) if payload.get("checkIn") else None
         co = _parse_time(payload.get("checkOut")) if payload.get("checkOut") else None
         status = (payload.get("status") or "present").lower()
+        if not can_manage:
+            status = "present"
         notes = payload.get("notes") or ""
-        from .models import Employee
-        e = Employee.objects.filter(id=emp_id).first()
-        if not e:
-            return JsonResponse({"success": False, "message": "Employee not found"}, status=404)
+
         with transaction.atomic():
-            rec = AttendanceRecord.objects.create(employee=e, date=d, check_in=ci, check_out=co, status=status, notes=notes)
+            existing = None
+            if not can_manage:
+                existing = AttendanceRecord.objects.filter(employee_id=emp.id, date=d).first()
+                if existing:
+                    # Idempotent response for repeat submissions
+                    if ci and not existing.check_in:
+                        existing.check_in = ci
+                        existing.status = status
+                        existing.notes = notes
+                        existing.save()
+                    return JsonResponse({"success": True, "data": _safe_att(existing)})
+            rec = AttendanceRecord.objects.create(
+                employee=emp,
+                date=d,
+                check_in=ci,
+                check_out=co,
+                status=status,
+                notes=notes,
+            )
         return JsonResponse({"success": True, "data": _safe_att(rec)})
     except Exception:
         return JsonResponse({"success": False, "message": "Server error"}, status=500)
@@ -122,38 +243,63 @@ def attendance_detail(request, rid):
     actor, err = _actor_from_request(request)
     if not actor:
         return err
-    if not _has_permission(actor, "attendance.manage"):
-        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
     try:
         from .models import AttendanceRecord, Employee
         rec = AttendanceRecord.objects.select_related("employee").filter(id=rid).first()
         if not rec:
             return JsonResponse({"success": False, "message": "Not found"}, status=404)
+
+        can_manage = _has_permission(actor, "attendance.manage")
+        if not can_manage:
+            self_employee = _employee_for_actor(actor)
+            if not self_employee or str(rec.employee_id) != str(self_employee.id):
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
         if request.method == "DELETE":
+            if not can_manage:
+                return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
             rec.delete()
             return JsonResponse({"success": True})
+
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
         except Exception:
             payload = {}
-        if "employeeId" in payload and payload["employeeId"]:
-            e = Employee.objects.filter(id=payload["employeeId"]).first()
-            if not e:
-                return JsonResponse({"success": False, "message": "Employee not found"}, status=404)
-            rec.employee = e
-        if "date" in payload and payload["date"]:
-            d = _parse_date(payload["date"]) 
-            if not d:
-                return JsonResponse({"success": False, "message": "Invalid date"}, status=400)
-            rec.date = d
+
+        if can_manage:
+            if "employeeId" in payload and payload["employeeId"]:
+                e = Employee.objects.filter(id=payload["employeeId"]).first()
+                if not e:
+                    return JsonResponse({"success": False, "message": "Employee not found"}, status=404)
+                rec.employee = e
+            if "date" in payload and payload["date"]:
+                d = _parse_date(payload["date"])
+                if not d:
+                    return JsonResponse({"success": False, "message": "Invalid date"}, status=400)
+                rec.date = d
+            if "checkIn" in payload:
+                rec.check_in = _parse_time(payload["checkIn"]) if payload["checkIn"] else None
+            if "checkOut" in payload:
+                rec.check_out = _parse_time(payload["checkOut"]) if payload["checkOut"] else None
+            if "status" in payload and payload["status"]:
+                rec.status = str(payload["status"]).lower()
+            if "notes" in payload and payload["notes"] is not None:
+                rec.notes = str(payload["notes"])
+            rec.save()
+            return JsonResponse({"success": True, "data": _safe_att(rec)})
+
+        updated = False
         if "checkIn" in payload:
             rec.check_in = _parse_time(payload["checkIn"]) if payload["checkIn"] else None
+            updated = True
         if "checkOut" in payload:
             rec.check_out = _parse_time(payload["checkOut"]) if payload["checkOut"] else None
-        if "status" in payload and payload["status"]:
-            rec.status = str(payload["status"]).lower()
-        if "notes" in payload and payload["notes"] is not None:
-            rec.notes = str(payload["notes"]) 
+            updated = True
+        if "notes" in payload:
+            rec.notes = str(payload["notes"] or "")
+            updated = True
+        if not updated:
+            return JsonResponse({"success": False, "message": "No valid fields to update"}, status=400)
         rec.save()
         return JsonResponse({"success": True, "data": _safe_att(rec)})
     except Exception:

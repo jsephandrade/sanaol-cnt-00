@@ -1,27 +1,46 @@
-import { mockCateringOrders } from '../mockData';
+import apiClient from '../client';
 
-const mockDelay = (ms = 500) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const buildQueryString = (params = {}) => {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+    if (Array.isArray(value)) {
+      value.forEach((v) => qs.append(key, String(v)));
+      return;
+    }
+    qs.append(key, String(value));
+  });
+  const query = qs.toString();
+  return query ? `?${query}` : '';
+};
 
 class CateringService {
-  async getUpcoming(limit = 5) {
-    await mockDelay(300);
-    const now = new Date();
-    const list = (mockCateringOrders || [])
-      .filter((e) => {
-        const d = new Date(e.eventDate || now);
-        // Treat confirmed/future as upcoming
-        return (e.status || '').toLowerCase() === 'confirmed' || d >= now;
-      })
-      .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate))
-      .slice(0, limit)
-      .map((e) => ({
-        id: e.id,
-        name: e.eventName,
-        date: e.eventDate,
-        client: e.clientName,
-      }));
-    return { success: true, data: list };
+  async listEvents(params = {}) {
+    const query = buildQueryString(params);
+    return apiClient.get(`/catering/events${query}`);
+  }
+
+  async getEvent(eventId, params = {}) {
+    const query = buildQueryString(params);
+    return apiClient.get(`/catering/events/${eventId}${query}`);
+  }
+
+  async createEvent(payload) {
+    return apiClient.post('/catering/events', payload);
+  }
+
+  async updateEvent(eventId, payload) {
+    return apiClient.patch(`/catering/events/${eventId}`, payload);
+  }
+
+  async cancelEvent(eventId) {
+    return this.updateEvent(eventId, { status: 'cancelled' });
+  }
+
+  async setEventMenuItems(eventId, items = []) {
+    return apiClient.put(`/catering/events/${eventId}/menu-items`, {
+      items,
+    });
   }
 }
 

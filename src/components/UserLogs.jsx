@@ -20,10 +20,14 @@ const UserLogs = () => {
     limit: 100,
   });
   const [securityAlerts, setSecurityAlerts] = useState([]);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState([]);
 
   useEffect(() => {
-    setSecurityAlerts(alerts || []);
-  }, [alerts]);
+    const nextAlerts = (alerts || []).filter(
+      (alert) => !dismissedAlertIds.includes(alert.id)
+    );
+    setSecurityAlerts(nextAlerts);
+  }, [alerts, dismissedAlertIds]);
 
   // Sync UI controls to backend filters
   useEffect(() => {
@@ -74,23 +78,24 @@ const UserLogs = () => {
     }
   };
 
+  const recordDismissedAlert = (alertId) => {
+    setDismissedAlertIds((prev) =>
+      prev.includes(alertId) ? prev : [...prev, alertId]
+    );
+  };
+
   const handleBlockIP = (alertId) => {
     toast({
       title: 'IP Address Blocked',
       description: 'The suspicious IP address has been blocked successfully.',
     });
-    // Remove the alert after blocking IP
+    recordDismissedAlert(alertId);
     setSecurityAlerts((prev) => prev.filter((alert) => alert.id !== alertId));
   };
 
   const handleDismissAlert = (alertId) => {
-    setSecurityAlerts((prev) =>
-      prev
-        .map((alert) =>
-          alert.id === alertId ? { ...alert, dismissed: true } : alert
-        )
-        .filter((alert) => !alert.dismissed)
-    );
+    recordDismissedAlert(alertId);
+    setSecurityAlerts((prev) => prev.filter((alert) => alert.id !== alertId));
     toast({
       title: 'Alert Dismissed',
       description: 'Security alert has been dismissed.',

@@ -15,11 +15,14 @@ from . import views_orders as order_views
 from . import views_reports as rpt_views
 from . import views_cash as cash_views
 from . import views_diag as diag_views
+from . import views_catering as catering_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
     path("health/db", auth_views.health_db, name="health_db"),
     path("auth/login", auth_views.auth_login, name="auth_login"),
+    path("auth/login/resend-otp", auth_views.auth_login_resend_otp, name="auth_login_resend_otp"),
+    path("auth/login/verify-otp", auth_views.auth_login_verify_otp, name="auth_login_verify_otp"),
     path("auth/logout", auth_views.auth_logout, name="auth_logout"),
     path("auth/register", auth_views.auth_register, name="auth_register"),
     path("auth/verify-email", auth_views.verify_email, name="verify_email"),
@@ -124,6 +127,15 @@ urlpatterns = [
     path("inventory/transfer", inv_views.inventory_transfer, name="inventory_transfer"),
     path("inventory/adjust", inv_views.inventory_adjust, name="inventory_adjust"),
     path("inventory/ledger", inv_views.inventory_ledger, name="inventory_ledger"),
+
+    # Catering events
+    path("catering/events", catering_views.catering_events, name="catering_events"),
+    path("catering/events/<uuid:event_id>", catering_views.catering_event_detail, name="catering_event_detail"),
+    path(
+        "catering/events/<uuid:event_id>/menu-items",
+        catering_views.catering_event_menu_items,
+        name="catering_event_menu_items",
+    ),
 
     # Reports
     path("reports/sales", rpt_views.reports_sales, name="reports_sales"),

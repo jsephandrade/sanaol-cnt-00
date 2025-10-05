@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from .settings_components import get_database, get_cors, get_jwt, get_email
+from .settings_components import get_database, get_cors, get_jwt, get_email, get_channel_layers
 try:
     from dotenv import load_dotenv  # type: ignore
 except Exception:
@@ -33,6 +33,7 @@ INSTALLED_APPS = [
 
     # Third-party
     "corsheaders",
+    "channels",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -83,8 +84,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database configuration (SQLite by default; supports MySQL/Postgres via env)
+# Database configuration (MySQL across all environments)
 DATABASES = get_database(BASE_DIR)
+
+ASGI_APPLICATION = "config.asgi.application"
+CHANNEL_LAYERS = get_channel_layers()
 
 # Static files (optional for API-only)
 STATIC_URL = "/static/"

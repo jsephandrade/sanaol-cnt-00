@@ -47,9 +47,8 @@ Diagnostics
 
 Backups
 
-- SQLite: `python manage.py backup_db` creates file under backend/backups.
-- Restore: `python manage.py restore_db path/to/file.sqlite3` (SQLite only).
-- MySQL: use mysqldump/mysql CLI per instructions printed by backup command.
+- Backup: `python manage.py backup_db` creates a MySQL dump (.sql) under backend/backups.
+- Restore: `python manage.py restore_db path/to/file.sql` replays the dump into MySQL.
 
 Security
 

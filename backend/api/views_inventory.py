@@ -1,6 +1,7 @@
 """Inventory endpoints: items CRUD, stock adjustments, low stock, activities."""
 
 import json
+import logging
 from datetime import datetime
 from uuid import UUID
 from django.http import JsonResponse
@@ -9,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone as dj_timezone
 
+from .events import publish_event
 from .views_common import _actor_from_request, _has_permission, _paginate, rate_limit
 from .inventory_services import (
     get_current_stock,
@@ -20,6 +22,9 @@ from .inventory_services import (
     transfer_stock,
     get_recent_activity,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _safe_item(i, stock_qty: float | None = None):
@@ -95,7 +100,8 @@ def inventory_items(request):
             }
             return JsonResponse({"success": True, "data": items, "pagination": pagination})
         except Exception:
-            return JsonResponse({"success": True, "data": [], "pagination": {"page": 1, "limit": 50, "total": 0, "totalPages": 1}})
+            logger.exception("Failed to list inventory items")
+            return JsonResponse({"success": False, "message": "Unable to fetch inventory items"}, status=500)
 
     # POST: Manager/Admin required (or explicit inventory.menu.manage)
     if not (_has_permission(actor, "inventory.menu.manage") or _has_permission(actor, "inventory.update") or getattr(actor, "role", "").lower() in {"admin", "manager"}):
@@ -114,6 +120,8 @@ def inventory_items(request):
                 expiry_date = datetime.fromisoformat(str(expiry_date)).date()
             except Exception:
                 expiry_date = None
+        changed = False
+        changes = {}
         item = InventoryItem.objects.create(
             name=name,
             category=(data.get("category") or "").strip(),
@@ -124,6 +132,7 @@ def inventory_items(request):
             last_restocked=dj_timezone.now() if qty > 0 else None,
             expiry_date=expiry_date,
         )
+        changed = True
         # If initial quantity provided, mirror it into the ledger as a receipt
         try:
             if qty > 0:
@@ -133,8 +142,12 @@ def inventory_items(request):
             pass
         # Return with authoritative quantity from ledger
         stock_map = get_current_stock([str(item.id)], location_id=None, as_of=None)
-        return JsonResponse({"success": True, "data": _safe_item(item, float(stock_map.get(str(item.id), 0)))})
+        item_payload = _safe_item(item, float(stock_map.get(str(item.id), 0)))
+        if changed or changes:
+            publish_event("inventory.updated", {"item": item_payload, "changes": changes}, roles={"admin", "manager", "staff"})
+        return JsonResponse({"success": True, "data": item_payload})
     except Exception:
+        logger.exception("Failed to create inventory item")
         return JsonResponse({"success": False, "message": "Failed to create item"}, status=500)
 
 
@@ -156,7 +169,10 @@ def inventory_item_detail(request, iid):
         if not (_has_permission(actor, "inventory.update") or getattr(actor, "role", "").lower() in {"admin", "manager"}):
             return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
         if request.method == "DELETE":
+            item_id = str(item.id)
+            item_name = item.name
             item.delete()
+            publish_event("inventory.deleted", {"itemId": item_id, "name": item_name}, roles={"admin", "manager", "staff"})
             return JsonResponse({"success": True, "message": "Deleted"})
         data = json.loads(request.body.decode("utf-8") or "{}")
         fields = ["name", "category", "unit", "supplier"]
@@ -215,7 +231,10 @@ def inventory_item_detail(request, iid):
                 pass
         # Return item with authoritative quantity
         stock_map = get_current_stock([str(item.id)], location_id=None, as_of=None)
-        return JsonResponse({"success": True, "data": _safe_item(item, float(stock_map.get(str(item.id), 0)))})
+        item_payload = _safe_item(item, float(stock_map.get(str(item.id), 0)))
+        if changed or changes:
+            publish_event("inventory.updated", {"item": item_payload, "changes": changes}, roles={"admin", "manager", "staff"})
+        return JsonResponse({"success": True, "data": item_payload})
     except Exception:
         return JsonResponse({"success": False, "message": "Error"}, status=500)
 
@@ -250,7 +269,7 @@ def inventory_item_stock(request, iid):
                 if connection.features.has_select_for_update:
                     qs = qs.select_for_update()
             except Exception:
-                # Be safe on SQLite and other limited backends
+                # Be safe on backends without SELECT FOR UPDATE support
                 pass
             item = qs.first()
             if not item:
@@ -301,7 +320,9 @@ def inventory_item_stock(request, iid):
                 # Do not fail the request if activity logging fails
                 pass
 
-        return JsonResponse({"success": True, "data": _safe_item(item, new_q)})
+        item_payload = _safe_item(item, new_q)
+        publish_event("inventory.stock_adjusted", {"item": item_payload, "operation": op, "quantity": qty, "newQuantity": new_q, "reason": reason}, roles={"admin", "manager", "staff"})
+        return JsonResponse({"success": True, "data": item_payload})
     except Exception:
         return JsonResponse({"success": False, "message": "Failed to update stock"}, status=500)
 
@@ -433,6 +454,7 @@ def inventory_receipts(request):
             reference_type="goods_receipt",
             reference_id=str(payload.get("goodsReceiptId") or ""),
         )
+        publish_event("inventory.receipt_recorded", {"movementId": str(mv.id), "itemId": str(item.id), "quantity": qty, "location": loc.code}, roles={"admin", "manager", "staff"})
         return JsonResponse({"success": True, "data": {"movementId": str(mv.id)}})
     except Exception as e:
         return JsonResponse({"success": False, "message": "Failed to record receipt"}, status=500)
@@ -458,6 +480,7 @@ def inventory_adjust(request):
         if not item:
             return JsonResponse({"success": False, "message": "Item not found"}, status=404)
         mv = adjust_stock(item=item, delta_qty=delta, location=loc, reason=reason, actor=actor if hasattr(actor, "id") else None)
+        publish_event("inventory.adjustment_recorded", {"movementId": str(mv.id), "itemId": str(item.id), "delta": delta, "location": loc.code, "reason": reason}, roles={"admin", "manager", "staff"})
         return JsonResponse({"success": True, "data": {"movementId": str(mv.id)}})
     except ValueError as ve:
         return JsonResponse({"success": False, "message": str(ve)}, status=400)
@@ -626,6 +649,8 @@ def inventory_consume(request):
             if it:
                 components.append((it, qty))
         mvs = consume_for_order(order_id=order_id, components=components, location=loc, actor=actor if hasattr(actor, "id") else None)
+        event_components = [{"itemId": str(it.id), "quantity": qty} for it, qty in components]
+        publish_event("inventory.consumed_for_order", {"orderId": order_id, "count": len(mvs), "components": event_components, "location": loc.code}, roles={"admin", "manager", "staff"})
         return JsonResponse({"success": True, "data": {"count": len(mvs)}})
     except ValueError as ve:
         return JsonResponse({"success": False, "message": str(ve)}, status=400)
@@ -654,6 +679,7 @@ def inventory_transfer(request):
         if not item:
             return JsonResponse({"success": False, "message": "Item not found"}, status=404)
         mvs = transfer_stock(item=item, qty=qty, from_location=from_loc, to_location=to_loc, actor=actor if hasattr(actor, "id") else None)
+        publish_event("inventory.transfer_recorded", {"itemId": str(item.id), "quantity": qty, "from": from_loc.code, "to": to_loc.code, "movementIds": [str(m.id) for m in mvs]}, roles={"admin", "manager", "staff"})
         return JsonResponse({"success": True, "data": {"count": len(mvs)}})
     except ValueError as ve:
         return JsonResponse({"success": False, "message": str(ve)}, status=400)

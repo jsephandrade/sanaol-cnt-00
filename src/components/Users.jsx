@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -58,6 +58,16 @@ const Users = () => {
     // IMPORTANT: send '' (not a sentinel) to the hook/api
     role: roleFilter,
   });
+
+  useEffect(() => {
+    const handleUsersUpdated = () => {
+      refetch?.();
+    };
+    window?.addEventListener?.('users.updated', handleUsersUpdated);
+    return () => {
+      window?.removeEventListener?.('users.updated', handleUsersUpdated);
+    };
+  }, [refetch]);
 
   const {
     roles,

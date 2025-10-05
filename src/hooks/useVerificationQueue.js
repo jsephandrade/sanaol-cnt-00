@@ -38,12 +38,23 @@ export const useVerificationQueue = (params = {}) => {
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['verify-requests'] });
+  const refreshUsers = () =>
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  const broadcastUsersUpdated = (detail) => {
+    try {
+      window?.dispatchEvent?.(
+        new CustomEvent('users.updated', { detail: detail || null })
+      );
+    } catch {}
+  };
 
   const approve = useMutation({
     mutationFn: ({ requestId, role, note }) =>
       verificationService.approve({ requestId, role, note }),
     onSuccess: () => {
       invalidate();
+      refreshUsers();
+      broadcastUsersUpdated({ type: 'approve' });
       toast({
         title: 'Approved',
         description: 'Access granted and role assigned.',
