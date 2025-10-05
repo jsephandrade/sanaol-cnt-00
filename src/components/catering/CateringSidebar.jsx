@@ -11,7 +11,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -64,11 +63,11 @@ export const CateringSidebar = ({
         <CardHeader className="relative pb-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
                 <UtensilsCrossed className="h-3.5 w-3.5" /> Catering Menu
               </div>
-              <CardDescription className="max-w-sm text-sm text-slate-500">
-                Discover handcrafted favorites ready for your next service.
+              <CardDescription className="text-sm">
+                Discover curated dishes and bundles ready for your next event.
               </CardDescription>
             </div>
             {hasMenuItems && (
@@ -146,7 +145,7 @@ export const CateringSidebar = ({
           <Button
             variant="default"
             size="sm"
-            className="w-full justify-center gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full justify-center gap-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={onViewFullMenu}
             disabled={isMenuLoading || !hasMenuItems}
           >
@@ -162,10 +161,10 @@ export const CateringSidebar = ({
 
         <CardHeader className="relative pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold">
-                Upcoming Events
-              </CardTitle>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
+                <UtensilsCrossed className="h-3.5 w-3.5" /> Upcoming Events
+              </div>
               <CardDescription className="text-sm">
                 Stay aligned with every celebration on the horizon.
               </CardDescription>

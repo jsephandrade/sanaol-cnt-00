@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Utensils } from 'lucide-react';
+import { PlusCircle, Utensils, UtensilsCrossed } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO, parse } from 'date-fns';
 import { NewEventModal } from './catering/NewEventModal';
@@ -481,9 +480,13 @@ const Catering = () => {
             <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
             <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle>Catering Management</CardTitle>
-                <CardDescription>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
+                  <UtensilsCrossed className="h-3.5 w-3.5" /> Catering
+                  Management
+                </div>
+
+                <CardDescription className="text-sm">
                   Handle catering orders and events
                 </CardDescription>
               </div>
