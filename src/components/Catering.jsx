@@ -476,8 +476,11 @@ const Catering = () => {
     <>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card className="relative overflow-hidden rounded-3xl border border-border bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)]">
+            {/* light theme decorative blobs */}
+            <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
+            <CardHeader className="relative flex flex-row items-center justify-between pb-2">
               <div>
                 <CardTitle>Catering Management</CardTitle>
                 <CardDescription>
@@ -488,7 +491,7 @@ const Catering = () => {
                 <PlusCircle className="h-4 w-4 mr-1" /> New Event
               </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="relative space-y-4">
               <EventSearchAndFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}

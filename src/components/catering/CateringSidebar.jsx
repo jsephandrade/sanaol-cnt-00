@@ -1,5 +1,11 @@
-import React from 'react';
-import { ChevronRight, Clock } from 'lucide-react';
+﻿import React from 'react';
+import {
+  CalendarClock,
+  ChevronRight,
+  Clock,
+  Sparkles,
+  UtensilsCrossed,
+} from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -36,32 +42,61 @@ const getItemImage = (item) => {
   return '';
 };
 
+const safeSlice = (collection, count) =>
+  Array.isArray(collection) ? collection.slice(0, count) : [];
+
 export const CateringSidebar = ({
   cateringMenu = [],
   upcomingEvents = [],
   onViewFullMenu,
   isMenuLoading = false,
 }) => {
-  const hasMenuItems = Array.isArray(cateringMenu) && cateringMenu.length > 0;
+  const menuItems = safeSlice(cateringMenu, 3);
+  const eventItems = safeSlice(upcomingEvents, 4);
+  const hasMenuItems = menuItems.length > 0;
+  const hasEvents = eventItems.length > 0;
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Catering Menu</CardTitle>
-          <CardDescription>Available catering options</CardDescription>
+    <div className="space-y-6">
+      <Card className="relative overflow-hidden rounded-3xl border border-border bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)]">
+        <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
+        <CardHeader className="relative pb-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                <UtensilsCrossed className="h-3.5 w-3.5" /> Catering Menu
+              </div>
+              <CardDescription className="max-w-sm text-sm text-slate-500">
+                Discover handcrafted favorites ready for your next service.
+              </CardDescription>
+            </div>
+            {hasMenuItems && (
+              <span className="flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-600">
+                <Sparkles className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {isMenuLoading ? (
-              Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+        <CardContent className="relative space-y-6">
+          {isMenuLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 rounded-2xl border border-dashed border-muted bg-muted/20 p-3"
+                >
+                  <Skeleton className="h-12 w-12 rounded-xl" />
+                  <div className="w-full space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
                 </div>
-              ))
-            ) : hasMenuItems ? (
-              cateringMenu.slice(0, 3).map((item) => {
+              ))}
+            </div>
+          ) : hasMenuItems ? (
+            <div className="space-y-3">
+              {menuItems.map((item) => {
                 const imageSrc = getItemImage(item);
                 const fallbackInitial =
                   (item?.name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -69,9 +104,9 @@ export const CateringSidebar = ({
                 return (
                   <div
                     key={item.id ?? item.name}
-                    className="flex items-start gap-3 border-b pb-2 last:border-0"
+                    className="group flex items-center gap-4 rounded-2xl border border-transparent bg-slate-50/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-white"
                   >
-                    <div className="h-12 w-12 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                    <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-slate-200">
                       {imageSrc ? (
                         <img
                           src={imageSrc}
@@ -80,74 +115,108 @@ export const CateringSidebar = ({
                           loading="lazy"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-muted-foreground">
+                        <div className="flex h-full w-full items-center justify-center text-base font-semibold text-slate-500">
                           {fallbackInitial}
                         </div>
                       )}
+                      <span className="absolute inset-0 rounded-xl border border-white/50 opacity-0 transition group-hover:opacity-100" />
                     </div>
-                    <div className="flex flex-1 items-start justify-between gap-3">
+                    <div className="flex flex-1 items-center justify-between gap-4">
                       <div>
-                        <p className="text-xl font-medium">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-base font-semibold text-slate-900">
+                          {item.name}
+                        </p>
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           {item.category || 'Uncategorized'}
                         </p>
                       </div>
-                      <p className="whitespace-nowrap text-sm font-semibold">
+                      <p className="whitespace-nowrap text-sm font-semibold text-primary">
                         {formatCurrency(item.price)}
                       </p>
                     </div>
                   </div>
                 );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No catering menu items available.
-              </p>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full flex items-center gap-1"
-              onClick={onViewFullMenu}
-              disabled={isMenuLoading || !hasMenuItems}
-            >
-              View Full Menu <ChevronRight className="h-3 w-3" />
-            </Button>
-          </div>
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-muted bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+              No catering menu items available.
+            </div>
+          )}
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full justify-center gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={onViewFullMenu}
+            disabled={isMenuLoading || !hasMenuItems}
+          >
+            View Full Menu <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Events</CardTitle>
-          <CardDescription>Next scheduled catering events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {upcomingEvents.slice(0, 4).map((event) => (
-              <div
-                key={event.id}
-                className="rounded-lg border p-3 hover:bg-muted/30 transition-colors"
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>{event.dateLabel || event.date || 'TBD'}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {event.time}
-                  </span>
-                </div>
-                <h4 className="text-sm font-medium">{event.name}</h4>
-                <p className="text-xs text-muted-foreground">{event.client}</p>
-              </div>
-            ))}
-            {!upcomingEvents.length && (
-              <p className="text-sm text-muted-foreground">
-                No upcoming events scheduled.
-              </p>
+      <Card className="relative overflow-hidden rounded-3xl border border-border bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)]">
+        {/* light theme decorative blobs */}
+        <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
+
+        <CardHeader className="relative pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-semibold">
+                Upcoming Events
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Stay aligned with every celebration on the horizon.
+              </CardDescription>
+            </div>
+            {hasEvents && (
+              <span className="rounded-full bg-secondary/20 px-3 py-1 text-xs font-medium text-secondary-foreground">
+                {eventItems.length} scheduled
+              </span>
             )}
           </div>
+        </CardHeader>
+        <CardContent className="relative">
+          {hasEvents ? (
+            <div className="relative space-y-4">
+              <div
+                className="absolute inset-y-2 left-3 w-px bg-muted"
+                aria-hidden="true"
+              />
+              {eventItems.map((event, index) => (
+                <div
+                  key={event.id ?? index}
+                  className="relative ml-7 rounded-2xl border border-transparent bg-muted/20 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-background"
+                >
+                  <span className="absolute left-[-28px] top-5 flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+                    <CalendarClock className="h-3 w-3" />
+                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 font-semibold text-foreground">
+                      {event.dateLabel || event.date || 'Date TBD'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {event.time || 'Time TBD'}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <h4 className="text-base font-semibold text-foreground">
+                      {event.name}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {event.client || 'Client details not provided'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-muted bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+              No upcoming events scheduled.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
