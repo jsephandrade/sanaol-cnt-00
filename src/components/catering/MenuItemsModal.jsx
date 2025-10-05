@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,43 +20,99 @@ export const MenuItemsModal = ({
 }) => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('1');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [paymentType, setPaymentType] = useState('downpayment');
   const [amountPaid, setAmountPaid] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Sample categories - same as POS
-  const categories = [
-    {
-      id: '1',
-      name: 'Noodles',
-      items: menuItems.filter((item) => item.category === 'Noodles'),
-    },
-    {
-      id: '2',
-      name: 'Sandwich',
-      items: menuItems.filter((item) => item.category === 'Sandwich'),
-    },
-    {
-      id: '3',
-      name: 'Main Dish',
-      items: menuItems.filter((item) => item.category === 'Main Dish'),
-    },
-    {
-      id: '4',
-      name: 'Viand',
-      items: menuItems.filter((item) => item.category === 'Viand'),
-    },
-    {
-      id: '5',
-      name: 'Drinks',
-      items: menuItems.filter((item) => item.category === 'Drinks'),
-    },
-    {
-      id: '6',
-      name: 'Combo Meals',
-      items: menuItems.filter((item) => item.category === 'Combo Meals'),
-    },
-  ];
+  useEffect(() => {
+    if (!open) return;
+    const existingItems = (event?.items || []).map((item) => ({
+      id: `existing-${item.id || item.menuItemId || Math.random()}`,
+      menuItemId: item.menuItemId || item.menu_item_id || null,
+      name: item.name,
+      price: Number(item.unitPrice ?? item.unit_price ?? item.price ?? 0),
+      quantity: Number(item.quantity ?? 1),
+    }));
+    setSelectedItems(existingItems);
+    setPaymentType('downpayment');
+    setAmountPaid('');
+  }, [open, event?.id, event?.items]);
+
+  const normalizedMenuItems = useMemo(() => {
+    const getCategoryName = (category) => {
+      if (!category) return 'Uncategorized';
+      if (typeof category === 'string') return category;
+      if (typeof category === 'object') {
+        return (
+          category.name ||
+          category.label ||
+          category.title ||
+          category.slug ||
+          category.id ||
+          'Uncategorized'
+        );
+      }
+      return String(category);
+    };
+
+    const toNumber = (value) => {
+      const num = Number(value ?? 0);
+      return Number.isFinite(num) ? num : 0;
+    };
+
+    return (menuItems || []).map((item) => ({
+      ...item,
+      category: getCategoryName(item.category),
+      price: toNumber(item.price ?? item.unitPrice ?? item.basePrice),
+      description: item.description || '',
+    }));
+  }, [menuItems]);
+
+  const categories = useMemo(() => {
+    if (!normalizedMenuItems.length) return [];
+
+    const slugify = (value) =>
+      String(value || 'uncategorized')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || 'uncategorized';
+
+    const grouped = new Map();
+
+    normalizedMenuItems.forEach((item) => {
+      const name = item.category || 'Uncategorized';
+      const slug = slugify(name);
+      if (!grouped.has(slug)) {
+        grouped.set(slug, { id: slug, name, items: [] });
+      }
+      grouped.get(slug).items.push(item);
+    });
+
+    const sorted = Array.from(grouped.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
+    return [
+      {
+        id: 'all',
+        name: 'All',
+        items: normalizedMenuItems,
+      },
+      ...sorted,
+    ];
+  }, [normalizedMenuItems]);
+
+  useEffect(() => {
+    if (!categories.length) {
+      setActiveCategory('all');
+      return;
+    }
+
+    if (!categories.some((category) => category.id === activeCategory)) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
 
   const addToOrder = (menuItem) => {
     setSelectedItems((prevItems) => {
@@ -130,17 +186,24 @@ export const MenuItemsModal = ({
     }
   };
 
-  const handleSave = () => {
-    if (event) {
+  const handleSave = async () => {
+    if (!event || isSaving) return;
+
+    setIsSaving(true);
+    try {
       const eventMenuItems = selectedItems.map((item) => ({
         menuItemId: item.menuItemId,
         quantity: item.quantity,
-        price: item.price * item.quantity,
+        unitPrice: item.price,
       }));
 
-      onUpdateMenuItems(event.id, eventMenuItems);
-      onOpenChange(false);
-      clearOrder();
+      const success = await onUpdateMenuItems(event.id, eventMenuItems);
+      if (success) {
+        onOpenChange(false);
+        clearOrder();
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -164,16 +227,22 @@ export const MenuItemsModal = ({
 
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 h-[calc(90vh-200px)]">
           <div className="lg:col-span-2">
-            <CateringMenuSelection
-              categories={categories}
-              activeCategory={activeCategory}
-              setActiveCategory={setActiveCategory}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              onAddToOrder={addToOrder}
-              eventName={event.name}
-              attendees={event.attendees}
-            />
+            {categories.length ? (
+              <CateringMenuSelection
+                categories={categories}
+                activeCategory={activeCategory}
+                setActiveCategory={setActiveCategory}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                onAddToOrder={addToOrder}
+                eventName={event.name}
+                attendees={event.attendees}
+              />
+            ) : (
+              <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+                No menu items available. Please add items to the menu first.
+              </div>
+            )}
           </div>
 
           <div className="lg:col-span-1">
@@ -194,11 +263,18 @@ export const MenuItemsModal = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={selectedItems.length === 0}>
-            Save Menu Items & Payment
+          <Button
+            onClick={handleSave}
+            disabled={selectedItems.length === 0 || isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Menu Items & Payment'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -19,6 +19,10 @@ import {
 export const EventDetailsModal = ({ open, onOpenChange, event }) => {
   if (!event) return null;
 
+  const contactPerson = event.contactPerson || { name: '', phone: '' };
+  const totalValue = Number(event.total ?? 0);
+  const attendeesCount = Number(event.attendees ?? 0);
+
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'scheduled':
@@ -35,8 +39,10 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
   };
 
   const getInitials = (name) => {
+    if (!name) return '';
     return name
       .split(' ')
+      .filter(Boolean)
       .map((n) => n[0])
       .join('')
       .toUpperCase();
@@ -52,7 +58,6 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Event Header */}
           <Card>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -70,7 +75,6 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
             </CardHeader>
           </Card>
 
-          {/* Event Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-3">
@@ -93,7 +97,7 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-medium">{event.attendees} people</p>
+                <p className="font-medium">{attendeesCount} people</p>
                 <p className="text-sm text-muted-foreground">Expected guests</p>
               </CardContent>
             </Card>
@@ -106,7 +110,7 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-medium">{event.location}</p>
+                <p className="font-medium">{event.location || '—'}</p>
               </CardContent>
             </Card>
 
@@ -120,19 +124,20 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
               <CardContent className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-sm">Total:</span>
-                  <span className="font-medium">${event.total.toFixed(2)}</span>
+                  <span className="font-medium">${totalValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Per person:</span>
                   <span className="font-medium">
-                    ${(event.total / event.attendees).toFixed(2)}
+                    {attendeesCount > 0
+                      ? `$${(totalValue / attendeesCount).toFixed(2)}`
+                      : '$0.00'}
                   </span>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Contact Information */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -144,14 +149,14 @@ export const EventDetailsModal = ({ open, onOpenChange, event }) => {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                   <span className="font-medium">
-                    {getInitials(event.contactPerson.name)}
+                    {getInitials(contactPerson.name) || '—'}
                   </span>
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium">{event.contactPerson.name}</p>
+                  <p className="font-medium">{contactPerson.name || '—'}</p>
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <Phone className="h-3 w-3" />
-                    <span>{event.contactPerson.phone}</span>
+                    <span>{contactPerson.phone || '—'}</span>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   SidebarGroup,
@@ -23,6 +23,17 @@ import {
   FileText,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
+
+const HIDE_SCROLLBAR_STYLES = `
+  .navigation-sidebar-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .navigation-sidebar-scroll::-webkit-scrollbar {
+    display: none;
+  }
+`;
 
 export const NavigationSidebar = () => {
   const location = useLocation();
@@ -179,46 +190,49 @@ export const NavigationSidebar = () => {
     .filter((group) => group.items.length > 0);
 
   return (
-    <div className="px-2 py-2 space-y-2">
-      {visibleGroups.map((group) => (
-        <SidebarGroup key={group.key}>
-          <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {group.items.map((item) => {
-                const isAttendanceShortcut =
-                  isStaff && item.key === 'employees';
+    <>
+      <style>{HIDE_SCROLLBAR_STYLES}</style>
+      <div className="navigation-sidebar-scroll px-2 py-2 space-y-2 overflow-y-auto">
+        {visibleGroups.map((group) => (
+          <SidebarGroup key={group.key}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const isAttendanceShortcut =
+                    isStaff && item.key === 'employees';
 
-                const isActive = location.pathname === item.href;
-                const attendanceLink = {
-                  pathname: item.href,
-                  search: '?attendance=1',
-                  state: { openAttendance: true },
-                };
+                  const isActive = location.pathname === item.href;
+                  const attendanceLink = {
+                    pathname: item.href,
+                    search: '?attendance=1',
+                    state: { openAttendance: true },
+                  };
 
-                return (
-                  <SidebarMenuItem key={item.key}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.name}
-                    >
-                      <Link
-                        to={isAttendanceShortcut ? attendanceLink : item.href}
-                        className="flex items-center space-x-3"
+                  return (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.name}
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.name}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
-    </div>
+                        <Link
+                          to={isAttendanceShortcut ? attendanceLink : item.href}
+                          className="flex items-center space-x-3"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.name}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </div>
+    </>
   );
 };
 

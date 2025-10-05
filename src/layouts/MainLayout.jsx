@@ -31,6 +31,17 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 
+const LAYOUT_SCROLLBAR_STYLES = `
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
 const MainLayout = ({ children, title: _title }) => {
   const isMobile = useIsMobile();
   const { user, logout } = useAuth();
@@ -40,117 +51,120 @@ const MainLayout = ({ children, title: _title }) => {
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
-      <div className="flex h-screen w-full bg-background">
-        {/* Sidebar */}
-        <Sidebar variant="sidebar" collapsible="icon">
-          <SidebarHeader>
-            <div className="flex items-center justify-center p-4">
-              <div className="flex items-center space-x-2">
-                <img
-                  src={logo}
-                  alt="TechnoMart Logo"
-                  className="h-8 w-8 object-contain group-data-[collapsible=icon]:hidden"
-                />
-                <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">
-                  TechnoMart
-                </span>
+    <>
+      <style>{LAYOUT_SCROLLBAR_STYLES}</style>
+      <SidebarProvider defaultOpen={!isMobile}>
+        <div className="flex h-screen w-full bg-background">
+          {/* Sidebar */}
+          <Sidebar variant="sidebar" collapsible="icon">
+            <SidebarHeader>
+              <div className="flex items-center justify-center p-4">
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={logo}
+                    alt="TechnoMart Logo"
+                    className="h-8 w-8 object-contain group-data-[collapsible=icon]:hidden"
+                  />
+                  <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">
+                    TechnoMart
+                  </span>
+                </div>
               </div>
-            </div>
-          </SidebarHeader>
+            </SidebarHeader>
 
-          <SidebarContent>
-            <NavigationSidebar />
-          </SidebarContent>
+            <SidebarContent className="hide-scrollbar">
+              <NavigationSidebar />
+            </SidebarContent>
 
-          <SidebarFooter>
-            {/* Expanded footer with name/role */}
-            <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-                  <span className="font-semibold text-sidebar-accent-foreground">
+            <SidebarFooter>
+              {/* Expanded footer with name/role */}
+              <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+                    <span className="font-semibold text-sidebar-accent-foreground">
+                      {avatarInitial}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">{displayName}</p>
+                    <p className="text-sm text-sidebar-foreground/70 capitalize">
+                      {displayRole}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Collapsed footer shows only user initial */}
+              <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-2 border-t border-sidebar-border">
+                <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+                  <span className="text-sm font-semibold text-sidebar-accent-foreground">
                     {avatarInitial}
                   </span>
                 </div>
-                <div>
-                  <p className="font-semibold">{displayName}</p>
-                  <p className="text-sm text-sidebar-foreground/70 capitalize">
-                    {displayRole}
-                  </p>
-                </div>
               </div>
-            </div>
+            </SidebarFooter>
+          </Sidebar>
 
-            {/* Collapsed footer shows only user initial */}
-            <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-2 border-t border-sidebar-border">
-              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <span className="text-sm font-semibold text-sidebar-accent-foreground">
-                  {avatarInitial}
-                </span>
+          {/* Main content */}
+          <SidebarInset className="flex flex-col">
+            {/* Header */}
+            <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
+              <div className="flex items-center">
+                <SidebarTrigger className="mr-2" />
               </div>
-            </div>
-          </SidebarFooter>
-        </Sidebar>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" asChild>
+                  <Link to="/notifications">
+                    <Bell className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/help">Help</Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/settings">Settings</Link>
+                </Button>
 
-        {/* Main content */}
-        <SidebarInset className="flex flex-col">
-          {/* Header */}
-          <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
-            <div className="flex items-center">
-              <SidebarTrigger className="mr-2" />
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" asChild>
-                <Link to="/notifications">
-                  <Bell className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/help">Help</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/settings">Settings</Link>
-              </Button>
-
-              {/* ⬇️ Logout with confirmation */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" title="Logout">
-                    <LogOut className="mr-1" />
-                    Logout
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Are you sure you want to logout?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      You’ll be signed out of your account and may need to log
-                      in again to continue.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={logout}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
+                {/* ⬇️ Logout with confirmation */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" title="Logout">
+                      <LogOut className="mr-1" />
                       Logout
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </header>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you sure you want to logout?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You’ll be signed out of your account and may need to log
+                        in again to continue.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={logout}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Logout
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </header>
 
-          {/* Content */}
-          <main className="flex-1 overflow-y-auto p-6">
-            <PageTransition>{children}</PageTransition>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+            {/* Content */}
+            <main className="flex-1 overflow-y-auto p-6 hide-scrollbar">
+              <PageTransition>{children}</PageTransition>
+            </main>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    </>
   );
 };
 

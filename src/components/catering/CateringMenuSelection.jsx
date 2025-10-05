@@ -25,17 +25,21 @@ const CateringMenuSelection = ({
   const getFilteredItems = () => {
     if (searchTerm.trim()) {
       const allItems = [];
-      categories.forEach((category) => {
-        category.items
-          .filter(
-            (item) =>
-              item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              item.description.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-          .forEach((item) => {
-            allItems.push({ ...item, categoryName: category.name });
-          });
-      });
+      categories
+        .filter((category) => category.id !== 'all')
+        .forEach((category) => {
+          category.items
+            .filter(
+              (item) =>
+                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.description
+                  .toLowerCase()
+                  .includes(searchTerm.toLowerCase())
+            )
+            .forEach((item) => {
+              allItems.push({ ...item, categoryName: category.name });
+            });
+        });
       return allItems;
     }
     return [];

@@ -15,6 +15,7 @@ from . import views_orders as order_views
 from . import views_reports as rpt_views
 from . import views_cash as cash_views
 from . import views_diag as diag_views
+from . import views_catering as catering_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -126,6 +127,15 @@ urlpatterns = [
     path("inventory/transfer", inv_views.inventory_transfer, name="inventory_transfer"),
     path("inventory/adjust", inv_views.inventory_adjust, name="inventory_adjust"),
     path("inventory/ledger", inv_views.inventory_ledger, name="inventory_ledger"),
+
+    # Catering events
+    path("catering/events", catering_views.catering_events, name="catering_events"),
+    path("catering/events/<uuid:event_id>", catering_views.catering_event_detail, name="catering_event_detail"),
+    path(
+        "catering/events/<uuid:event_id>/menu-items",
+        catering_views.catering_event_menu_items,
+        name="catering_event_menu_items",
+    ),
 
     # Reports
     path("reports/sales", rpt_views.reports_sales, name="reports_sales"),

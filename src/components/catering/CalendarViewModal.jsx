@@ -127,10 +127,10 @@ export const CalendarViewModal = ({ open, onOpenChange, events }) => {
 
                       <div className="flex justify-between items-center pt-2">
                         <span className="font-semibold">
-                          ${event.total.toFixed(2)}
+                          ${Number(event.total ?? 0).toFixed(2)}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          Contact: {event.contactPerson.name}
+                          Contact: {event.contactPerson?.name || '—'}
                         </span>
                       </div>
                     </CardContent>

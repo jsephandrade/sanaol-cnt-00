@@ -233,6 +233,9 @@ DEFAULT_ROLE_PERMISSIONS = {
         "notification.view",
         # Menu management (alias for clarity in endpoints)
         "menu.manage",
+        # Catering module
+        "catering.view",
+        "catering.manage",
         # Employee directory management
         "employees.manage",
         # Verification review
@@ -267,6 +270,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "notification.send",
         "notification.receive",
         "notification.view",
+        # Catering module (view-only access)
+        "catering.view",
     },
 }
 
