@@ -41,7 +41,7 @@
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 201 94% 37%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 20%;
+    --sidebar-accent: 208, 72%, 24%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 210 40% 20%;
     --sidebar-ring: 201 94% 37%;
@@ -161,7 +161,12 @@
 
 /* Loading states */
 .loading-skeleton {
-  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.1) 50%, hsl(var(--muted)) 75%);
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.1) 50%,
+    hsl(var(--muted)) 75%
+  );
   background-size: 200% 100%;
   animation: loading 1.5s infinite;
 }

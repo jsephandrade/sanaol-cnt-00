@@ -1,13 +1,9 @@
-// MainLayout.jsx
 import React from 'react';
 import {
   SidebarProvider,
   Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarTrigger,
   SidebarInset,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -16,9 +12,8 @@ import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { Link } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
-import logo from '@/assets/technomart-logo.png';
 
-// ⬇️ Add these imports
+// ⬇️ Logout dialog imports
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -42,13 +37,9 @@ const LAYOUT_SCROLLBAR_STYLES = `
   }
 `;
 
-const MainLayout = ({ children, title: _title }) => {
+const MainLayout = ({ children }) => {
   const isMobile = useIsMobile();
   const { user, logout } = useAuth();
-
-  const displayName = user?.name || 'Admin';
-  const displayRole = user?.role || 'admin';
-  const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
 
   return (
     <>
@@ -57,75 +48,34 @@ const MainLayout = ({ children, title: _title }) => {
         <div className="flex h-screen w-full bg-background">
           {/* Sidebar */}
           <Sidebar variant="sidebar" collapsible="icon">
-            <SidebarHeader>
-              <div className="flex items-center justify-center p-4">
-                <div className="flex items-center space-x-2">
-                  <img
-                    src={logo}
-                    alt="TechnoMart Logo"
-                    className="h-8 w-8 object-contain group-data-[collapsible=icon]:hidden"
-                  />
-                  <span className="text-xl font-bold group-data-[collapsible=icon]:hidden">
-                    TechnoMart
-                  </span>
-                </div>
-              </div>
-            </SidebarHeader>
-
-            <SidebarContent className="hide-scrollbar">
-              <NavigationSidebar />
-            </SidebarContent>
-
-            <SidebarFooter>
-              {/* Expanded footer with name/role */}
-              <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
-                    <span className="font-semibold text-sidebar-accent-foreground">
-                      {avatarInitial}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-semibold">{displayName}</p>
-                    <p className="text-sm text-sidebar-foreground/70 capitalize">
-                      {displayRole}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Collapsed footer shows only user initial */}
-              <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-2 border-t border-sidebar-border">
-                <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
-                  <span className="text-sm font-semibold text-sidebar-accent-foreground">
-                    {avatarInitial}
-                  </span>
-                </div>
-              </div>
-            </SidebarFooter>
+            <NavigationSidebar />
           </Sidebar>
 
           {/* Main content */}
           <SidebarInset className="flex flex-col">
             {/* Header */}
             <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
-              <div className="flex items-center">
-                <SidebarTrigger className="mr-2" />
+              <div className="flex items-center gap-2">
+                {/* ⬇️ Shrink / Expand Sidebar button */}
+                <SidebarTrigger />
               </div>
+
               <div className="flex items-center gap-3">
                 <Button variant="outline" asChild>
                   <Link to="/notifications">
                     <Bell className="h-4 w-4" />
                   </Link>
                 </Button>
+
                 <Button variant="outline" asChild>
                   <Link to="/help">Help</Link>
                 </Button>
+
                 <Button variant="outline" asChild>
                   <Link to="/settings">Settings</Link>
                 </Button>
 
-                {/* ⬇️ Logout with confirmation */}
+                {/* Logout with confirmation */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="ghost" title="Logout">
@@ -157,7 +107,7 @@ const MainLayout = ({ children, title: _title }) => {
               </div>
             </header>
 
-            {/* Content */}
+            {/* Page Content */}
             <main className="flex-1 overflow-y-auto p-6 hide-scrollbar">
               <PageTransition>{children}</PageTransition>
             </main>

@@ -1,16 +1,20 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,
-  Menu,
+  Menu as MenuIcon,
   TrendingUp,
   Users,
   CalendarClock,
@@ -22,218 +26,248 @@ import {
   CreditCard,
   FileText,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
-
-const HIDE_SCROLLBAR_STYLES = `
-  .navigation-sidebar-scroll {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .navigation-sidebar-scroll::-webkit-scrollbar {
-    display: none;
-  }
-`;
+import logo from '@/assets/technomart-logo.png';
 
 export const NavigationSidebar = () => {
   const location = useLocation();
-  const { hasRole } = useAuth();
-  const isAdmin = hasRole('admin');
-  const isStaff = hasRole('staff');
+  const { user } = useAuth();
+
+  const displayName = user?.name || 'Admin';
+  const displayRole = user?.role || 'admin';
+  const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
+  const isAdmin = true;
+
+  // Read collapsed state; default to expanded if hook not present
+  let isCollapsed = false;
+  try {
+    const sidebar = useSidebar?.();
+    isCollapsed = sidebar?.state === 'collapsed';
+  } catch {
+    isCollapsed = false;
+  }
+
+  // Slightly wider "icon" (collapsed) width so logo/initials can be bigger
+  // You can tweak 96px -> 88px / 104px to your taste.
+  const COLLAPSED_WIDTH_CSS = `
+    /* Scope to the sidebar when it is in icon (collapsed) mode */
+    .group[data-collapsible="icon"] {
+      --sidebar-width-icon: 96px;
+    }
+  `;
 
   const navigationGroups = [
     {
-      key: 'account-management',
-      label: 'Account Management',
+      label: 'Core',
       items: [
-        {
-          key: 'dashboard',
-          name: 'Dashboard',
-          href: '/',
-          icon: LayoutDashboard,
-        },
-        {
-          key: 'users',
-          name: 'User Management',
-          href: '/users',
-          icon: Users,
-          adminOnly: true,
-        },
+        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+        { name: 'Point of Sale', href: '/pos', icon: ShoppingCart },
       ],
     },
     {
-      key: 'inventory-management',
-      label: 'Inventory Management',
+      label: 'Operations',
       items: [
-        {
-          key: 'menu',
-          name: 'Menu Management',
-          href: '/menu',
-          icon: Menu,
-        },
-        {
-          key: 'inventory',
-          name: 'Inventory',
-          href: '/inventory',
-          icon: Package,
-        },
+        { name: 'Menu Management', href: '/menu', icon: MenuIcon },
+        { name: 'Catering', href: '/catering', icon: Utensils },
+        { name: 'Inventory', href: '/inventory', icon: Package },
       ],
     },
     {
-      key: 'order-handling',
-      label: 'Order Handling',
+      label: 'Management',
       items: [
+        { name: 'Analytics', href: '/analytics', icon: TrendingUp },
         {
-          key: 'pos',
-          name: 'Point of Sale',
-          href: '/pos',
-          icon: ShoppingCart,
-        },
-        {
-          key: 'catering',
-          name: 'Catering',
-          href: '/catering',
-          icon: Utensils,
-        },
-      ],
-    },
-    {
-      key: 'payments-transactions',
-      label: 'Payment and Transactions',
-      items: [
-        {
-          key: 'payments',
-          name: 'Payments',
-          href: '/payments',
-          icon: CreditCard,
-        },
-      ],
-    },
-    {
-      key: 'staff-scheduling',
-      label: 'Staff and Work Scheduling',
-      items: [
-        {
-          key: 'employees',
           name: 'Employee Management',
           href: '/employees',
           icon: CalendarClock,
         },
+        { name: 'Payments', href: '/payments', icon: CreditCard },
+        { name: 'Users', href: '/users', icon: Users, adminOnly: true },
       ],
     },
     {
-      key: 'reports-analytics',
-      label: 'Reports and Analytics',
+      label: 'Support',
       items: [
-        {
-          key: 'analytics',
-          name: 'Analytics',
-          href: '/analytics',
-          icon: TrendingUp,
-        },
-        {
-          key: 'logs',
-          name: 'Activity Logs',
-          href: '/logs',
-          icon: FileText,
-        },
-        {
-          key: 'feedback',
-          name: 'Customer Feedback',
-          href: '/feedback',
-          icon: MessageSquare,
-        },
-      ],
-    },
-    {
-      key: 'notifications',
-      label: 'Notifications',
-      items: [
-        {
-          key: 'notifications',
-          name: 'Notifications',
-          href: '/notifications',
-          icon: Bell,
-        },
+        { name: 'Activity Logs', href: '/logs', icon: FileText },
+        { name: 'Notifications', href: '/notifications', icon: Bell },
+        { name: 'Customer Feedback', href: '/feedback', icon: MessageSquare },
       ],
     },
   ];
 
-  const restrictedForStaff = new Set([
-    'menu',
-    'catering',
-    'inventory',
-    'analytics',
-    'payments',
-    'logs',
-    'feedback',
-  ]);
-
-  const computeVisibleItems = (items = []) =>
-    items
-      .map((item) =>
-        item.key === 'employees' && isStaff
-          ? { ...item, name: 'Employee Attendance' }
-          : item
-      )
-      .filter(
-        (item) =>
-          (!item.adminOnly || isAdmin) &&
-          !(isStaff && restrictedForStaff.has(item.key))
-      );
-
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: computeVisibleItems(group.items),
+      items: group.items.filter((item) => !item.adminOnly || isAdmin),
     }))
     .filter((group) => group.items.length > 0);
 
   return (
     <>
-      <style>{HIDE_SCROLLBAR_STYLES}</style>
-      <div className="navigation-sidebar-scroll px-2 py-2 space-y-2 overflow-y-auto">
-        {visibleGroups.map((group) => (
-          <SidebarGroup key={group.key}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const isAttendanceShortcut =
-                    isStaff && item.key === 'employees';
+      {/* widen collapsed width */}
+      <style>{COLLAPSED_WIDTH_CSS}</style>
 
-                  const isActive = location.pathname === item.href;
-                  const attendanceLink = {
-                    pathname: item.href,
-                    search: '?attendance=1',
-                    state: { openAttendance: true },
-                  };
+      {/* Header with TechnoMart Logo — centered & larger in shrink mode */}
+      <SidebarHeader>
+        <div className="flex items-center justify-center p-4">
+          <Link to="/" className="flex flex-col items-center">
+            {/* Expanded: logo + wordmark */}
+            <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden">
+              <img
+                src={logo}
+                alt="TechnoMart Logo"
+                className="h-8 w-8 object-contain"
+              />
+              <span className="text-xl font-bold">TechnoMart</span>
+            </div>
 
-                  return (
-                    <SidebarMenuItem key={item.key}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive}
-                        tooltip={item.name}
+            {/* Collapsed: centered, bigger logo only */}
+            <img
+              src={logo}
+              alt="TechnoMart"
+              className="hidden group-data-[collapsible=icon]:block object-contain
+                         group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
+            />
+          </Link>
+        </div>
+      </SidebarHeader>
+
+      {/* Navigation Content */}
+      <SidebarContent
+        data-collapsed={isCollapsed ? 'true' : 'false'}
+        className={cn('hide-scrollbar')}
+      >
+        <div className={cn('flex flex-col py-1 px-3', isCollapsed && 'px-2')}>
+          {visibleGroups.map((group, groupIndex) => (
+            <SidebarGroup key={group.label} className="animate-fade-in">
+              <SidebarGroupLabel
+                className={cn(
+                  'mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-group-label',
+                  isCollapsed && 'sr-only'
+                )}
+              >
+                {group.label}
+              </SidebarGroupLabel>
+
+              <SidebarGroupContent>
+                <SidebarMenu
+                  className={cn(
+                    'space-y-1',
+                    isCollapsed && 'space-y-1.5',
+                    'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
+                  )}
+                >
+                  {group.items.map((item, itemIndex) => {
+                    const isActive = location.pathname === item.href;
+                    const Icon = item.icon;
+                    const animationDelay = `${groupIndex * 100 + itemIndex * 50}ms`;
+
+                    return (
+                      <SidebarMenuItem
+                        key={item.name}
+                        className="animate-slide-in"
+                        style={{ animationDelay }}
                       >
-                        <Link
-                          to={isAttendanceShortcut ? attendanceLink : item.href}
-                          className="flex items-center space-x-3"
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive}
+                          tooltip={item.name}
+                          className={cn(
+                            'group relative overflow-hidden rounded-lg transition-all duration-300',
+                            'hover:bg-sidebar-item-hover hover:shadow-md',
+                            // Center the whole cell in collapsed mode and give a touch more vertical padding
+                            isCollapsed && 'px-0',
+                            isActive && [
+                              'bg-sidebar-item-active-bg',
+                              'before:absolute before:left-0 before:top-0 before:h-full before:w-1',
+                              'before:bg-sidebar-item-active before:transition-all before:duration-300',
+                              'hover:bg-sidebar-item-active-bg',
+                            ]
+                          )}
                         >
-                          <item.icon className="h-5 w-5" />
-                          <span>{item.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-      </div>
+                          <Link
+                            to={item.href}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2.5 w-full',
+                              // Center icon perfectly when collapsed
+                              'group-data-[collapsible=icon]:justify-center',
+                              'group-data-[collapsible=icon]:px-0',
+                              'group-data-[collapsible=icon]:py-3'
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                'h-5 w-5 transition-all duration-300 shrink-0',
+                                // Slightly larger icon in collapsed mode
+                                'group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5',
+                                isActive
+                                  ? 'text-sidebar-item-active scale-110'
+                                  : 'text-white group-hover:text-white group-hover:scale-110'
+                              )}
+                              aria-hidden="true"
+                            />
+
+                            {/* Hide label in collapsed mode (keep DOM for smooth expand) */}
+                            <span
+                              className={cn(
+                                'text-sm font-medium transition-all duration-200',
+                                isActive
+                                  ? 'text-sidebar-item-active font-semibold'
+                                  : 'text-white group-hover:text-white',
+                                'group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:-left-[9999px]'
+                              )}
+                            >
+                              {item.name}
+                            </span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+
+              {!isCollapsed && groupIndex < visibleGroups.length - 1 && (
+                <div className="my-3 h-px bg-sidebar-divider" />
+              )}
+            </SidebarGroup>
+          ))}
+        </div>
+      </SidebarContent>
+
+      {/* Footer with User Info */}
+      <SidebarFooter>
+        {/* Expanded footer with name/role */}
+        <div className="p-4 border-t border-sidebar-border group-data-[collapsible=icon]:hidden">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-sidebar-accent flex items-center justify-center">
+              <span className="font-semibold text-sidebar-accent-foreground">
+                {avatarInitial}
+              </span>
+            </div>
+            <div>
+              <p className="font-semibold">{displayName}</p>
+              <p className="text-sm text-sidebar-foreground/70 capitalize">
+                {displayRole}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsed footer: centered & larger initials */}
+        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-3 border-t border-sidebar-border">
+          <div
+            className="rounded-full bg-sidebar-accent flex items-center justify-center
+                          w-12 h-12"
+          >
+            <span className="text-base font-semibold text-sidebar-accent-foreground">
+              {avatarInitial}
+            </span>
+          </div>
+        </div>
+      </SidebarFooter>
     </>
   );
 };
-
-export default NavigationSidebar;
