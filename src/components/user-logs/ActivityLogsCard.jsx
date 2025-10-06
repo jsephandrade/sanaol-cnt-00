@@ -48,6 +48,20 @@ const ActivityLogsCard = ({
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return '—';
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return timestamp;
+    }
+
+    return date.toLocaleString(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -145,7 +159,7 @@ const ActivityLogsCard = ({
                       <td className="p-4 align-middle whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {log.timestamp}
+                          {formatTimestamp(log.timestamp)}
                         </div>
                       </td>
                       <td className="p-4 align-middle">
