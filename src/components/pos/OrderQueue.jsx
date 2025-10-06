@@ -11,10 +11,82 @@ import { Badge } from '@/components/ui/badge';
 import { Package, Smartphone, Clock, Check } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 
+const truthyValues = new Set([true, 'true', 1, '1']);
+const falsyValues = new Set([false, 'false', 0, '0']);
+
+const normalizeStatus = (value) => {
+  if (!value) return '';
+  return String(value).toLowerCase().trim();
+};
+
+const isOrderPaid = (order) => {
+  if (!order || typeof order !== 'object') return false;
+
+  const booleanCandidates = [
+    order.isPaid,
+    order.paid,
+    order.hasPaid,
+    order.payment?.isPaid,
+    order.payment?.paid,
+    order.payment?.hasPaid,
+  ];
+
+  for (const value of booleanCandidates) {
+    if (truthyValues.has(value)) return true;
+    if (falsyValues.has(value)) return false;
+  }
+
+  const statusCandidates = [
+    order.paymentStatus,
+    order.payment_status,
+    order.payment?.status,
+    order.payment?.paymentStatus,
+  ]
+    .map(normalizeStatus)
+    .filter(Boolean);
+
+  const paidStatuses = new Set([
+    'paid',
+    'settled',
+    'complete',
+    'completed',
+    'success',
+    'succeeded',
+  ]);
+  const unpaidStatuses = new Set([
+    'unpaid',
+    'pending',
+    'due',
+    'failed',
+    'declined',
+    'void',
+    'voided',
+  ]);
+
+  for (const status of statusCandidates) {
+    if (paidStatuses.has(status)) return true;
+    if (unpaidStatuses.has(status)) return false;
+  }
+
+  return true;
+};
+
 const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
   const { can } = useAuth();
-  const walkInOrders = orderQueue.filter((order) => order.type === 'walk-in');
-  const onlineOrders = orderQueue.filter((order) => order.type === 'online');
+  const paidOrders = useMemo(() => {
+    if (!Array.isArray(orderQueue)) return [];
+    return orderQueue.filter((order) => isOrderPaid(order));
+  }, [orderQueue]);
+
+  const walkInOrders = useMemo(
+    () => paidOrders.filter((order) => order.type === 'walk-in'),
+    [paidOrders]
+  );
+
+  const onlineOrders = useMemo(
+    () => paidOrders.filter((order) => order.type === 'online'),
+    [paidOrders]
+  );
 
   const formatTimeAgo = (input) => {
     const d = input instanceof Date ? input : new Date(input);
@@ -273,24 +345,24 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
               <p className="text-sm font-medium text-muted-foreground">
                 Total Orders
               </p>
-              <p className="text-3xl font-bold">{orderQueue.length}</p>
+              <p className="text-3xl font-bold">{paidOrders.length}</p>
             </div>
             <div className="bg-yellow-50 p-4 rounded-md">
               <p className="text-sm font-medium text-yellow-800">Pending</p>
               <p className="text-3xl font-bold text-yellow-800">
-                {orderQueue.filter((o) => o.status === 'pending').length}
+                {paidOrders.filter((o) => o.status === 'pending').length}
               </p>
             </div>
             <div className="bg-blue-50 p-4 rounded-md">
               <p className="text-sm font-medium text-blue-800">Preparing</p>
               <p className="text-3xl font-bold text-blue-800">
-                {orderQueue.filter((o) => o.status === 'preparing').length}
+                {paidOrders.filter((o) => o.status === 'preparing').length}
               </p>
             </div>
             <div className="bg-green-50 p-4 rounded-md">
               <p className="text-sm font-medium text-green-800">Ready</p>
               <p className="text-3xl font-bold text-green-800">
-                {orderQueue.filter((o) => o.status === 'ready').length}
+                {paidOrders.filter((o) => o.status === 'ready').length}
               </p>
             </div>
           </div>
