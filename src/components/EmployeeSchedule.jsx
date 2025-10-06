@@ -297,7 +297,7 @@ const EmployeeSchedule = () => {
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="flex w-full flex-wrap gap-2 justify-start">
+          <TabsList className="flex w-full flex-wrap gap-2 justify-start w-fit">
             <TabsTrigger
               value="schedule"
               className="min-w-[160px] flex-1 sm:flex-none"

@@ -651,7 +651,7 @@ export default function SalesAnalytics() {
       <h2 className="text-2xl font-semibold">Analytics</h2>
 
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="flex flex-wrap gap-2">
+        <TabsList className="inline-flex flex-wrap gap-2 justify-start w-fit">
           <TabsTrigger value="sales">Sales Reports</TabsTrigger>
           <TabsTrigger value="inventory">Inventory Reports</TabsTrigger>
           <TabsTrigger value="orders">Orders & Transactions</TabsTrigger>
