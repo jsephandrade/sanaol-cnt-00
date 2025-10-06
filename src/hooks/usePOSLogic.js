@@ -4,8 +4,25 @@ import { orderService } from '@/api/services/orderService';
 export const usePOSLogic = () => {
   const [currentOrder, setCurrentOrder] = useState([]);
   const [discount, setDiscount] = useState({ type: 'percentage', value: 0 });
+  const [orderInfo, setOrderInfo] = useState(null);
+
+  const resetOrderInfo = () => setOrderInfo(null);
+
+  const extractOrderInfo = (data) => {
+    if (!data || typeof data !== 'object') return null;
+    const id = data.id || data.orderId || data.orderID || data.order_id || null;
+    const orderNumber =
+      data.orderNumber ||
+      data.order_number ||
+      data.number ||
+      data.orderNo ||
+      null;
+    if (!id || !orderNumber) return null;
+    return { id, orderNumber };
+  };
 
   const addToOrder = (menuItem) => {
+    resetOrderInfo();
     setCurrentOrder((prevOrder) => {
       const existingItemIndex = prevOrder.findIndex(
         (item) => item.menuItemId === menuItem.id
@@ -31,6 +48,7 @@ export const usePOSLogic = () => {
   };
 
   const updateQuantity = (orderItemId, change) => {
+    resetOrderInfo();
     setCurrentOrder((prevOrder) => {
       const updatedOrder = prevOrder.map((item) => {
         if (item.id === orderItemId) {
@@ -44,12 +62,14 @@ export const usePOSLogic = () => {
   };
 
   const removeFromOrder = (orderItemId) => {
+    resetOrderInfo();
     setCurrentOrder((prevOrder) =>
       prevOrder.filter((item) => item.id !== orderItemId)
     );
   };
 
   const clearOrder = () => {
+    resetOrderInfo();
     setCurrentOrder([]);
     setDiscount({ type: 'percentage', value: 0 });
   };
@@ -94,11 +114,13 @@ export const usePOSLogic = () => {
     setDiscount({ type: 'percentage', value: 0 });
   };
 
-  const processPayment = async (paymentMethod) => {
-    const total = calculateTotal();
+  const ensureOrderCreated = async () => {
     if (!currentOrder.length) {
       alert('No items in order.');
-      return false;
+      return null;
+    }
+    if (orderInfo && orderInfo.id && orderInfo.orderNumber) {
+      return orderInfo;
     }
     try {
       // Create order in backend
@@ -111,10 +133,30 @@ export const usePOSLogic = () => {
         type: 'walk-in',
       };
       const res = await orderService.createOrder(payload);
-      const orderId = res?.data?.id || res?.data?.orderId || res?.data?.orderID;
-      if (!orderId) throw new Error('Order was not created');
-      // Process payment
-      await orderService.processPayment(orderId, {
+      const data = res?.data ?? res;
+      const info = extractOrderInfo(data);
+      if (!info) throw new Error('Order was not created');
+      setOrderInfo(info);
+      return info;
+    } catch (e) {
+      console.error(e);
+      alert('Failed to create order. Please try again.');
+      return null;
+    }
+  };
+
+  const processPayment = async (paymentMethod) => {
+    const total = calculateTotal();
+    if (!currentOrder.length) {
+      alert('No items in order.');
+      return false;
+    }
+    const info = await ensureOrderCreated();
+    if (!info?.id) {
+      return false;
+    }
+    try {
+      await orderService.processPayment(info.id, {
         amount: total,
         method: paymentMethod,
       });
@@ -130,6 +172,7 @@ export const usePOSLogic = () => {
   return {
     currentOrder,
     discount,
+    orderInfo,
     addToOrder,
     updateQuantity,
     removeFromOrder,
@@ -140,5 +183,6 @@ export const usePOSLogic = () => {
     applyDiscount,
     removeDiscount,
     processPayment,
+    ensureOrderCreated,
   };
 };

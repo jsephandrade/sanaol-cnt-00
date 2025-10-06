@@ -60,11 +60,13 @@ const PaymentModal = ({
     return payment >= totalAmount;
   };
 
-  const handleProcessPayment = () => {
+  const handleProcessPayment = async () => {
     if (isPaymentValid()) {
-      onProcessPayment();
-      setPaymentAmount('');
-      setChange(0);
+      const success = await onProcessPayment();
+      if (success) {
+        setPaymentAmount('');
+        setChange(0);
+      }
     }
   };
 

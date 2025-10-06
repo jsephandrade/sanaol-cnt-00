@@ -39,6 +39,7 @@ const POS = () => {
   const {
     currentOrder,
     discount,
+    orderInfo,
     addToOrder,
     updateQuantity,
     removeFromOrder,
@@ -49,6 +50,7 @@ const POS = () => {
     applyDiscount,
     removeDiscount,
     processPayment,
+    ensureOrderCreated,
   } = usePOSLogic();
 
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
@@ -61,10 +63,17 @@ const POS = () => {
     }
   };
 
-  const handleProcessPayment = () => {
-    const success = processPayment(paymentMethod);
+  const handleProcessPayment = async () => {
+    const success = await processPayment(paymentMethod);
     if (success) {
       setIsPaymentModalOpen(false);
+    }
+  };
+
+  const handleOpenPaymentModal = async () => {
+    const info = await ensureOrderCreated();
+    if (info?.id) {
+      setIsPaymentModalOpen(true);
     }
   };
   // Fetch order history only when modal opens
@@ -132,6 +141,7 @@ const POS = () => {
             <CurrentOrder
               currentOrder={currentOrder}
               discount={discount}
+              orderNumber={orderInfo?.orderNumber}
               onUpdateQuantity={updateQuantity}
               onRemoveFromOrder={removeFromOrder}
               onClearOrder={clearOrder}
@@ -139,7 +149,7 @@ const POS = () => {
               calculateSubtotal={calculateSubtotal}
               calculateDiscountAmount={calculateDiscountAmount}
               calculateTotal={calculateTotal}
-              onOpenPaymentModal={() => setIsPaymentModalOpen(true)}
+              onOpenPaymentModal={handleOpenPaymentModal}
               onOpenDiscountModal={() => setIsDiscountModalOpen(true)}
               onOpenHistoryModal={() => setIsOrderHistoryModalOpen(true)}
             />

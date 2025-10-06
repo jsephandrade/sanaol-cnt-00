@@ -22,6 +22,7 @@ import {
 const CurrentOrder = ({
   currentOrder,
   discount,
+  orderNumber,
   onUpdateQuantity,
   onRemoveFromOrder,
   onClearOrder,
@@ -47,7 +48,9 @@ const CurrentOrder = ({
             <ShoppingCart className="h-5 w-5" />
             Current Order
           </CardTitle>
-          <CardDescription>Order #1254</CardDescription>
+          <CardDescription>
+            Order #{orderNumber ? orderNumber : 'Pending'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto">
           <div className="space-y-3">
