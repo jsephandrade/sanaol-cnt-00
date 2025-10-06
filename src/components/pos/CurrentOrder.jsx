@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -23,6 +23,7 @@ const CurrentOrder = ({
   currentOrder,
   discount,
   orderNumber,
+  onEnsureOrderCreated,
   onUpdateQuantity,
   onRemoveFromOrder,
   onClearOrder,
@@ -35,6 +36,18 @@ const CurrentOrder = ({
   onOpenHistoryModal,
 }) => {
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
+  const hasRequestedOrderNumberRef = useRef(false);
+
+  useEffect(() => {
+    if (!hasOrderItems) {
+      hasRequestedOrderNumberRef.current = false;
+      return;
+    }
+    if (!orderNumber && !hasRequestedOrderNumberRef.current) {
+      hasRequestedOrderNumberRef.current = true;
+      onEnsureOrderCreated?.();
+    }
+  }, [hasOrderItems, orderNumber, onEnsureOrderCreated]);
 
   if (!hasOrderItems) {
     return null;
@@ -49,7 +62,7 @@ const CurrentOrder = ({
             Current Order
           </CardTitle>
           <CardDescription>
-            Order #{orderNumber ? orderNumber : 'Pending'}
+            Order #{orderNumber ? orderNumber : 'Generating...'}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto">

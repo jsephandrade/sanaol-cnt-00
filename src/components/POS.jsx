@@ -142,6 +142,7 @@ const POS = () => {
               currentOrder={currentOrder}
               discount={discount}
               orderNumber={orderInfo?.orderNumber}
+              onEnsureOrderCreated={ensureOrderCreated}
               onUpdateQuantity={updateQuantity}
               onRemoveFromOrder={removeFromOrder}
               onClearOrder={clearOrder}
