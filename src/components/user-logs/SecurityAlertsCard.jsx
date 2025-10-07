@@ -1,11 +1,17 @@
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 const SecurityAlertsCard = ({ securityAlerts, onBlockIP, onDismiss }) => {
   return (
-    <Card>
+    <Card className="w-full md:max-w-xs mx-auto">
       <CardHeader>
         <CardTitle>Security Alerts</CardTitle>
         <CardDescription>Important security notifications</CardDescription>
@@ -15,7 +21,9 @@ const SecurityAlertsCard = ({ securityAlerts, onBlockIP, onDismiss }) => {
           <div
             key={alert.id}
             className={`rounded-lg border p-3 flex gap-3 ${
-              alert.type === 'critical' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+              alert.type === 'critical'
+                ? 'bg-red-50 border-red-200'
+                : 'bg-amber-50 border-amber-200'
             }`}
           >
             <AlertTriangle
@@ -40,11 +48,19 @@ const SecurityAlertsCard = ({ securityAlerts, onBlockIP, onDismiss }) => {
               </p>
               <div className="mt-2 flex gap-2">
                 {alert.type === 'critical' && (
-                  <Button size="sm" variant="destructive" onClick={() => onBlockIP(alert.id)}>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onBlockIP(alert.id)}
+                  >
                     Block IP
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => onDismiss(alert.id)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onDismiss(alert.id)}
+                >
                   Dismiss
                 </Button>
               </div>
@@ -57,4 +73,3 @@ const SecurityAlertsCard = ({ securityAlerts, onBlockIP, onDismiss }) => {
 };
 
 export default SecurityAlertsCard;
-

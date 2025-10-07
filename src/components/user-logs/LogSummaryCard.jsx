@@ -27,7 +27,7 @@ const LogSummaryCard = ({ summary }) => {
   const week = summary?.week || today;
   const month = summary?.month || week;
   return (
-    <Card>
+    <Card className="w-full md:max-w-xs mx-auto">
       <CardHeader>
         <CardTitle>Log Summary</CardTitle>
         <CardDescription>Activity overview</CardDescription>

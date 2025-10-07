@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, ShieldAlert, UserCog, LogIn, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ActivityLogsCard from './user-logs/ActivityLogsCard';
@@ -15,7 +15,7 @@ const UserLogs = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const { logs, filters, setFilters, alerts, setAlerts, summary } = useLogs({
+  const { logs, filters, setFilters, alerts, summary } = useLogs({
     timeRange: '24h',
     limit: 100,
   });
@@ -108,8 +108,8 @@ const UserLogs = () => {
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2 space-y-4">
+    <div className="grid gap-4 md:grid-cols-7">
+      <div className="space-y-4 md:col-span-5">
         <ActivityLogsCard
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -130,7 +130,7 @@ const UserLogs = () => {
         />
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 md:col-span-1 md:max-w-xs">
         <SecurityAlertsCard
           securityAlerts={securityAlerts}
           onBlockIP={handleBlockIP}
