@@ -63,7 +63,7 @@ const ActivityLogsCard = ({
   };
 
   return (
-    <Card>
+    <Card className="w-full md:max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
           <CardTitle>Activity Logs</CardTitle>
