@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, Clock } from 'lucide-react';
+import { Search, Download, Clock, ChevronDown } from 'lucide-react';
 
 const ActivityLogsCard = ({
   searchTerm,
@@ -30,6 +30,7 @@ const ActivityLogsCard = ({
   getActionIcon,
   getActionColor,
 }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       (log.action || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,6 +48,14 @@ const ActivityLogsCard = ({
   const sortedLogs = [...filteredLogs].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
+
+  const MAX_VISIBLE_LOGS = 10;
+  const hasMoreLogs = sortedLogs.length > MAX_VISIBLE_LOGS;
+  const displayedLogs =
+    !hasMoreLogs || isExpanded
+      ? sortedLogs
+      : sortedLogs.slice(0, MAX_VISIBLE_LOGS);
+  const displayedCount = displayedLogs.length;
 
   const formatTimestamp = (timestamp) => {
     if (!timestamp) return '—';
@@ -119,80 +128,114 @@ const ActivityLogsCard = ({
         </div>
 
         <div className="rounded-md border">
-          <div className="relative w-full overflow-auto">
-            <table className="w-full caption-bottom text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="h-10 px-4 text-left font-medium w-[55%]">
-                    Action
-                  </th>
-                  <th className="h-10 px-4 text-left font-medium">User ID</th>
-                  <th className="h-10 px-4 text-left font-medium">Timestamp</th>
-                  <th className="h-10 px-4 text-left font-medium">
-                    More Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedLogs.length > 0 ? (
-                  sortedLogs.map((log) => (
-                    <tr
-                      key={log.id}
-                      className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
-                      onClick={() => onRowClick(log)}
-                    >
-                      <td className="p-4 align-middle w-[55%]">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div
-                            className={`rounded-full p-1 ${getActionColor(log.type)}`}
-                          >
-                            {getActionIcon(log.type)}
+          <div
+            className="relative w-full overflow-hidden transition-[max-height] duration-500 ease-in-out"
+            style={{ maxHeight: isExpanded ? '80rem' : '36rem' }}
+          >
+            <div className="relative w-full overflow-auto">
+              <table className="w-full caption-bottom text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-10 px-4 text-left font-medium w-[55%]">
+                      Action
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">User ID</th>
+                    <th className="h-10 px-4 text-left font-medium">
+                      Timestamp
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">
+                      More Details
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedLogs.length > 0 ? (
+                    displayedLogs.map((log) => (
+                      <tr
+                        key={log.id}
+                        className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                        onClick={() => onRowClick(log)}
+                      >
+                        <td className="p-4 align-middle w-[55%]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div
+                              className={`rounded-full p-1 ${getActionColor(log.type)}`}
+                            >
+                              {getActionIcon(log.type)}
+                            </div>
+                            <span className="truncate">
+                              {log.action || (log.type || '').toUpperCase()}
+                            </span>
                           </div>
-                          <span className="truncate">
-                            {log.action || (log.type || '').toUpperCase()}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        <span className="font-mono">{log.userId || '—'}</span>
-                      </td>
-                      <td className="p-4 align-middle whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTimestamp(log.timestamp)}
-                        </div>
-                      </td>
-                      <td className="p-4 align-middle">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRowClick(log);
-                          }}
-                          aria-label={`View details for ${log.id}`}
-                        >
-                          View
-                        </Button>
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          <span className="font-mono">{log.userId || '—'}</span>
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatTimestamp(log.timestamp)}
+                          </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRowClick(log);
+                            }}
+                            aria-label={`View details for ${log.id}`}
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="h-24 text-center">
+                        No logs found matching your criteria
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="h-24 text-center">
-                      No logs found matching your criteria
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {hasMoreLogs && !isExpanded && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
+            )}
           </div>
         </div>
       </CardContent>
-      <CardFooter className="border-t py-3">
+      <CardFooter className="border-t py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div className="text-xs text-muted-foreground">
-          Showing {filteredLogs.length} of {logs.length} logs
+          Showing {displayedCount} of {sortedLogs.length} matching logs (out of{' '}
+          {logs.length} total)
         </div>
+        {hasMoreLogs && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="group flex items-center gap-1 self-start md:self-auto"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            aria-expanded={isExpanded}
+            aria-label={
+              isExpanded ? 'Collapse activity logs' : 'Expand activity logs'
+            }
+          >
+            <span className="text-sm font-medium">
+              {isExpanded ? 'Show Less' : 'Show All Logs'}
+            </span>
+            <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-300 ease-in-out ${
+                  isExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </span>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
