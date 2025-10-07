@@ -11,7 +11,7 @@ import { AlertTriangle } from 'lucide-react';
 
 const SecurityAlertsCard = ({ securityAlerts, onBlockIP, onDismiss }) => {
   return (
-    <Card className="w-full md:max-w-md mx-auto">
+    <Card className="w-full mx-auto">
       <CardHeader>
         <CardTitle>Security Alerts</CardTitle>
         <CardDescription>Important security notifications</CardDescription>

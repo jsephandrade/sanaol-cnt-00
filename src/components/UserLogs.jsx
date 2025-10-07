@@ -130,7 +130,7 @@ const UserLogs = () => {
         />
       </div>
 
-      <div className="space-y-4 md:col-span-1 md:max-w-xs">
+      <div className="space-y-4 md:col-span-2">
         <SecurityAlertsCard
           securityAlerts={securityAlerts}
           onBlockIP={handleBlockIP}
