@@ -49,7 +49,7 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             <div className="pointer-events-none absolute bottom-2 left-2">
               <Badge
                 variant={item.available ? 'outline' : 'destructive'}
-                className={`backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wide ${
+                className={`backdrop-blur-sm text-[11px] font-semibold uppercase tracking-wide ${
                   item.available
                     ? 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
                     : ''
@@ -82,7 +82,7 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             {item.category && (
               <Badge
                 variant="outline"
-                className="rounded-full px-3 py-1 text-[10px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent"
+                className="rounded-full px-3 py-1 text-[11px] font-medium bg-[#FFF3BF] text-[#5C4300] border-transparent"
               >
                 {item.category}
               </Badge>

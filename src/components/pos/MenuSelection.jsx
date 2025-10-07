@@ -10,7 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const MenuSelection = ({
   categories,
@@ -70,75 +70,111 @@ const MenuSelection = ({
             handleActivate(event);
           }
         }}
-        className={`flex h-full flex-col overflow-hidden transition-shadow ${
+        className={`group relative h-full overflow-hidden border border-border/50 shadow-sm transition-all duration-300 ${
           isUnavailable
             ? 'cursor-not-allowed opacity-60'
-            : 'cursor-pointer hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/60'
+            : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-primary/60'
         }`}
         aria-disabled={isUnavailable}
       >
-        <CardHeader className="p-0">
-          <div className="border-b bg-muted">
-            {imageSrc ? (
-              <img
-                src={imageSrc}
-                alt={item.name}
-                className="h-24 w-full object-cover sm:h-28 md:h-32"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-24 w-full items-center justify-center text-xs text-muted-foreground sm:h-28 md:h-32">
-                No Image
-              </div>
-            )}
-          </div>
-        </CardHeader>
+        {imageSrc && (
+          <div
+            className="absolute inset-0 z-0 bg-cover bg-center blur-sm opacity-30 scale-110"
+            style={{ backgroundImage: `url(${imageSrc})` }}
+            aria-hidden="true"
+          />
+        )}
+        <div
+          className="absolute inset-0 bg-background/60 backdrop-blur-[2px] z-0"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60 z-10"
+          aria-hidden="true"
+        />
 
-        <CardContent className="flex flex-1 flex-col gap-2 px-3 py-3">
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <CardTitle className="truncate text-sm font-semibold leading-tight">
+        <div className="relative z-10 flex h-full flex-col">
+          <CardHeader className="p-4 pb-0">
+            <div className="relative rounded-lg border border-border/40 bg-background/60 backdrop-blur-sm shadow-inner">
+              {imageSrc ? (
+                <img
+                  src={imageSrc}
+                  alt={item.name}
+                  className="h-28 w-full rounded-lg object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-28 w-full flex-col items-center justify-center gap-1 rounded-lg bg-muted/50 text-muted-foreground">
+                  <ImageIcon className="h-7 w-7" aria-hidden="true" />
+                  <span className="text-xs font-medium">
+                    No Image Available
+                  </span>
+                </div>
+              )}
+              <div className="pointer-events-none absolute bottom-2 left-2">
+                <Badge
+                  variant={isUnavailable ? 'destructive' : 'outline'}
+                  className={`backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wide ${
+                    isUnavailable
+                      ? ''
+                      : 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
+                  }`}
+                >
+                  {isUnavailable ? 'Unavailable' : 'Available'}
+                </Badge>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1">
+              <CardTitle className="text-l font-semibold leading-tight text-foreground line-clamp-2">
                 {item.name}
               </CardTitle>
-              <CardDescription className="text-xs line-clamp-2">
+              <CardDescription className="text-xs text-muted-foreground line-clamp-3">
                 {item.description}
               </CardDescription>
             </div>
-            {showCategoryBadge && categoryLabel ? (
-              <Badge
-                variant="outline"
-                className="shrink-0 px-1.5 py-0 text-[10px] bg-[#FFF3BF] text-[#5C4300] border-transparent"
-              >
-                {categoryLabel}
-              </Badge>
-            ) : null}
-          </div>
+          </CardHeader>
 
-          <div className="mt-auto flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold md:text-base">
-              ₱{Number(item.price).toFixed(2)}
-            </span>
-            <Badge
-              variant={isUnavailable ? 'destructive' : 'outline'}
-              className={`shrink-0 px-1.5 py-0 text-[10px] ${
-                isUnavailable
-                  ? ''
-                  : 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
-              }`}
-            >
-              {isUnavailable ? 'Unavailable' : 'Available'}
-            </Badge>
-          </div>
+          <CardContent className="flex flex-1 flex-col p-4 pt-1">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Starting at
+                </p>
+                <p className="text-lg font-semibold text-primary">
+                  ₱{Number(item.price).toFixed(2)}
+                </p>
+              </div>
+              {showCategoryBadge && categoryLabel ? (
+                <Badge
+                  variant="outline"
+                  className="rounded-full px-3 py-1 text-[10px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent"
+                >
+                  {categoryLabel}
+                </Badge>
+              ) : null}
+            </div>
+          </CardContent>
 
-          {!showCategoryBadge && categoryLabel ? (
-            <Badge
-              variant="outline"
-              className="w-max px-1.5 py-0 text-[10px] bg-[#FFF3BF] text-[#5C4300] border-transparent"
-            >
-              {categoryLabel}
-            </Badge>
-          ) : null}
-        </CardContent>
+          <CardFooter className="mt-auto p-4 pt-0">
+            <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>
+                  {isUnavailable
+                    ? 'Currently unavailable'
+                    : 'Tap to add to order'}
+                </span>
+                {!showCategoryBadge && categoryLabel ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full px-2 py-[2px] text-[10px] font-medium bg-[#FFF3BF] text-[#5C4300] border-transparent"
+                  >
+                    {categoryLabel}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+          </CardFooter>
+        </div>
       </Card>
     );
   };
