@@ -38,7 +38,11 @@ const ItemList = ({ items, onEdit, onDelete = false }) => {
                 <p className="font-medium truncate">{item.name}</p>
                 <Badge
                   variant={item.available ? 'outline' : 'destructive'}
-                  className="text-[10px] px-1.5 py-0.5"
+                  className={`text-[10px] px-1.5 py-0.5 ${
+                    item.available
+                      ? 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
+                      : ''
+                  }`}
                 >
                   {item.available ? 'Available' : 'Unavailable'}
                 </Badge>

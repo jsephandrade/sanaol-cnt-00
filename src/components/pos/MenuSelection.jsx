@@ -107,7 +107,7 @@ const MenuSelection = ({
             {showCategoryBadge && categoryLabel ? (
               <Badge
                 variant="outline"
-                className="shrink-0 px-1.5 py-0 text-[10px]"
+                className="shrink-0 px-1.5 py-0 text-[10px] bg-[#FFF3BF] text-[#5C4300] border-transparent"
               >
                 {categoryLabel}
               </Badge>
@@ -120,7 +120,11 @@ const MenuSelection = ({
             </span>
             <Badge
               variant={isUnavailable ? 'destructive' : 'outline'}
-              className="shrink-0 px-1.5 py-0 text-[10px]"
+              className={`shrink-0 px-1.5 py-0 text-[10px] ${
+                isUnavailable
+                  ? ''
+                  : 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
+              }`}
             >
               {isUnavailable ? 'Unavailable' : 'Available'}
             </Badge>
@@ -128,8 +132,8 @@ const MenuSelection = ({
 
           {!showCategoryBadge && categoryLabel ? (
             <Badge
-              variant="secondary"
-              className="w-max px-1.5 py-0 text-[10px]"
+              variant="outline"
+              className="w-max px-1.5 py-0 text-[10px] bg-[#FFF3BF] text-[#5C4300] border-transparent"
             >
               {categoryLabel}
             </Badge>

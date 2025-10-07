@@ -49,14 +49,18 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             <div className="pointer-events-none absolute bottom-2 left-2">
               <Badge
                 variant={item.available ? 'outline' : 'destructive'}
-                className="backdrop-blur-sm bg-background/80 text-[10px] font-semibold uppercase tracking-wide"
+                className={`backdrop-blur-sm text-[10px] font-semibold uppercase tracking-wide ${
+                  item.available
+                    ? 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
+                    : ''
+                }`}
               >
                 {item.available ? 'Available' : 'Unavailable'}
               </Badge>
             </div>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-base font-semibold leading-tight text-foreground line-clamp-2">
+            <CardTitle className="text-l font-semibold leading-tight text-foreground line-clamp-2">
               {item.name}
             </CardTitle>
             <CardDescription className="text-sm text-muted-foreground line-clamp-3">
@@ -77,8 +81,8 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             </div>
             {item.category && (
               <Badge
-                variant="secondary"
-                className="rounded-full px-3 py-1 text-[10px] font-medium"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-[10px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent"
               >
                 {item.category}
               </Badge>
