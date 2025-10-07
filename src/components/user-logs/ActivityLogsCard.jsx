@@ -17,6 +17,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, Download, Clock, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
+
+import exportActivityLogs from '@/utils/exportActivityLogs';
 
 const ActivityLogsCard = ({
   searchTerm,
@@ -71,6 +74,16 @@ const ActivityLogsCard = ({
     });
   };
 
+  const handleExportLogs = React.useCallback(() => {
+    try {
+      exportActivityLogs(sortedLogs);
+      toast.success('Activity logs exported');
+    } catch (error) {
+      console.error('Failed to export activity logs', error);
+      toast.error('Failed to export activity logs');
+    }
+  }, [sortedLogs]);
+
   return (
     <Card className="w-full md:max-w-4xl mx-auto">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -83,6 +96,7 @@ const ActivityLogsCard = ({
             variant="outline"
             size="sm"
             className="flex items-center gap-1"
+            onClick={handleExportLogs}
           >
             <Download className="h-4 w-4 mr-1" /> Export
           </Button>
