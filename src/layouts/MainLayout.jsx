@@ -39,7 +39,7 @@ const LAYOUT_SCROLLBAR_STYLES = `
 
 const MainLayout = ({ children }) => {
   const isMobile = useIsMobile();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <>

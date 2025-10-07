@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 
 from django.db import transaction
 from django.db.models import Q
+from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
 from django.utils import timezone as dj_tz
 from django.conf import settings
@@ -416,7 +417,12 @@ def menu_item_image(request, item_id):
             img.file.seek(0)
         except Exception:
             return JsonResponse({"success": False, "message": "Invalid image"}, status=400)
-        mi.image.save(img.name, img, save=True)
+        storage_name = mi.image.field.generate_filename(mi, img.name)
+        if default_storage.exists(storage_name):
+            mi.image.name = storage_name
+            mi.save(update_fields=["image", "updated_at"])
+        else:
+            mi.image.save(img.name, img, save=True)
         image_url = mi.image.url if getattr(mi, "image", None) else None
     except Exception:
         if getattr(settings, "DISABLE_INMEM_FALLBACK", False):

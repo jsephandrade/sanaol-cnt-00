@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Search, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '@/components/AuthContext';
 
 const MenuSelection = ({
   categories,
@@ -21,6 +22,10 @@ const MenuSelection = ({
   onAddToOrder,
   occupyFullWidth = false,
 }) => {
+  const { user } = useAuth();
+  const currentUserRole = user?.role
+    ? user.role.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase()) // Title Case
+    : '—';
   const getFilteredItems = () => {
     if (searchTerm.trim()) {
       const allItems = [];
@@ -290,7 +295,7 @@ const MenuSelection = ({
 
         <CardFooter className="border-t pt-3">
           <div className="flex w-full justify-between text-xs text-muted-foreground">
-            <span>Cashier</span>
+            <span>{currentUserRole}</span>
             <span>
               {new Date().toLocaleDateString()}{' '}
               {new Date().toLocaleTimeString()}
