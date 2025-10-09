@@ -26,6 +26,13 @@ export const useMenuManagement = (params = {}) => {
     })()
   );
 
+  const isArchivedView = (() => {
+    const flag = params?.archived;
+    if (flag === undefined || flag === null || flag === '') return false;
+    if (typeof flag === 'boolean') return flag;
+    return String(flag).toLowerCase() === 'true';
+  })();
+
   const fetchMenuItems = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -128,17 +135,67 @@ export const useMenuManagement = (params = {}) => {
       if (response.success) {
         setItems((prev) => prev.filter((item) => item.id !== itemId));
         toast({
-          title: 'Menu Item Deleted',
-          description: 'Menu item has been removed from the menu.',
-          variant: 'destructive',
+          title: 'Menu Item Archived',
+          description: 'The item has been moved to the archive.',
         });
+        try {
+          window?.dispatchEvent?.(
+            new CustomEvent('menu.items.updated', {
+              detail: { type: 'archive', id: itemId },
+            })
+          );
+        } catch {}
         return true;
       } else {
-        throw new Error('Failed to delete menu item');
+        throw new Error('Failed to archive menu item');
       }
     } catch (error) {
       toast({
-        title: 'Error Deleting Item',
+        title: 'Error Archiving Item',
+        description: error.message,
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const restoreMenuItem = async (itemId) => {
+    try {
+      const response = await menuService.restoreMenuItem(itemId);
+
+      if (response.success) {
+        const restored =
+          (response.data && response.data.data) || response.data || null;
+        if (isArchivedView) {
+          setItems((prev) => prev.filter((item) => item.id !== itemId));
+        } else if (restored) {
+          setItems((prev) => {
+            const exists = prev.some((item) => item.id === itemId);
+            if (exists) {
+              return prev.map((item) =>
+                item.id === itemId ? { ...item, ...restored } : item
+              );
+            }
+            return [...prev, restored];
+          });
+        }
+        toast({
+          title: 'Menu Item Restored',
+          description: 'The item has been moved back to the active menu.',
+        });
+        try {
+          window?.dispatchEvent?.(
+            new CustomEvent('menu.items.updated', {
+              detail: { type: 'restore', id: itemId },
+            })
+          );
+        } catch {}
+        return restored;
+      }
+      throw new Error('Failed to restore menu item');
+    } catch (error) {
+      toast({
+        title: 'Error Restoring Item',
         description: error.message,
         variant: 'destructive',
       });
@@ -240,6 +297,7 @@ export const useMenuManagement = (params = {}) => {
     createMenuItem,
     updateMenuItem,
     deleteMenuItem,
+    restoreMenuItem,
     updateItemAvailability,
     uploadItemImage,
     refetch,

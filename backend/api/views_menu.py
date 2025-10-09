@@ -33,6 +33,8 @@ def _safe_menu_item(mi):
             "category": mi.category or "",
             "price": float(mi.price or 0),
             "available": bool(mi.available),
+            "archived": bool(getattr(mi, "archived", False)),
+            "archivedAt": mi.archived_at.isoformat() if getattr(mi, "archived_at", None) else None,
             "image": (mi.image.url if getattr(mi, "image", None) else None),
             "ingredients": getattr(mi, "ingredients", []) or [],
             "preparationTime": getattr(mi, "preparation_time", 0) or 0,
@@ -48,11 +50,99 @@ def _safe_menu_item(mi):
             "category": getattr(mi, "category", ""),
             "price": float(getattr(mi, "price", 0) or 0),
             "available": bool(getattr(mi, "available", True)),
+            "archived": bool(getattr(mi, "archived", False)),
+            "archivedAt": getattr(mi, "archivedAt", None),
             "image": getattr(mi, "image", None),
             "ingredients": getattr(mi, "ingredients", []) or [],
             "preparationTime": getattr(mi, "preparationTime", 0) or 0,
         }
 
+
+def _record_menu_audit(request, actor, action, details, severity="info", meta=None):
+    try:
+        record_audit(
+            request,
+            user=actor if hasattr(actor, "id") else None,
+            type="action",
+            action=action,
+            details=details,
+            severity=severity,
+            meta=meta or {},
+        )
+    except Exception:
+        pass
+
+
+def _archive_menu_item_instance(request, actor, menu_item):
+    changed = False
+    if menu_item and not bool(getattr(menu_item, "archived", False)):
+        menu_item.archived = True
+        menu_item.archived_at = dj_tz.now()
+        menu_item.available = False
+        menu_item.save(update_fields=["archived", "archived_at", "available", "updated_at"])
+        changed = True
+        _record_menu_audit(
+            request,
+            actor,
+            action="Menu item archived",
+            details=f"Archived '{menu_item.name}'",
+            severity="warning",
+            meta={"id": str(menu_item.id), "name": menu_item.name},
+        )
+    return changed, _safe_menu_item(menu_item)
+
+
+def _restore_menu_item_instance(request, actor, menu_item):
+    changed = False
+    if menu_item and bool(getattr(menu_item, "archived", False)):
+        menu_item.archived = False
+        menu_item.archived_at = None
+        menu_item.available = False  # restored items remain unavailable until explicitly enabled
+        menu_item.save(update_fields=["archived", "archived_at", "available", "updated_at"])
+        changed = True
+        _record_menu_audit(
+            request,
+            actor,
+            action="Menu item restored",
+            details=f"Restored '{menu_item.name}' from archive",
+            severity="info",
+            meta={"id": str(menu_item.id), "name": menu_item.name},
+        )
+    return changed, _safe_menu_item(menu_item)
+
+
+def _archive_menu_item_fallback(request, actor, item_dict):
+    changed = not bool(item_dict.get("archived"))
+    item_dict["archived"] = True
+    item_dict["available"] = False
+    item_dict["archivedAt"] = dj_tz.now().isoformat()
+    if changed:
+        _record_menu_audit(
+            request,
+            actor,
+            action="Menu item archived",
+            details=f"Archived '{item_dict.get('name','Unnamed')}'",
+            severity="warning",
+            meta={"id": item_dict.get("id"), "name": item_dict.get("name")},
+        )
+    return changed, item_dict
+
+
+def _restore_menu_item_fallback(request, actor, item_dict):
+    changed = bool(item_dict.get("archived"))
+    item_dict["archived"] = False
+    item_dict["archivedAt"] = None
+    item_dict["available"] = False
+    if changed:
+        _record_menu_audit(
+            request,
+            actor,
+            action="Menu item restored",
+            details=f"Restored '{item_dict.get('name','Unnamed')}' from archive",
+            severity="info",
+            meta={"id": item_dict.get("id"), "name": item_dict.get("name")},
+        )
+    return changed, item_dict
 
 @require_http_methods(["GET", "POST"]) 
 def menu_items(request):
@@ -74,6 +164,12 @@ def menu_items(request):
             limit = max(1, min(200, limit))
 
             qs = MenuItem.objects.all()
+            archived_param = request.GET.get("archived")
+            if archived_param is None or archived_param == "":
+                qs = qs.filter(archived=False)
+            else:
+                val = str(archived_param).lower() in {"1", "true", "yes"}
+                qs = qs.filter(archived=val)
             if search:
                 qs = qs.filter(Q(name__icontains=search) | Q(description__icontains=search) | Q(category__icontains=search))
             if category:
@@ -102,9 +198,15 @@ def menu_items(request):
             search = (request.GET.get("search") or request.GET.get("q") or "").lower()
             category = (request.GET.get("category") or "").lower()
             available = request.GET.get("available")
+            archived_param = request.GET.get("archived")
             page = request.GET.get("page", 1)
             limit = request.GET.get("limit", 50)
             data = MENU_ITEMS
+            if archived_param is None or archived_param == "":
+                data = [i for i in data if not i.get("archived")]
+            else:
+                val = str(archived_param).lower() in {"1", "true", "yes"}
+                data = [i for i in data if bool(i.get("archived")) == val]
             if search:
                 data = [i for i in data if search in i.get("name", "").lower() or search in i.get("description", "").lower()]
             if category:
@@ -182,6 +284,8 @@ def menu_items(request):
             "price": float(payload.get("price", 0)),
             "category": payload.get("category", "General"),
             "available": bool(payload.get("available", True)),
+            "archived": False,
+            "archivedAt": None,
             "image": payload.get("image"),
             "ingredients": payload.get("ingredients") or [],
             "preparationTime": payload.get("preparationTime"),
@@ -229,29 +333,15 @@ def menu_item_detail(request, item_id):
     try:
         if request.method == "DELETE":
             if mi:
-                name = mi.name
-                _id = str(mi.id)
-                mi.delete()
-                deleted_meta = {"id": _id, "name": name}
-            else:
-                if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
-                    return JsonResponse({"success": False, "message": "Not found"}, status=404)
-                idx = next((i for i, it in enumerate(MENU_ITEMS) if it.get("id") == item_id), -1)
-                deleted = MENU_ITEMS.pop(idx)
-                deleted_meta = {"id": deleted.get("id"), "name": deleted.get("name")}
-            try:
-                record_audit(
-                    request,
-                    user=actor,
-                    type="action",
-                    action="Menu item deleted",
-                    details=f"Deleted '{deleted_meta.get('name','Unnamed')}'",
-                    severity="warning",
-                    meta=deleted_meta,
-                )
-            except Exception:
-                pass
-            return JsonResponse({"success": True})
+                _, payload = _archive_menu_item_instance(request, actor, mi)
+                return JsonResponse({"success": True, "data": payload})
+            if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+                return JsonResponse({"success": False, "message": "Not found"}, status=404)
+            idx = next((i for i, it in enumerate(MENU_ITEMS) if it.get("id") == item_id), -1)
+            if idx == -1:
+                return JsonResponse({"success": False, "message": "Not found"}, status=404)
+            _, payload = _archive_menu_item_fallback(request, actor, MENU_ITEMS[idx])
+            return JsonResponse({"success": True, "data": payload})
         # Update
         try:
             payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -278,7 +368,10 @@ def menu_item_detail(request, item_id):
                     return JsonResponse({"success": False, "message": "price cannot be negative"}, status=400)
                 fields["price"] = price
             if "available" in payload:
-                fields["available"] = bool(payload["available"])
+                desired_available = bool(payload["available"])
+                if getattr(mi, "archived", False) and desired_available:
+                    return JsonResponse({"success": False, "message": "Archived items cannot be made available"}, status=400)
+                fields["available"] = desired_available
             if "ingredients" in payload:
                 ingredients = payload.get("ingredients")
                 if ingredients is not None and not isinstance(ingredients, list):
@@ -302,9 +395,13 @@ def menu_item_detail(request, item_id):
                 return JsonResponse({"success": False, "message": "Not found"}, status=404)
             idx = next((i for i, it in enumerate(MENU_ITEMS) if it.get("id") == item_id), -1)
             item = MENU_ITEMS[idx]
-            for k in ["name", "description", "category", "available", "image", "ingredients", "preparationTime"]:
+            for k in ["name", "description", "category", "image", "ingredients", "preparationTime"]:
                 if k in payload:
                     item[k] = payload[k]
+            if "available" in payload:
+                if item.get("archived") and payload.get("available"):
+                    return JsonResponse({"success": False, "message": "Archived items cannot be made available"}, status=400)
+                item["available"] = bool(payload.get("available"))
             if "price" in payload:
                 try:
                     item["price"] = float(payload["price"])
@@ -328,6 +425,62 @@ def menu_item_detail(request, item_id):
     return JsonResponse({"success": True, "data": item})
 
 
+@require_http_methods(["POST"])
+def menu_item_archive(request, item_id):
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "menu.manage") and not _has_permission(actor, "inventory.menu.manage"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    db_error = False
+    mi = None
+    try:
+        from .models import MenuItem
+        mi = MenuItem.objects.filter(id=item_id).first()
+    except Exception:
+        db_error = True
+    if mi:
+        _, payload = _archive_menu_item_instance(request, actor, mi)
+        return JsonResponse({"success": True, "data": payload})
+    if not db_error:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse({"success": False, "message": "Failed to archive menu item"}, status=500)
+    idx = next((i for i, it in enumerate(MENU_ITEMS) if it.get("id") == item_id), -1)
+    if idx == -1:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+    _, payload = _archive_menu_item_fallback(request, actor, MENU_ITEMS[idx])
+    return JsonResponse({"success": True, "data": payload})
+
+
+@require_http_methods(["POST"])
+def menu_item_restore(request, item_id):
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "menu.manage") and not _has_permission(actor, "inventory.menu.manage"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    db_error = False
+    mi = None
+    try:
+        from .models import MenuItem
+        mi = MenuItem.objects.filter(id=item_id).first()
+    except Exception:
+        db_error = True
+    if mi:
+        _, payload = _restore_menu_item_instance(request, actor, mi)
+        return JsonResponse({"success": True, "data": payload})
+    if not db_error:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+        return JsonResponse({"success": False, "message": "Failed to restore menu item"}, status=500)
+    idx = next((i for i, it in enumerate(MENU_ITEMS) if it.get("id") == item_id), -1)
+    if idx == -1:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+    _, payload = _restore_menu_item_fallback(request, actor, MENU_ITEMS[idx])
+    return JsonResponse({"success": True, "data": payload})
+
+
 @require_http_methods(["PATCH"]) 
 def menu_item_availability(request, item_id):
     # Try DB first
@@ -348,6 +501,10 @@ def menu_item_availability(request, item_id):
         return err
     if not _has_permission(actor, "menu.manage") and not _has_permission(actor, "inventory.menu.manage"):
         return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    if mi and getattr(mi, "archived", False):
+        return JsonResponse({"success": False, "message": "Archived items cannot be made available"}, status=400)
+    if mi is None and MENU_ITEMS[idx].get("archived"):
+        return JsonResponse({"success": False, "message": "Archived items cannot be made available"}, status=400)
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
     except Exception:
@@ -449,7 +606,8 @@ def menu_categories(request):
     try:
         from .models import MenuItem
         rows = (
-            MenuItem.objects.values_list("category")
+            MenuItem.objects.filter(archived=False)
+            .values_list("category")
             .order_by("category")
             .distinct()
         )
@@ -457,7 +615,7 @@ def menu_categories(request):
         # Optional counts
         out = []
         for name in cats:
-            count = MenuItem.objects.filter(category=name).count()
+            count = MenuItem.objects.filter(category=name, archived=False).count()
             out.append({
                 "id": (name or "").lower().replace(" ", "_") or "uncategorized",
                 "name": name or "Uncategorized",
@@ -469,13 +627,13 @@ def menu_categories(request):
             return JsonResponse({"success": False, "data": [], "message": "Failed to load categories"}, status=500)
         # Fallback based on in-memory items (dev only)
         try:
-            names = sorted({(i.get("category") or "") for i in MENU_ITEMS})
+            names = sorted({(i.get("category") or "") for i in MENU_ITEMS if not i.get("archived")})
             out = []
             for name in names:
                 out.append({
                     "id": (name or "").lower().replace(" ", "_") or "uncategorized",
                     "name": name or "Uncategorized",
-                    "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name]),
+                    "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
                 })
             return JsonResponse({"success": True, "data": out})
         except Exception:
@@ -485,6 +643,8 @@ def menu_categories(request):
 __all__ = [
     "menu_items",
     "menu_item_detail",
+    "menu_item_archive",
+    "menu_item_restore",
     "menu_item_availability",
     "menu_item_image",
     "menu_categories",

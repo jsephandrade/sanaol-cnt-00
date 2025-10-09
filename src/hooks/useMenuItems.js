@@ -59,10 +59,17 @@ export const useMenuItems = () => {
     try {
       await menuService.deleteMenuItem(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
-      toast.success('Menu item deleted successfully');
+      toast.success('Menu item archived successfully');
+      try {
+        window?.dispatchEvent?.(
+          new CustomEvent('menu.items.updated', {
+            detail: { type: 'archive', id },
+          })
+        );
+      } catch {}
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to delete menu item';
+        err instanceof Error ? err.message : 'Failed to archive menu item';
       toast.error(errorMessage);
       throw err;
     }

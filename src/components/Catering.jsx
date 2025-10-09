@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardDescription,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Utensils, UtensilsCrossed } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +15,7 @@ import { CateringSidebar } from './catering/CateringSidebar';
 import { toast } from 'sonner';
 import { useMenuItems } from '@/hooks/useMenuItems';
 import cateringService from '@/api/services/cateringService';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const FALLBACK_DEPOSIT_RATIO = 0.5;
 
@@ -475,59 +470,45 @@ const Catering = () => {
     <>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-2 space-y-4">
-          <Card className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
-            {/* light theme decorative blobs */}
-            <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
-            <CardHeader className="relative flex flex-row items-center justify-between pb-2">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
-                  <UtensilsCrossed className="h-3.5 w-3.5" /> Catering
-                  Management
-                </div>
-
-                <CardDescription className="text-sm">
-                  Handle catering orders and events
-                </CardDescription>
-              </div>
+          <FeaturePanelCard
+            badgeIcon={UtensilsCrossed}
+            badgeText="Catering Management"
+            description="Handle catering orders and events"
+            headerActions={
               <Button onClick={() => setShowNewEventModal(true)}>
                 <PlusCircle className="h-4 w-4 mr-1" /> New Event
               </Button>
-            </CardHeader>
-            <CardContent className="relative space-y-4">
-              <EventSearchAndFilters
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                onCalendarView={() => setShowCalendarModal(true)}
-              />
+            }
+          >
+            <EventSearchAndFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              onCalendarView={() => setShowCalendarModal(true)}
+            />
 
-              <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                  <TabsTrigger value="past">Past Events</TabsTrigger>
-                  <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-                </TabsList>
-                <TabsContent value="upcoming" className="pt-2">
-                  {renderTable(
-                    upcomingEvents,
-                    'No upcoming catering events found'
-                  )}
-                </TabsContent>
-                <TabsContent value="past" className="pt-2">
-                  {renderTable(
-                    pastEvents,
-                    'No past catering events to display'
-                  )}
-                </TabsContent>
-                <TabsContent value="cancelled" className="pt-2">
-                  {renderTable(
-                    cancelledEvents,
-                    'No cancelled catering events to display'
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+            <Tabs value={currentTab} onValueChange={setCurrentTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="past">Past Events</TabsTrigger>
+                <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upcoming" className="pt-2">
+                {renderTable(
+                  upcomingEvents,
+                  'No upcoming catering events found'
+                )}
+              </TabsContent>
+              <TabsContent value="past" className="pt-2">
+                {renderTable(pastEvents, 'No past catering events to display')}
+              </TabsContent>
+              <TabsContent value="cancelled" className="pt-2">
+                {renderTable(
+                  cancelledEvents,
+                  'No cancelled catering events to display'
+                )}
+              </TabsContent>
+            </Tabs>
+          </FeaturePanelCard>
 
           {nextUpcomingEvent && (
             <EventDetailsCard

@@ -2,13 +2,42 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Image as ImageIcon, Clock, Layers } from 'lucide-react';
+import {
+  Edit,
+  Archive,
+  RotateCcw,
+  Image as ImageIcon,
+  Clock,
+  Layers,
+} from 'lucide-react';
 
-const ItemList = ({ items, onEdit, onDelete = () => {} }) => {
+const formatArchivedOn = (value) => {
+  if (!value) return '';
+  try {
+    const dt = typeof value === 'string' ? new Date(value) : value;
+    if (!dt || Number.isNaN(dt.getTime())) return '';
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(dt);
+  } catch {
+    return '';
+  }
+};
+
+const ItemList = ({
+  items = [],
+  onEdit,
+  onArchive = () => {},
+  mode = 'active',
+  onRestore = () => {},
+}) => {
   if (!items || items.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-sm text-muted-foreground">
-        Nothing here yet. Try adding your first menu item.
+        {mode === 'archived'
+          ? 'No archived menu items yet.'
+          : 'Nothing here yet. Try adding your first menu item.'}
       </div>
     );
   }
@@ -18,17 +47,26 @@ const ItemList = ({ items, onEdit, onDelete = () => {} }) => {
       {items.map((item, index) => {
         const imageSrc = item.image || item.imageUrl || null;
         const category = item.category || item.categoryName || 'Uncategorized';
-        const availabilityBadge = item.available
-          ? {
-              label: 'Available',
-              className:
-                'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
-            }
-          : {
-              label: 'Unavailable',
-              className:
-                'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
-            };
+        const availabilityBadge =
+          mode === 'archived'
+            ? {
+                label: 'Archived',
+                className:
+                  'bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200',
+              }
+            : item.available
+              ? {
+                  label: 'Available',
+                  className:
+                    'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200',
+                }
+              : {
+                  label: 'Unavailable',
+                  className:
+                    'bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200',
+                };
+        const archivedOn =
+          mode === 'archived' ? formatArchivedOn(item.archivedAt) : '';
 
         return (
           <div
@@ -87,6 +125,11 @@ const ItemList = ({ items, onEdit, onDelete = () => {} }) => {
                     Prep: {item.preparationTime} mins
                   </span>
                 ) : null}
+                {archivedOn ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1">
+                    Archived on {archivedOn}
+                  </span>
+                ) : null}
                 {Array.isArray(item.ingredients) &&
                 item.ingredients.length > 0 ? (
                   <span className="hidden truncate rounded-full bg-muted px-2 py-1 font-medium sm:inline">
@@ -99,7 +142,7 @@ const ItemList = ({ items, onEdit, onDelete = () => {} }) => {
 
             <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:flex-col sm:items-end sm:justify-center sm:text-right">
               <span className="text-lg font-semibold text-primary">
-                ₱{Number(item.price).toFixed(2)}
+                PHP {Number(item.price).toFixed(2)}
               </span>
 
               <div className="flex items-center gap-2">
@@ -113,16 +156,29 @@ const ItemList = ({ items, onEdit, onDelete = () => {} }) => {
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                  onClick={() => onDelete(item.id)}
-                  aria-label={`Delete ${item.name}`}
-                  title={`Delete ${item.name}`}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {mode === 'archived' ? (
+                  <Button
+                    variant="default"
+                    size="icon"
+                    className="h-9 w-9 rounded-full"
+                    onClick={() => onRestore(item)}
+                    aria-label={`Restore ${item.name}`}
+                    title={`Restore ${item.name}`}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-full text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                    onClick={() => onArchive(item.id)}
+                    aria-label={`Archive ${item.name}`}
+                    title={`Archive ${item.name}`}
+                  >
+                    <Archive className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
 

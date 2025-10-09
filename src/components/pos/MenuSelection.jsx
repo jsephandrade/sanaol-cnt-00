@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   CardFooter,
@@ -10,7 +9,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Search, AlertCircle, Image as ImageIcon } from 'lucide-react';
+import {
+  Search,
+  AlertCircle,
+  Image as ImageIcon,
+  ShoppingCart,
+} from 'lucide-react';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const MenuSelection = ({
   categories,
@@ -124,13 +129,10 @@ const MenuSelection = ({
                 </Badge>
               </div>
             </div>
-            <div className="mt-3 space-y-1">
+            <div className="mt-3">
               <CardTitle className="text-l font-semibold leading-tight text-foreground line-clamp-2">
                 {item.name}
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground line-clamp-3">
-                {item.description}
-              </CardDescription>
             </div>
           </CardHeader>
 
@@ -141,7 +143,7 @@ const MenuSelection = ({
                   Starting at
                 </p>
                 <p className="text-lg font-semibold text-primary">
-                  ₱{Number(item.price).toFixed(2)}
+                  PHP {Number(item.price).toFixed(2)}
                 </p>
               </div>
               {showCategoryBadge && categoryLabel ? (
@@ -183,16 +185,13 @@ const MenuSelection = ({
 
   return (
     <div className={`col-span-1 ${columnClass}`}>
-      <Card className="flex h-full flex-col">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Point of Sale</CardTitle>
-              <CardDescription>
-                Select menu items to add to order
-              </CardDescription>
-            </div>
-          </div>
+      <FeaturePanelCard
+        className="flex h-full flex-col"
+        contentClassName="flex flex-1 flex-col overflow-hidden space-y-0"
+        badgeIcon={ShoppingCart}
+        badgeText="Point of Sale"
+        description="Select menu items to add to order"
+        headerContent={
           <div className="flex flex-col gap-2 pt-2 md:flex-row md:space-x-2 md:space-y-0">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -205,73 +204,81 @@ const MenuSelection = ({
               />
             </div>
           </div>
-        </CardHeader>
-
-        <CardContent className="flex flex-1 flex-col overflow-hidden">
-          {categories.length === 0 ? (
-            <div className="grid flex-1 place-items-center text-muted-foreground">
-              <div className="text-center">
-                <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
-                <p>No menu items available. Add items in Menu Management.</p>
+        }
+      >
+        {categories.length === 0 ? (
+          <div className="grid flex-1 place-items-center text-muted-foreground">
+            <div className="text-center">
+              <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+              <p>No menu items available. Add items in Menu Management.</p>
+            </div>
+          </div>
+        ) : searchTerm.trim() ? (
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-3">
+              <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+                Search results for "{searchTerm}"
+              </h3>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-3 lg:gap-4">
+                {filteredItems.length > 0 ? (
+                  filteredItems.map((item) => (
+                    <ItemCard
+                      key={`${item.categoryName}-${item.id}`}
+                      item={item}
+                      showCategoryBadge
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center">
+                    <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">
+                      No menu items found matching "{searchTerm}"
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-          ) : searchTerm.trim() ? (
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-3">
-                <h3 className="mb-3 text-sm font-medium text-muted-foreground">
-                  Search results for "{searchTerm}"
-                </h3>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-3 lg:gap-4">
-                  {filteredItems.length > 0 ? (
-                    filteredItems.map((item) => (
-                      <ItemCard
-                        key={`${item.categoryName}-${item.id}`}
-                        item={item}
-                        showCategoryBadge
-                      />
-                    ))
-                  ) : (
-                    <div className="col-span-full py-12 text-center">
-                      <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
-                      <p className="text-muted-foreground">
-                        No menu items found matching "{searchTerm}"
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+          </div>
+        ) : (
+          <Tabs
+            defaultValue={categories[0]?.id || ''}
+            value={activeCategory}
+            onValueChange={setActiveCategory}
+            className="flex-1 flex-col"
+          >
+            <div className="border-b">
+              <TabsList className="h-auto w-full justify-start overflow-auto p-0">
+                {categories.map((category) => (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id}
+                    className="px-4 py-2 transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                  >
+                    {category.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          ) : (
-            <Tabs
-              defaultValue={categories[0]?.id || ''}
-              value={activeCategory}
-              onValueChange={setActiveCategory}
-              className="flex-1 flex-col"
-            >
-              <div className="border-b">
-                <TabsList className="h-auto w-full justify-start overflow-auto p-0">
-                  {categories.map((category) => (
-                    <TabsTrigger
-                      key={category.id}
-                      value={category.id}
-                      className="px-4 py-2 transition-colors data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      {category.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
 
-              {categories.map((category) => (
+            {categories.map((category) => {
+              const categoryItems = Array.isArray(category.items)
+                ? category.items
+                : [];
+              const showBadge = category.id === 'all' || category.id === 'All';
+              return (
                 <TabsContent
                   key={category.id}
                   value={category.id}
                   className="flex-1 overflow-y-auto p-0"
                 >
                   <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-3 lg:gap-4">
-                    {filteredItems.length > 0 ? (
-                      filteredItems.map((item) => (
-                        <ItemCard key={item.id} item={item} />
+                    {categoryItems.length > 0 ? (
+                      categoryItems.map((item) => (
+                        <ItemCard
+                          key={item.id}
+                          item={item}
+                          showCategoryBadge={showBadge}
+                        />
                       ))
                     ) : (
                       <div className="col-span-full py-12 text-center">
@@ -283,11 +290,11 @@ const MenuSelection = ({
                     )}
                   </div>
                 </TabsContent>
-              ))}
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </Tabs>
+        )}
+      </FeaturePanelCard>
     </div>
   );
 };

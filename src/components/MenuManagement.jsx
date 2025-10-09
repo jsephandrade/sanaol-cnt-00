@@ -16,9 +16,16 @@ const MenuManagement = () => {
     items,
     createMenuItem,
     updateMenuItem,
-    deleteMenuItem,
+    deleteMenuItem: archiveMenuItem,
     uploadItemImage,
+    refetch: refetchActive,
   } = useMenuManagement({});
+  const {
+    items: archivedItems,
+    loading: archivedLoading,
+    restoreMenuItem: restoreArchivedItem,
+    refetch: refetchArchived,
+  } = useMenuManagement({ archived: true });
   const { categories: categoryRows } = useMenuCategories();
   const categories = useMemo(
     () => (categoryRows || []).map((c) => c.name),
@@ -93,11 +100,24 @@ const MenuManagement = () => {
     }
   };
 
-  const handleDeleteItem = async (id) => {
+  const handleArchiveItem = async (id) => {
     try {
-      await deleteMenuItem(id);
+      await archiveMenuItem(id);
+      refetchArchived();
+      refetchActive();
     } catch (e) {
-      toast.error(e?.message || 'Failed to delete menu item');
+      toast.error(e?.message || 'Failed to archive menu item');
+    }
+  };
+
+  const handleRestoreItem = async (item) => {
+    try {
+      await restoreArchivedItem(item.id);
+      refetchArchived();
+      refetchActive();
+      toast.success(`${item.name} has been restored to the active menu.`);
+    } catch (e) {
+      toast.error(e?.message || 'Failed to restore menu item');
     }
   };
 
@@ -136,7 +156,13 @@ const MenuManagement = () => {
         onEdit={(it) =>
           setEditingItem({ ...it, imageUrl: it.image || it.imageUrl || '' })
         }
-        onDelete={handleDeleteItem}
+        onArchive={handleArchiveItem}
+        archivedItems={(archivedItems || []).map((it) => ({
+          ...it,
+          imageUrl: it.image || it.imageUrl || '',
+        }))}
+        archivedLoading={archivedLoading}
+        onRestore={handleRestoreItem}
       />
 
       <EditItemDialog

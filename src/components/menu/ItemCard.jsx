@@ -9,14 +9,14 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Edit, Archive, Image as ImageIcon } from 'lucide-react';
 
-const ItemCard = ({ item, onEdit, onDelete }) => {
+const ItemCard = ({ item, onEdit, onArchive = () => {} }) => {
   const imageSrc = item.image || item.imageUrl || null;
 
   return (
     <Card className="group relative h-full overflow-hidden border border-border/50 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
-      {/* 🖼️ Blurry background image */}
+      {/* Blurry background image */}
       {imageSrc && (
         <div
           className="absolute inset-0 z-0 bg-cover bg-center blur-sm opacity-30 scale-110"
@@ -72,7 +72,7 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
                 Starting at
               </p>
               <p className="text-lg font-semibold text-primary">
-                ₱{Number(item.price).toFixed(2)}
+                PHP {Number(item.price).toFixed(2)}
               </p>
             </div>
             {item.category && (
@@ -99,11 +99,11 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             variant="destructive"
             size="icon"
             className="h-8 w-8"
-            onClick={() => onDelete(item.id)}
-            aria-label={`Delete ${item.name}`}
-            title={`Delete ${item.name}`}
+            onClick={() => onArchive(item.id)}
+            aria-label={`Archive ${item.name}`}
+            title={`Archive ${item.name}`}
           >
-            <Trash2 className="h-4 w-4" />
+            <Archive className="h-4 w-4" />
           </Button>
         </CardFooter>
       </div>

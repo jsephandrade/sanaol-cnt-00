@@ -746,6 +746,8 @@ class MenuItem(models.Model):
     category = models.CharField(max_length=128, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     available = models.BooleanField(default=True)
+    archived = models.BooleanField(default=False)
+    archived_at = models.DateTimeField(blank=True, null=True)
     image = models.ImageField(upload_to="menu_items/", blank=True, null=True)
     ingredients = models.JSONField(default=list, blank=True)
     preparation_time = models.PositiveIntegerField(default=0, help_text="Minutes")
@@ -758,6 +760,7 @@ class MenuItem(models.Model):
             models.Index(fields=["name"]),
             models.Index(fields=["category"]),
             models.Index(fields=["available"]),
+            models.Index(fields=["archived"], name="menuitem_archived_idx"),
         ]
 
     def __str__(self) -> str:

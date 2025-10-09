@@ -109,10 +109,21 @@ class MenuService {
   }
 
   async deleteMenuItem(itemId) {
-    const res = await apiClient.delete(`/menu/items/${itemId}`, {
-      retry: { retries: 1 },
-    });
-    return { success: true, data: res?.data || true };
+    const res = await apiClient.post(
+      `/menu/items/${encodeURIComponent(itemId)}/archive`,
+      {},
+      { retry: { retries: 1 } }
+    );
+    return { success: true, data: res?.data || res };
+  }
+
+  async restoreMenuItem(itemId) {
+    const res = await apiClient.post(
+      `/menu/items/${encodeURIComponent(itemId)}/restore`,
+      {},
+      { retry: { retries: 1 } }
+    );
+    return { success: true, data: res?.data || res };
   }
 
   async updateItemAvailability(itemId, available) {
