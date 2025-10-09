@@ -1,5 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { startTransition, useCallback, useMemo, useState } from 'react';
 import InventoryRecentActivity from '@/components/inventory/InventoryRecentActivity';
 import { toast } from 'sonner';
 import InventoryHeader from '@/components/inventory/InventoryHeader';
@@ -7,6 +6,7 @@ import InventoryFilters from '@/components/inventory/InventoryFilters';
 import InventoryTabs from '@/components/inventory/InventoryTabs';
 import InventoryFooter from '@/components/inventory/InventoryFooter';
 import InventoryModals from '@/components/inventory/InventoryModals';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 import {
   useInventoryManagement,
   useInventoryActivities,
@@ -31,6 +31,7 @@ const Inventory = () => {
     items,
     createInventoryItem,
     updateInventoryItem,
+    deleteInventoryItem,
     updateStock,
     refetch: refetchInventory,
   } = useInventoryManagement(listParams);
@@ -48,10 +49,17 @@ const Inventory = () => {
     cacheTtlMs: 30000,
   });
 
-  const refreshInventoryData = useCallback(() => {
-    refetchInventory();
-    refetchActivities({ force: true });
-  }, [refetchInventory, refetchActivities]);
+  const forceRefreshActivities = useCallback(
+    () => refetchActivities({ force: true }),
+    [refetchActivities]
+  );
+
+  const schedulePostMutationSync = useCallback(() => {
+    startTransition(() => {
+      forceRefreshActivities();
+      refetchInventory();
+    });
+  }, [forceRefreshActivities, refetchInventory]);
 
   const categories = [
     'Grains',
@@ -116,11 +124,11 @@ const Inventory = () => {
         supplier: newItem.supplier,
       };
       const created = await createInventoryItem(payload);
-      refreshInventoryData();
+      schedulePostMutationSync();
       // No extra call needed since backend mirrors initial quantity into ledger and response includes authoritative quantity
       return created;
     },
-    [createInventoryItem, refreshInventoryData]
+    [createInventoryItem, schedulePostMutationSync]
   );
 
   const handleEditItem = useCallback((item) => {
@@ -147,9 +155,22 @@ const Inventory = () => {
       if (!Number.isNaN(newQty) && newQty !== prevQty) {
         await updateStock(updatedItem.id, newQty, 'set');
       }
-      refreshInventoryData();
+      schedulePostMutationSync();
     },
-    [updateInventoryItem, editingItem, refreshInventoryData]
+    [updateInventoryItem, editingItem, schedulePostMutationSync, updateStock]
+  );
+
+  const handleDeleteItem = useCallback(
+    async (item) => {
+      if (!item?.id) return;
+      const confirmed = window.confirm(
+        `Delete ${item.name}? This action cannot be undone.`
+      );
+      if (!confirmed) return;
+      await deleteInventoryItem(item.id);
+      schedulePostMutationSync();
+    },
+    [deleteInventoryItem, schedulePostMutationSync]
   );
 
   const handleDisableItem = useCallback((itemId, itemName) => {
@@ -167,31 +188,37 @@ const Inventory = () => {
     <div className="grid gap-4 md:grid-cols-3">
       {/* Left: Raw Materials Inventory */}
       <div className="md:col-span-2 space-y-4">
-        <Card>
-          <InventoryHeader onAddItem={() => setShowAddModal(true)} />
-          <CardContent className="space-y-4">
-            <InventoryFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              categories={categories}
-            />
+        <FeaturePanelCard
+          title="Raw Materials Inventory"
+          description="Track and manage inventory items"
+          headerActions={
+            <InventoryHeader onAddItem={() => setShowAddModal(true)} />
+          }
+          contentClassName="space-y-4"
+        >
+          <InventoryFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categories={categories}
+          />
 
-            <InventoryTabs
-              filteredItems={filteredItems}
-              onEditItem={handleEditItem}
-              onDisableItem={handleDisableItem}
-              getStockPercentage={useCallback(getStockPercentage, [])}
-              getStockBadgeVariant={useCallback(getStockBadgeVariant, [])}
-              getStockStatusText={useCallback(getStockStatusText, [])}
-            />
-          </CardContent>
+          <InventoryTabs
+            filteredItems={filteredItems}
+            onEditItem={handleEditItem}
+            onDisableItem={handleDisableItem}
+            onDeleteItem={handleDeleteItem}
+            getStockPercentage={useCallback(getStockPercentage, [])}
+            getStockBadgeVariant={useCallback(getStockBadgeVariant, [])}
+            getStockStatusText={useCallback(getStockStatusText, [])}
+          />
+
           <InventoryFooter
             filteredCount={filteredItems.length}
             totalCount={(items || []).length}
           />
-        </Card>
+        </FeaturePanelCard>
       </div>
 
       {/* Right: Recent Inventory Activity (beside) */}
@@ -199,7 +226,6 @@ const Inventory = () => {
         <InventoryRecentActivity
           recentActivities={recentActivities}
           loading={recentLoading}
-          onRefresh={() => refetchActivities({ force: true })}
         />
       </div>
 

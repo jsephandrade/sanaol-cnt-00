@@ -1,28 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import {
+  ArrowDownUp,
+  ArrowUpDown,
+  Banknote,
+  Calendar,
+  Check,
+  CircleDollarSign,
   CreditCard,
   Download,
-  Receipt,
-  ArrowUpDown,
   MoreVertical,
-  Check,
-  X,
-  ArrowDownUp,
-  Banknote,
+  Receipt,
   Smartphone,
-  CircleDollarSign,
+  X,
 } from 'lucide-react';
-// Removed unused Input/Select imports (handled in child filters)
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,19 +23,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-// Removed Tabs imports since we no longer show Settings
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch'; // NEW
+import { Switch } from '@/components/ui/switch';
 import PaymentsHeader from '@/components/payments/PaymentsHeader';
 import PaymentsFilters from '@/components/payments/PaymentsFilters';
 import { paymentsService } from '@/api/services/paymentsService';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateRange, setDateRange] = useState('7d');
 
-  // Local state for payment method activation
   const [methodActive, setMethodActive] = useState({
     cash: true,
     card: true,
@@ -123,8 +113,6 @@ const Payments = () => {
     });
   };
 
-  // total computed via totalForSelectedStatus (memoized)
-
   const filteredPayments = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return payments.filter((payment) => {
@@ -138,18 +126,22 @@ const Payments = () => {
     });
   }, [payments, searchTerm, selectedStatus, methodActive]);
 
-  const sortedPayments = useMemo(() => {
-    return [...filteredPayments].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  }, [filteredPayments]);
+  const sortedPayments = useMemo(
+    () =>
+      [...filteredPayments].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ),
+    [filteredPayments]
+  );
 
-  const totalForSelectedStatus = useMemo(() => {
-    return filteredPayments
-      .filter((p) => p.status !== 'refunded')
-      .reduce((acc, cur) => acc + cur.amount, 0)
-      .toFixed(2);
-  }, [filteredPayments]);
+  const totalForSelectedStatus = useMemo(
+    () =>
+      filteredPayments
+        .filter((p) => p.status !== 'refunded')
+        .reduce((acc, cur) => acc + cur.amount, 0)
+        .toFixed(2),
+    [filteredPayments]
+  );
 
   const handleRefund = async (paymentId) => {
     try {
@@ -162,7 +154,6 @@ const Payments = () => {
     }
   };
 
-  // Load payment method config
   useEffect(() => {
     (async () => {
       try {
@@ -207,311 +198,304 @@ const Payments = () => {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
-        <Card>
-          <PaymentsHeader />
-
-          <CardContent className="space-y-4">
-            <PaymentsFilters
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-              dateRange={dateRange}
-              setDateRange={setDateRange}
-            />
-
-            <div className="rounded-md border">
-              <div className="relative w-full overflow-auto">
-                <table className="w-full caption-bottom text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="h-10 px-4 text-left font-medium">
-                        <div className="flex items-center gap-1">
-                          Order ID <ArrowUpDown className="h-3 w-3" />
-                        </div>
-                      </th>
-                      <th className="h-10 px-4 text-left font-medium">
-                        <div className="flex items-center gap-1">
-                          Date <ArrowUpDown className="h-3 w-3" />
-                        </div>
-                      </th>
-                      <th className="h-10 px-4 text-left font-medium">
-                        Method
-                      </th>
-                      <th className="h-10 px-4 text-left font-medium">
-                        <div className="flex items-center gap-1">
-                          Amount <ArrowUpDown className="h-3 w-3" />
-                        </div>
-                      </th>
-                      <th className="h-10 px-4 text-left font-medium">
-                        Status
-                      </th>
-                      <th className="h-10 px-4 text-right font-medium">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
-                      <tr>
-                        <td colSpan={6} className="h-24 text-center">
-                          Loading...
-                        </td>
-                      </tr>
-                    ) : sortedPayments.length > 0 ? (
-                      sortedPayments.map((payment) => (
-                        <tr
-                          key={payment.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-4 align-middle font-medium">
-                            {payment.orderId
-                              ? `${payment.orderId}`.slice(0, 6)
-                              : ''}
-                          </td>
-                          <td className="p-4 align-middle whitespace-nowrap">
-                            {formatPaymentDate(payment.date)}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="flex items-center gap-2">
-                              {getPaymentMethodIcon(payment.method)}
-                              <span className="capitalize">
-                                {payment.method}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle">
-                            ₱{payment.amount.toFixed(2)}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <CustomBadge
-                              variant={getStatusBadgeVariant(payment.status)}
-                              className="capitalize"
-                            >
-                              {payment.status}
-                            </CustomBadge>
-                          </td>
-                          <td className="p-4 align-middle text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadInvoice(payment)}
-                                >
-                                  <Download className="mr-2 h-4 w-4" /> Download
-                                  Invoice
-                                </DropdownMenuItem>
-                                {payment.status === 'completed' && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleRefund(payment.id)}
-                                  >
-                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
-                                    Process Refund
-                                  </DropdownMenuItem>
-                                )}
-                                {payment.status === 'failed' && (
-                                  <DropdownMenuItem>
-                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
-                                    Retry Payment
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="h-24 text-center">
-                          No transactions match your search criteria
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+        <FeaturePanelCard
+          title="Payment Management"
+          description="Track and process payments"
+          headerActions={<PaymentsHeader />}
+          contentClassName="space-y-4"
+        >
+          {error ? (
+            <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
             </div>
-          </CardContent>
+          ) : null}
 
-          <CardFooter className="border-t py-3 flex justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {sortedPayments.length} of {payments.length} transactions
-            </div>
-            <div className="text-sm">
-              Total:{' '}
-              <span className="font-semibold">₱{totalForSelectedStatus}</span>
-            </div>
-          </CardFooter>
-        </Card>
-      </div>
+          <PaymentsFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+          />
 
-      <div className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>View latest payment activities</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {sortedPayments.length > 0 ? (
-              <div className="space-y-4">
-                {sortedPayments.slice(0, 5).map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex justify-between items-center border-b pb-2 last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`rounded-full p-1 ${
-                          payment.status === 'completed'
-                            ? 'bg-green-100'
-                            : payment.status === 'failed'
-                              ? 'bg-red-100'
-                              : payment.status === 'refunded'
-                                ? 'bg-amber-100'
-                                : 'bg-gray-100'
-                        }`}
-                      >
-                        {payment.status === 'completed' && (
-                          <Check className="h-4 w-4 text-green-600" />
-                        )}
-                        {payment.status === 'failed' && (
-                          <X className="h-4 w-4 text-red-600" />
-                        )}
-                        {payment.status === 'refunded' && (
-                          <ArrowDownUp className="h-4 w-4 text-amber-600" />
-                        )}
-                        {payment.status === 'pending' && (
-                          <Calendar className="h-4 w-4 text-gray-600" />
-                        )}
+          <div className="rounded-md border">
+            <div className="relative w-full overflow-auto">
+              <table className="w-full caption-bottom text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="h-10 px-4 text-left font-medium">
+                      <div className="flex items-center gap-1">
+                        Order ID <ArrowUpDown className="h-3 w-3" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {payment.orderId
-                              ? `${payment.orderId}`.slice(0, 6)
-                              : ''}
-                          </span>
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">
+                      <div className="flex items-center gap-1">
+                        Date <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">Method</th>
+                    <th className="h-10 px-4 text-left font-medium">
+                      <div className="flex items-center gap-1">
+                        Amount <ArrowUpDown className="h-3 w-3" />
+                      </div>
+                    </th>
+                    <th className="h-10 px-4 text-left font-medium">Status</th>
+                    <th className="h-10 px-4 text-right font-medium">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="h-24 text-center">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : sortedPayments.length > 0 ? (
+                    sortedPayments.map((payment) => (
+                      <tr
+                        key={payment.id}
+                        className="border-b transition-colors hover:bg-muted/50"
+                      >
+                        <td className="p-4 align-middle font-medium">
+                          {payment.orderId
+                            ? `${payment.orderId}`.slice(0, 6)
+                            : ''}
+                        </td>
+                        <td className="p-4 align-middle whitespace-nowrap">
+                          {formatPaymentDate(payment.date)}
+                        </td>
+                        <td className="p-4 align-middle">
+                          <div className="flex items-center gap-2">
+                            {getPaymentMethodIcon(payment.method)}
+                            <span className="capitalize">{payment.method}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 align-middle">
+                          �,�{payment.amount.toFixed(2)}
+                        </td>
+                        <td className="p-4 align-middle">
                           <CustomBadge
                             variant={getStatusBadgeVariant(payment.status)}
-                            className="capitalize text-xs"
+                            className="capitalize"
                           >
                             {payment.status}
                           </CustomBadge>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {payment.customer
-                            ? payment.customer
-                            : 'Walk-in Customer'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        ₱{payment.amount.toFixed(2)}
-                      </div>
-                      <div className="text-xs text-muted-foreground capitalize">
-                        {payment.method}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <Receipt className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">
-                  No recent transactions to display
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                        </td>
+                        <td className="p-4 align-middle text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadInvoice(payment)}
+                              >
+                                <Download className="mr-2 h-4 w-4" /> Download
+                                Invoice
+                              </DropdownMenuItem>
+                              {payment.status === 'completed' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRefund(payment.id)}
+                                >
+                                  <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                  Process Refund
+                                </DropdownMenuItem>
+                              )}
+                              {payment.status === 'failed' && (
+                                <DropdownMenuItem>
+                                  <ArrowDownUp className="mr-2 h-4 w-4" /> Retry
+                                  Payment
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="h-24 text-center">
+                        No transactions match your search criteria
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
-            <CardDescription>Configure accepted payment types</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Removed Tabs & Settings. Show direct list with switches */}
+          <div className="flex flex-col gap-2 border-t pt-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Showing {sortedPayments.length} of {payments.length} transactions
+            </span>
+            <span className="text-sm text-foreground">
+              Total:{' '}
+              <span className="font-semibold">�,�{totalForSelectedStatus}</span>
+            </span>
+          </div>
+        </FeaturePanelCard>
+      </div>
+
+      <div className="space-y-4">
+        <FeaturePanelCard
+          title="Recent Transactions"
+          description="View latest payment activities"
+          contentClassName="space-y-4"
+        >
+          {sortedPayments.length > 0 ? (
             <div className="space-y-4">
-              {/* Cash */}
-              <div className="flex justify-between items-center border p-3 rounded-md">
-                <div className="flex items-center gap-3">
-                  <Banknote className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="font-medium">Cash</p>
-                    <p className="text-xs text-muted-foreground">
-                      Physical currency
-                    </p>
+              {sortedPayments.slice(0, 5).map((payment) => (
+                <div
+                  key={payment.id}
+                  className="flex items-center justify-between border-b pb-2 last:border-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`rounded-full p-1 ${
+                        payment.status === 'completed'
+                          ? 'bg-green-100'
+                          : payment.status === 'failed'
+                            ? 'bg-red-100'
+                            : payment.status === 'refunded'
+                              ? 'bg-amber-100'
+                              : 'bg-gray-100'
+                      }`}
+                    >
+                      {payment.status === 'completed' && (
+                        <Check className="h-4 w-4 text-green-600" />
+                      )}
+                      {payment.status === 'failed' && (
+                        <X className="h-4 w-4 text-red-600" />
+                      )}
+                      {payment.status === 'refunded' && (
+                        <ArrowDownUp className="h-4 w-4 text-amber-600" />
+                      )}
+                      {payment.status === 'pending' && (
+                        <Calendar className="h-4 w-4 text-gray-600" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {payment.orderId
+                            ? `${payment.orderId}`.slice(0, 6)
+                            : ''}
+                        </span>
+                        <CustomBadge
+                          variant={getStatusBadgeVariant(payment.status)}
+                          className="capitalize text-xs"
+                        >
+                          {payment.status}
+                        </CustomBadge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {payment.customer
+                          ? payment.customer
+                          : 'Walk-in Customer'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">
+                      �,�{payment.amount.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-muted-foreground capitalize">
+                      {payment.method}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {methodActive.cash ? 'Active' : 'Inactive'}
-                  </span>
-                  <Switch
-                    checked={methodActive.cash}
-                    onCheckedChange={(v) => updateMethod('cash', v)}
-                    aria-label="Toggle cash method"
-                  />
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center">
+              <Receipt className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
+              <p className="text-muted-foreground">
+                No recent transactions to display
+              </p>
+            </div>
+          )}
+        </FeaturePanelCard>
+
+        <FeaturePanelCard
+          title="Payment Methods"
+          description="Configure accepted payment types"
+          contentClassName="space-y-4"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="flex items-center gap-3">
+                <Banknote className="h-5 w-5 text-green-600" />
+                <div>
+                  <p className="font-medium">Cash</p>
+                  <p className="text-xs text-muted-foreground">
+                    Physical currency
+                  </p>
                 </div>
               </div>
-
-              {/* Card */}
-              <div className="flex justify-between items-center border p-3 rounded-md">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Credit/Debit Cards</p>
-                    <p className="text-xs text-muted-foreground">
-                      Visa, Mastercard, Amex
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {methodActive.card ? 'Active' : 'Inactive'}
-                  </span>
-                  <Switch
-                    checked={methodActive.card}
-                    onCheckedChange={(v) => updateMethod('card', v)}
-                    aria-label="Toggle card method"
-                  />
-                </div>
-              </div>
-
-              {/* Mobile */}
-              <div className="flex justify-between items-center border p-3 rounded-md">
-                <div className="flex items-center gap-3">
-                  <Smartphone className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="font-medium">Mobile Payments</p>
-                    <p className="text-xs text-muted-foreground">
-                      Apple Pay, Google Pay
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {methodActive.mobile ? 'Active' : 'Inactive'}
-                  </span>
-                  <Switch
-                    checked={methodActive.mobile}
-                    onCheckedChange={(v) => updateMethod('mobile', v)}
-                    aria-label="Toggle mobile method"
-                  />
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {methodActive.cash ? 'Active' : 'Inactive'}
+                </span>
+                <Switch
+                  checked={methodActive.cash}
+                  onCheckedChange={(v) => updateMethod('cash', v)}
+                  aria-label="Toggle cash method"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="flex items-center gap-3">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium">Credit/Debit Cards</p>
+                  <p className="text-xs text-muted-foreground">
+                    Visa, Mastercard, Amex
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {methodActive.card ? 'Active' : 'Inactive'}
+                </span>
+                <Switch
+                  checked={methodActive.card}
+                  onCheckedChange={(v) => updateMethod('card', v)}
+                  aria-label="Toggle card method"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="flex items-center gap-3">
+                <Smartphone className="h-5 w-5 text-purple-600" />
+                <div>
+                  <p className="font-medium">Mobile Payments</p>
+                  <p className="text-xs text-muted-foreground">
+                    Apple Pay, Google Pay
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {methodActive.mobile ? 'Active' : 'Inactive'}
+                </span>
+                <Switch
+                  checked={methodActive.mobile}
+                  onCheckedChange={(v) => updateMethod('mobile', v)}
+                  aria-label="Toggle mobile method"
+                />
+              </div>
+            </div>
+          </div>
+        </FeaturePanelCard>
       </div>
     </div>
   );

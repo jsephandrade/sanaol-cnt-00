@@ -179,16 +179,8 @@ const EditItemModal = ({ open, onOpenChange, item, onEditItem }) => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="supplier">Supplier</Label>
-              <Input
-                id="supplier"
-                {...register('supplier', { required: 'Supplier is required' })}
-              />
-              {errors.supplier && (
-                <span className="text-sm text-destructive">
-                  {errors.supplier.message}
-                </span>
-              )}
+              <Label htmlFor="supplier">Supplier (Optional)</Label>
+              <Input id="supplier" {...register('supplier')} />
             </div>
           </div>
           <DialogFooter>

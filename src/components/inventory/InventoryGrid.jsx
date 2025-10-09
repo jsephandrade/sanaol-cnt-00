@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, PenSquare, Ban } from 'lucide-react';
+import { MoreVertical, PenSquare, Ban, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CustomBadge } from '@/components/ui/custom-badge';
@@ -13,13 +13,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const InventoryGrid = ({ 
-  items, 
-  onEditItem, 
+export const InventoryGrid = ({
+  items,
+  onEditItem,
   onDisableItem,
+  onDeleteItem,
   getStockPercentage,
   getStockBadgeVariant,
-  getStockStatusText
+  getStockStatusText,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
@@ -59,10 +60,7 @@ export const InventoryGrid = ({
               </span>
             </div>
             <Progress
-              value={getStockPercentage(
-                item.currentStock,
-                item.minThreshold
-              )}
+              value={getStockPercentage(item.currentStock, item.minThreshold)}
               className="h-2"
             />
           </div>
@@ -92,6 +90,17 @@ export const InventoryGrid = ({
                   <Ban className="mr-2 h-4 w-4" />
                   {item.disabled ? 'Enable' : 'Disable'}
                 </DropdownMenuItem>
+                {onDeleteItem ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onDeleteItem(item)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

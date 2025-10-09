@@ -13,15 +13,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Plus } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 
-const AddItemDialog = ({
-  open,
-  onOpenChange,
-  newItem,
-  setNewItem,
-  onAdd,
-}) => {
+const AddItemDialog = ({ open, onOpenChange, newItem, setNewItem, onAdd }) => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -37,18 +31,22 @@ const AddItemDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button className="flex items-center gap-2">
-          <Plus size={16} /> Add Item
+          <PlusCircle className="h-4 w-4" /> Add Item
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Menu Item</DialogTitle>
-          <DialogDescription>Add a new item to your canteen menu.</DialogDescription>
+          <DialogDescription>
+            Add a new item to your canteen menu.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">Name</Label>
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
             <Input
               id="name"
               value={newItem.name}
@@ -58,7 +56,9 @@ const AddItemDialog = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">Description</Label>
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
             <Input
               id="description"
               value={newItem.description}
@@ -70,20 +70,27 @@ const AddItemDialog = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="price" className="text-right">Price</Label>
+            <Label htmlFor="price" className="text-right">
+              Price
+            </Label>
             <Input
               id="price"
               type="number"
               value={newItem.price}
               onChange={(e) =>
-                setNewItem({ ...newItem, price: parseFloat(e.target.value) || 0 })
+                setNewItem({
+                  ...newItem,
+                  price: parseFloat(e.target.value) || 0,
+                })
               }
               className="col-span-3"
             />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">Category</Label>
+            <Label htmlFor="category" className="text-right">
+              Category
+            </Label>
             <Input
               id="category"
               value={newItem.category}
@@ -95,7 +102,9 @@ const AddItemDialog = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="available" className="text-right">Available</Label>
+            <Label htmlFor="available" className="text-right">
+              Available
+            </Label>
             <Switch
               id="available"
               checked={newItem.available}
@@ -106,7 +115,9 @@ const AddItemDialog = ({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="image-file" className="text-right">Upload Image</Label>
+            <Label htmlFor="image-file" className="text-right">
+              Upload Image
+            </Label>
             <Input
               id="image-file"
               type="file"
@@ -137,7 +148,9 @@ const AddItemDialog = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={onAdd}>Add Item</Button>
         </DialogFooter>
       </DialogContent>

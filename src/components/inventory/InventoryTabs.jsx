@@ -7,6 +7,7 @@ const InventoryTabs = ({
   filteredItems,
   onEditItem,
   onDisableItem,
+  onDeleteItem,
   getStockPercentage,
   getStockBadgeVariant,
   getStockStatusText,
@@ -22,6 +23,7 @@ const InventoryTabs = ({
           items={filteredItems}
           onEditItem={onEditItem}
           onDisableItem={onDisableItem}
+          onDeleteItem={onDeleteItem}
           getStockPercentage={getStockPercentage}
           getStockBadgeVariant={getStockBadgeVariant}
           getStockStatusText={getStockStatusText}
@@ -32,6 +34,7 @@ const InventoryTabs = ({
           items={filteredItems}
           onEditItem={onEditItem}
           onDisableItem={onDisableItem}
+          onDeleteItem={onDeleteItem}
           getStockPercentage={getStockPercentage}
           getStockBadgeVariant={getStockBadgeVariant}
           getStockStatusText={getStockStatusText}
@@ -42,4 +45,3 @@ const InventoryTabs = ({
 };
 
 export default InventoryTabs;
-

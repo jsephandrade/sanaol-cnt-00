@@ -1,15 +1,14 @@
 import React from 'react';
-import { CardFooter } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-const InventoryFooter = ({ filteredCount, totalCount }) => {
+const InventoryFooter = ({ filteredCount, totalCount, className }) => {
   return (
-    <CardFooter className="border-t py-3">
-      <div className="text-xs text-muted-foreground">
-        Showing {filteredCount} of {totalCount} items
-      </div>
-    </CardFooter>
+    <div
+      className={cn('border-t pt-3 text-xs text-muted-foreground', className)}
+    >
+      Showing {filteredCount} of {totalCount} items
+    </div>
   );
 };
 
 export default InventoryFooter;
-

@@ -159,17 +159,12 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
               </Select>
             </div>
             <div>
-              <Label htmlFor="supplier">Supplier</Label>
+              <Label htmlFor="supplier">Supplier (Optional)</Label>
               <Input
                 id="supplier"
-                {...register('supplier', { required: 'Supplier is required' })}
+                {...register('supplier')}
                 placeholder="e.g., Global Foods"
               />
-              {errors.supplier && (
-                <span className="text-sm text-destructive">
-                  {errors.supplier.message}
-                </span>
-              )}
             </div>
           </div>
           <DialogFooter>

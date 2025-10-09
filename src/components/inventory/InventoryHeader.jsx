@@ -1,25 +1,19 @@
 import React from 'react';
-import {
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const InventoryHeader = ({ onAddItem }) => {
+const InventoryHeader = ({ onAddItem, className }) => {
   return (
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <div>
-        <CardTitle>Raw Materials Inventory</CardTitle>
-        <CardDescription>Track and manage inventory items</CardDescription>
-      </div>
-      <Button size="sm" className="flex gap-1" onClick={onAddItem}>
-        <PlusCircle className="h-4 w-4 mr-1" /> Add Item
-      </Button>
-    </CardHeader>
+    <Button
+      size="sm"
+      className={cn('flex items-center gap-1', className)}
+      onClick={onAddItem}
+    >
+      <PlusCircle className="h-4 w-4" aria-hidden="true" />
+      <span>Add Item</span>
+    </Button>
   );
 };
 
 export default InventoryHeader;
-

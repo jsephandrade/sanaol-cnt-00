@@ -37,36 +37,40 @@ const FeaturePanelCard = ({
       ) : null}
 
       <CardHeader className={cn('relative pb-2', headerClassName)}>
-        <div className="flex w-full flex-col gap-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              {badgeText ? (
-                <div
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-base font-semibold uppercase tracking-[0.25em] text-primary md:text-lg',
-                    badgeClassName
-                  )}
-                >
-                  {BadgeIcon ? (
-                    <BadgeIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                  ) : null}
-                  <span>{badgeText}</span>
-                </div>
-              ) : null}
-              {title ? (
-                <CardTitle className="text-2xl font-semibold">
-                  {title}
-                </CardTitle>
-              ) : null}
-              {description ? (
-                <CardDescription>{description}</CardDescription>
-              ) : null}
-            </div>
-            {headerActions ? (
-              <div className="flex-shrink-0">{headerActions}</div>
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2 md:flex-1 md:min-w-0">
+            {badgeText ? (
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-base font-semibold uppercase tracking-[0.25em] text-primary md:text-lg',
+                  badgeClassName
+                )}
+              >
+                {BadgeIcon ? (
+                  <BadgeIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                ) : null}
+                <span>{badgeText}</span>
+              </div>
+            ) : null}
+            {title ? (
+              <CardTitle className="text-2xl font-semibold">{title}</CardTitle>
+            ) : null}
+            {description ? (
+              <CardDescription>{description}</CardDescription>
             ) : null}
           </div>
-          {headerContent}
+          {headerActions || headerContent ? (
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-shrink-0 md:items-end">
+              {headerActions ? (
+                <div className="flex w-full justify-start md:w-auto md:justify-end">
+                  {headerActions}
+                </div>
+              ) : null}
+              {headerContent ? (
+                <div className="w-full md:w-auto">{headerContent}</div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </CardHeader>
 

@@ -38,128 +38,217 @@ export const useInventoryManagement = (params = {}) => {
     fetchInventoryItems();
   }, [fetchInventoryItems]);
 
-  const createInventoryItem = async (itemData) => {
-    try {
-      const response = await inventoryService.createInventoryItem(itemData);
+  const createInventoryItem = useCallback(
+    async (itemData) => {
+      const tempId = `temp-${Date.now()}`;
+      const optimisticItem = { ...itemData, id: tempId };
+      setItems((prev) => [...prev, optimisticItem]);
 
-      if (response.success) {
-        setItems((prev) => [...prev, response.data]);
-        toast({
-          title: 'Inventory Item Created',
-          description: `${itemData.name} has been added to inventory.`,
-        });
-        return response.data;
-      } else {
+      try {
+        const response = await inventoryService.createInventoryItem(itemData);
+
+        if (response.success) {
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === tempId ? { ...item, ...response.data } : item
+            )
+          );
+          toast({
+            title: 'Inventory Item Created',
+            description: `${itemData.name} has been added to inventory.`,
+          });
+          return response.data;
+        }
         throw new Error('Failed to create inventory item');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Creating Item',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const updateInventoryItem = async (itemId, updates) => {
-    try {
-      const response = await inventoryService.updateInventoryItem(
-        itemId,
-        updates
-      );
-
-      if (response.success) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === itemId ? { ...item, ...response.data } : item
-          )
-        );
+      } catch (error) {
+        setItems((prev) => prev.filter((item) => item.id !== tempId));
         toast({
-          title: 'Inventory Item Updated',
-          description: 'Inventory item has been updated successfully.',
-        });
-        return response.data;
-      } else {
-        throw new Error('Failed to update inventory item');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error Updating Item',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const deleteInventoryItem = async (itemId) => {
-    try {
-      const response = await inventoryService.deleteInventoryItem(itemId);
-
-      if (response.success) {
-        setItems((prev) => prev.filter((item) => item.id !== itemId));
-        toast({
-          title: 'Inventory Item Deleted',
-          description: 'Inventory item has been removed.',
+          title: 'Error Creating Item',
+          description: error.message,
           variant: 'destructive',
         });
-        return true;
-      } else {
-        throw new Error('Failed to delete inventory item');
+        throw error;
       }
-    } catch (error) {
-      toast({
-        title: 'Error Deleting Item',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+    },
+    [toast]
+  );
 
-  const updateStock = async (itemId, quantity, operation = 'set') => {
-    try {
-      const response = await inventoryService.updateStock(
-        itemId,
-        quantity,
-        operation
+  const updateInventoryItem = useCallback(
+    async (itemId, updates) => {
+      let previousItem = null;
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === itemId) {
+            previousItem = item;
+            return { ...item, ...updates };
+          }
+          return item;
+        })
       );
 
-      if (response.success) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === itemId ? { ...item, ...response.data } : item
-          )
+      try {
+        const response = await inventoryService.updateInventoryItem(
+          itemId,
+          updates
         );
 
-        const operationText = {
-          add: 'restocked',
-          subtract: 'reduced',
-          set: 'updated',
-        }[operation];
-
+        if (response.success) {
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === itemId ? { ...item, ...response.data } : item
+            )
+          );
+          toast({
+            title: 'Inventory Item Updated',
+            description: 'Inventory item has been updated successfully.',
+          });
+          return response.data;
+        }
+        throw new Error('Failed to update inventory item');
+      } catch (error) {
+        if (previousItem) {
+          setItems((prev) =>
+            prev.map((item) => (item.id === itemId ? previousItem : item))
+          );
+        }
         toast({
-          title: 'Stock Updated',
-          description: `Stock has been ${operationText} successfully.`,
+          title: 'Error Updating Item',
+          description: error.message,
+          variant: 'destructive',
         });
-        return response.data;
-      } else {
-        throw new Error('Failed to update stock');
+        throw error;
       }
-    } catch (error) {
-      toast({
-        title: 'Error Updating Stock',
-        description: error.message,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
+    },
+    [toast]
+  );
 
-  const refetch = () => {
-    fetchInventoryItems();
-  };
+  const deleteInventoryItem = useCallback(
+    async (itemId) => {
+      let removedItem = null;
+      let removedIndex = -1;
+      setItems((prev) => {
+        const next = [...prev];
+        removedIndex = next.findIndex((item) => item.id === itemId);
+        if (removedIndex !== -1) {
+          removedItem = next[removedIndex];
+          next.splice(removedIndex, 1);
+        }
+        return next;
+      });
+
+      try {
+        const response = await inventoryService.deleteInventoryItem(itemId);
+
+        if (response.success) {
+          toast({
+            title: 'Inventory Item Deleted',
+            description: 'Inventory item has been removed.',
+            variant: 'destructive',
+          });
+          return true;
+        }
+        throw new Error('Failed to delete inventory item');
+      } catch (error) {
+        if (removedItem) {
+          setItems((prev) => {
+            const next = [...prev];
+            const insertIndex =
+              removedIndex >= 0 && removedIndex <= next.length
+                ? removedIndex
+                : next.length;
+            next.splice(insertIndex, 0, removedItem);
+            return next;
+          });
+        }
+        toast({
+          title: 'Error Deleting Item',
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    [toast]
+  );
+
+  const updateStock = useCallback(
+    async (itemId, quantity, operation = 'set') => {
+      let previousItem = null;
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === itemId) {
+            previousItem = item;
+            const currentQty = Number(item.quantity ?? 0);
+            const delta = Number(quantity ?? 0);
+            let nextQty = currentQty;
+            switch (operation) {
+              case 'add':
+                nextQty = currentQty + delta;
+                break;
+              case 'subtract':
+                nextQty = Math.max(0, currentQty - delta);
+                break;
+              default:
+                nextQty = delta;
+            }
+            return {
+              ...item,
+              quantity: nextQty,
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return item;
+        })
+      );
+
+      try {
+        const response = await inventoryService.updateStock(
+          itemId,
+          quantity,
+          operation
+        );
+
+        if (response.success) {
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === itemId ? { ...item, ...response.data } : item
+            )
+          );
+
+          const operationText = {
+            add: 'restocked',
+            subtract: 'reduced',
+            set: 'updated',
+          }[operation];
+
+          toast({
+            title: 'Stock Updated',
+            description: `Stock has been ${operationText} successfully.`,
+          });
+          return response.data;
+        }
+        throw new Error('Failed to update stock');
+      } catch (error) {
+        if (previousItem) {
+          setItems((prev) =>
+            prev.map((item) => (item.id === itemId ? previousItem : item))
+          );
+        }
+        toast({
+          title: 'Error Updating Stock',
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    [toast]
+  );
+
+  const refetch = useCallback(
+    () => fetchInventoryItems(),
+    [fetchInventoryItems]
+  );
 
   return {
     items,

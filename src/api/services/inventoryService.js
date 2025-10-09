@@ -70,6 +70,7 @@ class InventoryService {
       createdAt: new Date().toISOString(),
       lastRestocked: new Date().toISOString(),
     };
+    mockInventoryItems.push(newItem);
     return { success: true, data: newItem };
   }
 
@@ -89,6 +90,7 @@ class InventoryService {
       ...updates,
       updatedAt: new Date().toISOString(),
     };
+    mockInventoryItems[itemIndex] = updatedItem;
     return { success: true, data: updatedItem };
   }
 
@@ -100,8 +102,9 @@ class InventoryService {
       return { success: true, data: res?.data || true };
     }
     await mockDelay(600);
-    const item = mockInventoryItems.find((i) => i.id === itemId);
-    if (!item) throw new Error('Inventory item not found');
+    const index = mockInventoryItems.findIndex((i) => i.id === itemId);
+    if (index === -1) throw new Error('Inventory item not found');
+    mockInventoryItems.splice(index, 1);
     return { success: true, message: 'Inventory item deleted successfully' };
   }
 

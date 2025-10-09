@@ -192,8 +192,8 @@ const MenuSelection = ({
         badgeText="Point of Sale"
         description="Select menu items to add to order"
         headerContent={
-          <div className="flex flex-col gap-2 pt-2 md:flex-row md:space-x-2 md:space-y-0">
-            <div className="relative flex-1">
+          <div className="pt-2">
+            <div className="relative w-full md:w-72">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"

@@ -10,6 +10,8 @@ import EditItemDialog from '@/components/menu/EditItemDialog';
 import CategoryTabs from '@/components/menu/CategoryTabs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const MenuManagement = () => {
   const {
@@ -121,49 +123,65 @@ const MenuManagement = () => {
     }
   };
 
+  const actionButtons = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-1"
+        onClick={() => setCategoryDialogOpen(true)}
+      >
+        <PlusCircle className="h-4 w-4" />
+        Add Category
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-1"
+        onClick={() => setComboDialogOpen(true)}
+      >
+        <PlusCircle className="h-4 w-4" />
+        Add Combo Meal
+      </Button>
+      <AddItemDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        newItem={newItem}
+        setNewItem={setNewItem}
+        onAdd={handleAddItem}
+      />
+    </div>
+  );
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Menu Management</h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCategoryDialogOpen(true)}
-          >
-            + Add Category
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setComboDialogOpen(true)}
-          >
-            + Add Combo Meal
-          </Button>
-          <AddItemDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            newItem={newItem}
-            setNewItem={setNewItem}
-            onAdd={handleAddItem}
-          />
-        </div>
-      </div>
-
-      <CategoryTabs
-        items={(items || []).map((it) => ({ ...it, imageUrl: it.image || '' }))}
-        categories={categories}
-        onEdit={(it) =>
-          setEditingItem({ ...it, imageUrl: it.image || it.imageUrl || '' })
-        }
-        onArchive={handleArchiveItem}
-        archivedItems={(archivedItems || []).map((it) => ({
-          ...it,
-          imageUrl: it.image || it.imageUrl || '',
-        }))}
-        archivedLoading={archivedLoading}
-        onRestore={handleRestoreItem}
-      />
+      <FeaturePanelCard
+        title="Menu Management"
+        description="Organize categories, combo meals, and menu items."
+        headerActions={actionButtons}
+        contentClassName="space-y-6"
+      >
+        <CategoryTabs
+          items={(items || []).map((it) => ({
+            ...it,
+            imageUrl: it.image || it.imageUrl || '',
+          }))}
+          categories={categories}
+          onEdit={(it) =>
+            setEditingItem({
+              ...it,
+              imageUrl: it.image || it.imageUrl || '',
+            })
+          }
+          onArchive={handleArchiveItem}
+          archivedItems={(archivedItems || []).map((it) => ({
+            ...it,
+            imageUrl: it.image || it.imageUrl || '',
+          }))}
+          archivedLoading={archivedLoading}
+          onRestore={handleRestoreItem}
+        />
+      </FeaturePanelCard>
 
       <EditItemDialog
         item={editingItem}

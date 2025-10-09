@@ -1,5 +1,11 @@
 import React from 'react';
-import { ArrowUpDown, MoreVertical, PenSquare, Ban } from 'lucide-react';
+import {
+  ArrowUpDown,
+  MoreVertical,
+  PenSquare,
+  Ban,
+  Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CustomBadge } from '@/components/ui/custom-badge';
@@ -13,13 +19,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export const InventoryTable = ({ 
-  items, 
-  onEditItem, 
+export const InventoryTable = ({
+  items,
+  onEditItem,
   onDisableItem,
+  onDeleteItem,
   getStockPercentage,
   getStockBadgeVariant,
-  getStockStatusText
+  getStockStatusText,
 }) => {
   return (
     <div className="rounded-md border">
@@ -47,7 +54,16 @@ export const InventoryTable = ({
                   key={item.id}
                   className={`border-b transition-colors hover:bg-muted/50 ${
                     item.disabled ? 'opacity-50' : ''
-                  }`}
+                  } cursor-pointer`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onEditItem(item)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onEditItem(item);
+                    }
+                  }}
                 >
                   <td className="p-4 align-middle font-medium">
                     <div className="flex items-center gap-2">
@@ -99,26 +115,57 @@ export const InventoryTable = ({
                   <td className="p-4 align-middle text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onEditItem(item)}>
+                        <DropdownMenuItem
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onEditItem(item);
+                          }}
+                        >
                           <PenSquare className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() => onDisableItem(item.id, item.name)}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onDisableItem(item.id, item.name);
+                          }}
                           className={
-                            item.disabled ? 'text-green-600' : 'text-destructive'
+                            item.disabled
+                              ? 'text-green-600'
+                              : 'text-destructive'
                           }
                         >
                           <Ban className="mr-2 h-4 w-4" />
                           {item.disabled ? 'Enable' : 'Disable'}
                         </DropdownMenuItem>
+                        {onDeleteItem ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onDeleteItem(item);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
