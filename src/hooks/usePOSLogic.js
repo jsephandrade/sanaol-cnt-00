@@ -4,9 +4,6 @@ import { orderService } from '@/api/services/orderService';
 export const usePOSLogic = () => {
   const [currentOrder, setCurrentOrder] = useState([]);
   const [discount, setDiscount] = useState({ type: 'percentage', value: 0 });
-  const [orderInfo, setOrderInfo] = useState(null);
-
-  const resetOrderInfo = () => setOrderInfo(null);
 
   const extractOrderInfo = (data) => {
     if (!data || typeof data !== 'object') return null;
@@ -22,7 +19,6 @@ export const usePOSLogic = () => {
   };
 
   const addToOrder = (menuItem) => {
-    resetOrderInfo();
     setCurrentOrder((prevOrder) => {
       const existingItemIndex = prevOrder.findIndex(
         (item) => item.menuItemId === menuItem.id
@@ -48,7 +44,6 @@ export const usePOSLogic = () => {
   };
 
   const updateQuantity = (orderItemId, change) => {
-    resetOrderInfo();
     setCurrentOrder((prevOrder) => {
       const updatedOrder = prevOrder.map((item) => {
         if (item.id === orderItemId) {
@@ -62,14 +57,12 @@ export const usePOSLogic = () => {
   };
 
   const removeFromOrder = (orderItemId) => {
-    resetOrderInfo();
     setCurrentOrder((prevOrder) =>
       prevOrder.filter((item) => item.id !== orderItemId)
     );
   };
 
   const clearOrder = () => {
-    resetOrderInfo();
     setCurrentOrder([]);
     setDiscount({ type: 'percentage', value: 0 });
   };
@@ -114,65 +107,78 @@ export const usePOSLogic = () => {
     setDiscount({ type: 'percentage', value: 0 });
   };
 
-  const ensureOrderCreated = async () => {
+  const processPayment = async (paymentMethod, paymentDetails = {}) => {
+    const total = calculateTotal();
     if (!currentOrder.length) {
       alert('No items in order.');
       return null;
     }
-    if (orderInfo && orderInfo.id && orderInfo.orderNumber) {
-      return orderInfo;
-    }
+    const subtotal = calculateSubtotal();
+    const discountAmount = calculateDiscountAmount();
+    const tenderedAmount =
+      typeof paymentDetails.tenderedAmount === 'number'
+        ? paymentDetails.tenderedAmount
+        : total;
+    const change =
+      typeof paymentDetails.change === 'number'
+        ? paymentDetails.change
+        : Math.max(0, tenderedAmount - total);
+    let createdOrder = null;
     try {
-      // Create order in backend
       const payload = {
         items: currentOrder.map((it) => ({
           menuItemId: it.menuItemId,
           quantity: it.quantity,
         })),
         discount: discount?.type === 'fixed' ? discount.value : 0,
+        discountType: discount.type,
+        totals: {
+          subtotal,
+          discount: discountAmount,
+          total,
+        },
         type: 'walk-in',
+        payment: {
+          method: paymentMethod,
+          tenderedAmount,
+          change,
+        },
       };
       const res = await orderService.createOrder(payload);
       const data = res?.data ?? res;
       const info = extractOrderInfo(data);
-      if (!info) throw new Error('Order was not created');
-      setOrderInfo(info);
-      return info;
-    } catch (e) {
-      console.error(e);
-      alert('Failed to create order. Please try again.');
-      return null;
-    }
-  };
-
-  const processPayment = async (paymentMethod) => {
-    const total = calculateTotal();
-    if (!currentOrder.length) {
-      alert('No items in order.');
-      return false;
-    }
-    const info = await ensureOrderCreated();
-    if (!info?.id) {
-      return false;
-    }
-    try {
+      if (!info || !info.id) {
+        throw new Error('Order was not created');
+      }
+      createdOrder = info;
       await orderService.processPayment(info.id, {
         amount: total,
         method: paymentMethod,
+        tenderedAmount,
+        change,
       });
       clearOrder();
-      return true;
+      return info;
     } catch (e) {
       console.error(e);
+      if (createdOrder?.id) {
+        try {
+          await orderService.cancelOrder(
+            createdOrder.id,
+            'Payment could not be completed'
+          );
+        } catch (cancelError) {
+          console.error(cancelError);
+        }
+      }
       alert('Failed to process payment. Please try again.');
-      return false;
+      return null;
     }
   };
 
   return {
     currentOrder,
     discount,
-    orderInfo,
     addToOrder,
     updateQuantity,
     removeFromOrder,
@@ -183,6 +189,5 @@ export const usePOSLogic = () => {
     applyDiscount,
     removeDiscount,
     processPayment,
-    ensureOrderCreated,
   };
 };

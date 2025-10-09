@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuSelection from '@/components/pos/MenuSelection';
 import CurrentOrder from '@/components/pos/CurrentOrder';
@@ -6,11 +6,10 @@ import OrderQueue from '@/components/pos/OrderQueue';
 import PaymentModal from '@/components/pos/PaymentModal';
 import DiscountModal from '@/components/pos/DiscountModal';
 import OrderHistoryModal from '@/components/pos/OrderHistoryModal';
-import { usePOSData } from '@/hooks/usePOSData';
+import { usePOSData, EMPTY_QUEUE_STATE } from '@/hooks/usePOSData';
 import { usePOSLogic } from '@/hooks/usePOSLogic';
 import { useOrderHistory } from '@/hooks/useOrderManagement';
 import { orderService } from '@/api/services/orderService';
-import { useEffect } from 'react';
 
 const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +38,6 @@ const POS = () => {
   const {
     currentOrder,
     discount,
-    orderInfo,
     addToOrder,
     updateQuantity,
     removeFromOrder,
@@ -50,7 +48,6 @@ const POS = () => {
     applyDiscount,
     removeDiscount,
     processPayment,
-    ensureOrderCreated,
   } = usePOSLogic();
 
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
@@ -63,18 +60,44 @@ const POS = () => {
     }
   };
 
-  const handleProcessPayment = async () => {
-    const success = await processPayment(paymentMethod);
-    if (success) {
-      setIsPaymentModalOpen(false);
+  const refreshQueue = useCallback(async () => {
+    try {
+      const res = await orderService.getOrderQueue();
+      if (res?.data) {
+        setOrderQueue(res.data);
+        return res.data;
+      }
+    } catch (e) {
+      console.error(e);
     }
+    setOrderQueue(EMPTY_QUEUE_STATE);
+    return EMPTY_QUEUE_STATE;
+  }, [setOrderQueue]);
+
+  const handleProcessPayment = async (paymentDetails) => {
+    const info = await processPayment(paymentMethod, paymentDetails);
+    if (info?.id) {
+      setIsPaymentModalOpen(false);
+      setActiveTab('queue');
+
+      const triggerQueueRefresh = () => {
+        refreshQueue().catch((e) => console.error(e));
+      };
+
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(triggerQueueRefresh);
+      } else {
+        setTimeout(triggerQueueRefresh, 0);
+      }
+
+      return true;
+    }
+    return false;
   };
 
-  const handleOpenPaymentModal = async () => {
-    const info = await ensureOrderCreated();
-    if (info?.id) {
-      setIsPaymentModalOpen(true);
-    }
+  const handleOpenPaymentModal = () => {
+    if (!hasOrderItems) return;
+    setIsPaymentModalOpen(true);
   };
   // Fetch order history only when modal opens
   useEffect(() => {
@@ -84,11 +107,26 @@ const POS = () => {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       await orderService.updateOrderStatus(orderId, newStatus);
-      // Refresh queue after update
-      const res = await orderService.getOrderQueue();
-      if (res?.data) setOrderQueue(res.data);
+      await refreshQueue();
+      return true;
     } catch (e) {
       console.error(e);
+      return false;
+    }
+  };
+
+  const updateOrderItemState = async (orderId, itemId, payload) => {
+    try {
+      const res = await orderService.updateOrderItemState(
+        orderId,
+        itemId,
+        payload
+      );
+      await refreshQueue();
+      return res?.data ?? null;
+    } catch (e) {
+      console.error(e);
+      return null;
     }
   };
 
@@ -98,8 +136,7 @@ const POS = () => {
     let cancelled = false;
     const tick = async () => {
       try {
-        const res = await orderService.getOrderQueue();
-        if (!cancelled && res?.data) setOrderQueue(res.data);
+        await refreshQueue();
       } catch {
       } finally {
         if (!cancelled) timer = setTimeout(tick, 5000);
@@ -110,7 +147,7 @@ const POS = () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [setOrderQueue]);
+  }, [refreshQueue]);
 
   return (
     <div className="space-y-4">
@@ -141,8 +178,6 @@ const POS = () => {
             <CurrentOrder
               currentOrder={currentOrder}
               discount={discount}
-              orderNumber={orderInfo?.orderNumber}
-              onEnsureOrderCreated={ensureOrderCreated}
               onUpdateQuantity={updateQuantity}
               onRemoveFromOrder={removeFromOrder}
               onClearOrder={clearOrder}
@@ -160,7 +195,9 @@ const POS = () => {
         <TabsContent value="queue">
           <OrderQueue
             orderQueue={orderQueue}
+            refreshQueue={refreshQueue}
             updateOrderStatus={updateOrderStatus}
+            updateOrderItemState={updateOrderItemState}
           />
         </TabsContent>
       </Tabs>

@@ -866,20 +866,34 @@ class CateringEventItem(models.Model):
 
 
 class Order(models.Model):
-    STATUS_PENDING = "pending"
-    STATUS_IN_QUEUE = "in_queue"
-    STATUS_IN_PROGRESS = "in_progress"
-    STATUS_READY = "ready"
+    STATUS_NEW = "new"
+    STATUS_PENDING = "pending"  # legacy alias of NEW
+    STATUS_ACCEPTED = "accepted"
+    STATUS_IN_QUEUE = "in_queue"  # legacy alias of ACCEPTED
+    STATUS_IN_PREP = "in_prep"
+    STATUS_IN_PROGRESS = "in_progress"  # legacy alias of IN_PREP
+    STATUS_ASSEMBLING = "assembling"
+    STATUS_READY = "ready"  # legacy alias of STAGED
+    STATUS_STAGED = "staged"
+    STATUS_HANDOFF = "handoff"
     STATUS_COMPLETED = "completed"
     STATUS_CANCELLED = "cancelled"
+    STATUS_VOIDED = "voided"
     STATUS_REFUNDED = "refunded"
     STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
         (STATUS_PENDING, "Pending"),
+        (STATUS_ACCEPTED, "Accepted"),
         (STATUS_IN_QUEUE, "In Queue"),
+        (STATUS_IN_PREP, "In Preparation"),
         (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_ASSEMBLING, "Assembling"),
+        (STATUS_STAGED, "Staged"),
         (STATUS_READY, "Ready"),
+        (STATUS_HANDOFF, "Handoff"),
         (STATUS_COMPLETED, "Completed"),
         (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_VOIDED, "Voided"),
         (STATUS_REFUNDED, "Refunded"),
     ]
 
@@ -894,6 +908,24 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=16, blank=True)  # cash/card/mobile
     placed_by = models.ForeignKey('AppUser', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     completed_at = models.DateTimeField(blank=True, null=True)
+    promised_time = models.DateTimeField(blank=True, null=True)
+    quoted_minutes = models.PositiveIntegerField(default=15)
+    channel = models.CharField(max_length=32, blank=True)
+    priority = models.CharField(max_length=16, default="normal")
+    eta_seconds = models.IntegerField(default=0)
+    is_throttled = models.BooleanField(default=False)
+    throttle_reason = models.CharField(max_length=255, blank=True)
+    bulk_reference = models.CharField(max_length=64, blank=True)
+    shelf_slot = models.CharField(max_length=16, blank=True)
+    handoff_code = models.CharField(max_length=32, blank=True)
+    handoff_verified_at = models.DateTimeField(blank=True, null=True)
+    handoff_verified_by = models.CharField(max_length=255, blank=True)
+    partial_ready_items = models.PositiveIntegerField(default=0)
+    total_items_cached = models.PositiveIntegerField(default=0)
+    last_station_code = models.CharField(max_length=32, blank=True)
+    late_by_seconds = models.IntegerField(default=0)
+    meta = models.JSONField(default=dict, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -910,12 +942,49 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    STATE_QUEUED = "queued"
+    STATE_FIRING = "firing"
+    STATE_COOKING = "cooking"
+    STATE_HOLD = "hold"
+    STATE_DELAYED = "delayed"
+    STATE_READY = "ready"
+    STATE_REFIRED = "refired"
+    STATE_CANCELLED = "cancelled"
+    STATE_COMPLETED = "completed"
+    STATE_CHOICES = [
+        (STATE_QUEUED, "Queued"),
+        (STATE_FIRING, "Firing"),
+        (STATE_COOKING, "Cooking"),
+        (STATE_HOLD, "Hold"),
+        (STATE_DELAYED, "Delayed"),
+        (STATE_READY, "Item Ready"),
+        (STATE_REFIRED, "Re-fired"),
+        (STATE_CANCELLED, "Cancelled"),
+        (STATE_COMPLETED, "Completed"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_item = models.ForeignKey('MenuItem', on_delete=models.SET_NULL, null=True, blank=True)
     item_name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     quantity = models.PositiveIntegerField(default=1)
+    state = models.CharField(max_length=16, choices=STATE_CHOICES, default=STATE_QUEUED)
+    station_code = models.CharField(max_length=32, blank=True)
+    station_name = models.CharField(max_length=64, blank=True)
+    cook_seconds_estimate = models.PositiveIntegerField(default=0)
+    cook_seconds_actual = models.PositiveIntegerField(default=0)
+    fired_at = models.DateTimeField(blank=True, null=True)
+    ready_at = models.DateTimeField(blank=True, null=True)
+    hold_until = models.DateTimeField(blank=True, null=True)
+    batch_id = models.CharField(max_length=64, blank=True)
+    priority = models.CharField(max_length=16, default="normal")
+    sequence = models.PositiveIntegerField(default=0)
+    modifiers = models.JSONField(default=list, blank=True)
+    allergens = models.JSONField(default=list, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+    meta = models.JSONField(default=dict, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -923,7 +992,64 @@ class OrderItem(models.Model):
         db_table = "order_item"
         indexes = [
             models.Index(fields=["order"]),
+            models.Index(fields=["station_code", "state"], name="order_item_station_state_idx"),
+            models.Index(fields=["batch_id"], name="order_item_batch_idx"),
         ]
+
+    @property
+    def current_state(self) -> str:
+        return self.state
+
+    @property
+    def is_active(self) -> bool:
+        return self.state not in {self.STATE_CANCELLED, self.STATE_COMPLETED}
+
+
+class KitchenStation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=64)
+    tags = models.JSONField(default=list, blank=True)
+    capacity = models.PositiveIntegerField(default=4)
+    auto_batch_window_seconds = models.PositiveIntegerField(default=90)
+    make_to_stock = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_expo = models.BooleanField(default=False)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "kitchen_station"
+        indexes = [
+            models.Index(fields=["is_active", "sort_order"], name="kitchen_station_active_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.code} ({self.name})"
+
+
+class OrderEvent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="events")
+    item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name="events", null=True, blank=True)
+    actor = models.ForeignKey(AppUser, on_delete=models.SET_NULL, null=True, blank=True)
+    event_type = models.CharField(max_length=64)
+    from_state = models.CharField(max_length=32, blank=True)
+    to_state = models.CharField(max_length=32, blank=True)
+    station_code = models.CharField(max_length=32, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "order_event"
+        indexes = [
+            models.Index(fields=["order", "created_at"], name="order_event_order_created_idx"),
+            models.Index(fields=["event_type"], name="order_event_type_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.event_type} on {self.order_id}"
 
 
 # -----------------------------

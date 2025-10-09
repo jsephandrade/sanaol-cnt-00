@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -63,9 +62,6 @@ const ItemCard = ({ item, onEdit, onDelete }) => {
             <CardTitle className="text-l font-semibold leading-tight text-foreground line-clamp-2">
               {item.name}
             </CardTitle>
-            <CardDescription className="text-sm text-muted-foreground line-clamp-3">
-              {item.description}
-            </CardDescription>
           </div>
         </CardHeader>
 

@@ -2,10 +2,34 @@ import { useEffect, useState, useCallback } from 'react';
 import menuService from '@/api/services/menuService';
 import { toast } from 'sonner';
 
+const EMPTY_QUEUE = {
+  orders: [],
+  stations: [],
+  summary: {
+    totalOrders: 0,
+    statusCounts: {},
+    channelCounts: {},
+    priorityCounts: {},
+  },
+  capacity: {
+    stations: [],
+    shouldThrottle: false,
+    peakUtilization: 0,
+    recommendedQuoteMinutes: 0,
+    throttleReasons: [],
+  },
+  batches: [],
+  handoff: { pending: [], lateOrders: [] },
+  generatedAt: null,
+  eventCursor: null,
+};
+
+export const EMPTY_QUEUE_STATE = EMPTY_QUEUE;
+
 export const usePOSData = () => {
   const [orderHistory] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [orderQueue, setOrderQueue] = useState([]);
+  const [orderQueue, setOrderQueue] = useState(EMPTY_QUEUE);
 
   const loadMenu = useCallback(async () => {
     try {

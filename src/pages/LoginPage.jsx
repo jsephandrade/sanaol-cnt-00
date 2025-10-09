@@ -23,13 +23,20 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
-
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-
-  // field-level errors for a11y
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+
+  useEffect(() => {
+    try {
+      const savedEmail = getRememberedEmail();
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRemember(true);
+      }
+    } catch {}
+  }, []);
 
   const resolveLoginErrorMessage = (result) => {
     const status = result?.status ?? null;
@@ -41,27 +48,14 @@ const LoginPage = () => {
         return 'Incorrect account credentials.';
       if (/account not found/i.test(raw))
         return 'Incorrect account credentials.';
-      if (/service temporarily unavailable/i.test(raw))
-        return 'Incorrect account credentials.';
     }
     return raw || 'Something went wrong. Please try again.';
   };
-  // Prefill email from localStorage (we do not store passwords)
-  useEffect(() => {
-    try {
-      const savedEmail = getRememberedEmail();
-      if (savedEmail) {
-        setEmail(savedEmail);
-        setRemember(true);
-      }
-    } catch {}
-  }, []);
 
   const validate = () => {
     let ok = true;
     setEmailError('');
     setPasswordError('');
-
     if (!email) {
       setEmailError('Email is required.');
       ok = false;
@@ -69,7 +63,6 @@ const LoginPage = () => {
       setEmailError('Enter a valid email address.');
       ok = false;
     }
-
     if (!password) {
       setPasswordError('Password is required.');
       ok = false;
@@ -77,7 +70,6 @@ const LoginPage = () => {
       setPasswordError('Password must be at least 8 characters.');
       ok = false;
     }
-
     return ok;
   };
 
@@ -85,7 +77,6 @@ const LoginPage = () => {
     e.preventDefault();
     if (pending) return;
     setError('');
-
     if (!validate()) return;
 
     setPending(true);
@@ -95,53 +86,34 @@ const LoginPage = () => {
         setError(resolveLoginErrorMessage(res));
         return;
       }
+
       if (res?.otpRequired) {
-        try {
-          const expiresIn = Number(res?.otpExpiresIn || res?.expiresIn || 60);
-          const payload = {
+        sessionStorage.setItem(
+          'login_otp_context',
+          JSON.stringify({
             email,
             otpToken: res?.otpToken || '',
             remember,
             user: res?.user || null,
-            expiresAt:
-              Date.now() + Math.max(30, Number(expiresIn || 60)) * 1000,
-          };
-          sessionStorage.setItem('login_otp_context', JSON.stringify(payload));
-        } catch {}
-        try {
-          if (remember) {
-            rememberEmail(email);
-          } else {
-            clearRememberedEmail();
-          }
-        } catch {}
+            expiresAt: Date.now() + (res?.otpExpiresIn || 60) * 1000,
+          })
+        );
+        remember ? rememberEmail(email) : clearRememberedEmail();
         navigate('/otp');
         return;
       }
-      // If pending, stash verify token and route to verification
+
       if (
         res?.pending ||
         (res?.user?.status || '').toLowerCase() !== 'active'
       ) {
-        try {
-          sessionStorage.setItem('verify_token', res.verifyToken || '');
-          sessionStorage.setItem(
-            'pending_user',
-            JSON.stringify(res.user || {})
-          );
-        } catch {}
+        sessionStorage.setItem('verify_token', res.verifyToken || '');
+        sessionStorage.setItem('pending_user', JSON.stringify(res.user || {}));
         navigate('/verify');
         return;
       }
-      // Persist or clear remembered email based on the checkbox
-      try {
-        if (remember) {
-          rememberEmail(email);
-        } else {
-          clearRememberedEmail();
-        }
-      } catch {}
 
+      remember ? rememberEmail(email) : clearRememberedEmail();
       navigate('/');
     } catch (err) {
       setError(
@@ -155,60 +127,28 @@ const LoginPage = () => {
     }
   };
 
-  // SocialProviders now calls onSocial(provider, event).
-  const handleSocial = async (provider, payload /* e or credential */) => {
+  const handleSocial = async (provider, payload) => {
     if (pending) return;
     setPending(true);
     setError('');
     try {
-      if (provider === 'google-credential') {
-        const res = await loginWithGoogle(payload, { remember });
-        if (!res?.success) throw new Error('Google login failed');
-        if (res?.token) {
-          // approved path -> handled below by navigate('/')
-        } else if (res?.verifyToken) {
-          // pending path -> send to verification
-          try {
-            sessionStorage.setItem('verify_token', res.verifyToken || '');
-            sessionStorage.setItem(
-              'pending_user',
-              JSON.stringify(res.user || {})
-            );
-          } catch {}
-          navigate('/verify');
-          return;
-        } else {
-          setError(
-            'Your Google account is not registered or not yet approved.'
-          );
-          return;
-        }
-      } else if (provider === 'google') {
-        const credential = await signInWithGoogle();
+      if (provider === 'google-credential' || provider === 'google') {
+        const credential =
+          provider === 'google-credential' ? payload : await signInWithGoogle();
         const res = await loginWithGoogle(credential, { remember });
         if (!res?.success) throw new Error('Google login failed');
-        if (res?.token) {
-          // approved path -> continue to home
-        } else if (res?.verifyToken) {
-          try {
-            sessionStorage.setItem('verify_token', res.verifyToken || '');
-            sessionStorage.setItem(
-              'pending_user',
-              JSON.stringify(res.user || {})
-            );
-          } catch {}
-          navigate('/verify');
-          return;
-        } else {
-          setError(
-            'Your Google account is not registered or not yet approved.'
+        if (res?.verifyToken) {
+          sessionStorage.setItem('verify_token', res.verifyToken || '');
+          sessionStorage.setItem(
+            'pending_user',
+            JSON.stringify(res.user || {})
           );
+          navigate('/verify');
           return;
         }
       } else {
         await socialLogin(provider);
       }
-      // navigate("/dashboard");
       navigate('/');
     } catch (err) {
       setError(err?.message || 'Social login failed. Please try again.');
@@ -218,17 +158,11 @@ const LoginPage = () => {
   };
 
   const handleForgotPassword = () => {
-    if (pending) return;
-    navigate('/forgot-password');
+    if (!pending) navigate('/forgot-password');
   };
 
   const loginCard = (
-    <AuthCard
-      title="Login"
-      compact
-      className="mx-auto"
-      cardClassName="shadow-2xl"
-    >
+    <AuthCard title="Login" compact cardClassName="shadow-2xl">
       <LoginForm
         email={email}
         password={password}
@@ -243,14 +177,12 @@ const LoginPage = () => {
         onForgotPassword={handleForgotPassword}
         onSubmit={handleSubmit}
       />
-
       <SocialProviders onSocial={handleSocial} pending={pending} />
-
       <p className="mt-6 text-sm text-gray-600 text-center">
-        Don't have an account yet?{' '}
+        Don’t have an account yet?{' '}
         <button
           onClick={() => navigate('/signup')}
-          className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60 disabled:cursor-not-allowed"
+          className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60"
           type="button"
           disabled={pending}
         >
@@ -272,7 +204,8 @@ const LoginPage = () => {
       <AuthPageShell
         backgroundImage={AUTH_PAGE_DEFAULT_BACKGROUND}
         waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
-        formWrapperClassName="max-w-md ml-auto md:ml-0 md:mr-[min(8rem,14vw)]"
+        formWrapperClassName="order-2 md:order-1 w-full flex justify-center px-4 md:px-0"
+        asideWrapperClassName="order-1 md:order-2 mb-10 md:mb-0 flex justify-center"
         formSlot={loginCard}
         asideSlot={welcomeIntro}
       />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import {
   Card,
@@ -10,7 +10,14 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Delete } from 'lucide-react';
+import { X, Delete, Loader2 } from 'lucide-react';
+
+const NUMBER_PAD_LAYOUT = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['C', '0', '.'],
+];
 
 const PaymentModal = ({
   isOpen,
@@ -24,15 +31,24 @@ const PaymentModal = ({
 }) => {
   const { can } = useAuth();
   const [paymentAmount, setPaymentAmount] = useState('');
-  const [change, setChange] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const totalAmount = calculateTotal();
-
-  useEffect(() => {
-    const payment = parseFloat(paymentAmount) || 0;
-    const calculatedChange = payment - totalAmount;
-    setChange(calculatedChange >= 0 ? calculatedChange : 0);
-  }, [paymentAmount, totalAmount]);
+  const totalAmount = useMemo(
+    () => calculateTotal(),
+    [calculateTotal, _currentOrder, _discount]
+  );
+  const paymentValue = useMemo(
+    () => parseFloat(paymentAmount) || 0,
+    [paymentAmount]
+  );
+  const change = useMemo(() => {
+    const calculated = paymentValue - totalAmount;
+    return calculated >= 0 ? calculated : 0;
+  }, [paymentValue, totalAmount]);
+  const paymentIsSufficient = useMemo(
+    () => paymentValue >= totalAmount,
+    [paymentValue, totalAmount]
+  );
 
   const handlePaymentAmountChange = (e) => {
     const value = e.target.value;
@@ -55,29 +71,42 @@ const PaymentModal = ({
     setPaymentAmount((prev) => prev.slice(0, -1));
   };
 
-  const isPaymentValid = () => {
-    const payment = parseFloat(paymentAmount) || 0;
-    return payment >= totalAmount;
-  };
+  const handleProcessPayment = useCallback(async () => {
+    if (!paymentIsSufficient || isProcessing) return;
 
-  const handleProcessPayment = async () => {
-    if (isPaymentValid()) {
-      const success = await onProcessPayment();
+    setIsProcessing(true);
+
+    if (typeof window !== 'undefined') {
+      await new Promise((resolve) => {
+        if ('requestAnimationFrame' in window) {
+          window.requestAnimationFrame(() => resolve());
+        } else {
+          setTimeout(resolve, 16);
+        }
+      });
+    }
+
+    try {
+      const success = await onProcessPayment({
+        tenderedAmount: paymentValue,
+        change,
+      });
+
       if (success) {
         setPaymentAmount('');
-        setChange(0);
       }
+    } finally {
+      setIsProcessing(false);
     }
-  };
+  }, [
+    paymentIsSufficient,
+    isProcessing,
+    onProcessPayment,
+    paymentValue,
+    change,
+  ]);
 
   if (!isOpen) return null;
-
-  const numberButtons = [
-    ['1', '2', '3'],
-    ['4', '5', '6'],
-    ['7', '8', '9'],
-    ['C', '0', '.'],
-  ];
 
   return (
     <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
@@ -123,7 +152,7 @@ const PaymentModal = ({
 
             {/* Number Keyboard */}
             <div className="grid grid-cols-3 gap-2">
-              {numberButtons.map((row, rowIndex) =>
+              {NUMBER_PAD_LAYOUT.map((row, rowIndex) =>
                 row.map((button) => (
                   <Button
                     key={`${rowIndex}-${button}`}
@@ -162,9 +191,18 @@ const PaymentModal = ({
           <Button
             className="flex-1"
             onClick={handleProcessPayment}
-            disabled={!isPaymentValid() || !can('payment.process')}
+            disabled={
+              !paymentIsSufficient || !can('payment.process') || isProcessing
+            }
           >
-            Process Payment
+            {isProcessing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              'Process Payment'
+            )}
           </Button>
           <Button variant="outline" onClick={onClose}>
             Cancel
