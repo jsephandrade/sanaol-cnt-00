@@ -44,21 +44,77 @@ def reports_sales(request):
     if not _has_permission(actor, "reports.sales.view"):
         return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
     try:
-        from django.db.models import Sum
+        from django.db.models import Sum, Count
+        from django.db.models.functions import TruncDate, TruncMonth
         from .models import PaymentTransaction
         r = request.GET.get("range")
         start, end = _parse_range(r)
         qs = PaymentTransaction.objects.filter(created_at__gte=start, created_at__lte=end)
         total = qs.aggregate(total=Sum("amount")).get("total") or 0
-        by_method = (
-            qs.values("method").annotate(total=Sum("amount")).order_by()
+        txn_count = qs.count()
+        order_count = (
+            qs.exclude(order_id__isnull=True)
+            .exclude(order_id="")
+            .values("order_id")
+            .distinct()
+            .count()
         )
+        if order_count == 0:
+            order_count = txn_count
+        average = float(total) / order_count if order_count else 0.0
+
+        by_method = list(
+            qs.values("method")
+            .annotate(total=Sum("amount"), count=Count("id"))
+            .order_by()
+        )
+        daily_rows = (
+            qs.annotate(day=TruncDate("created_at"))
+            .values("day")
+            .annotate(total=Sum("amount"), count=Count("id"))
+            .order_by("day")
+        )
+        monthly_rows = (
+            qs.annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(total=Sum("amount"), count=Count("id"))
+            .order_by("month")
+        )
+
         return JsonResponse({
             "success": True,
             "data": {
-                "total": float(total or 0),
-                "byMethod": {row["method"]: float(row["total"] or 0) for row in by_method},
+                "totalRevenue": float(total or 0),
+                "totalTransactions": int(txn_count),
+                "totalOrders": int(order_count),
+                "averageOrderValue": float(average),
                 "range": {"from": start.isoformat(), "to": end.isoformat()},
+                "byMethod": [
+                    {
+                        "method": row["method"],
+                        "total": float(row["total"] or 0),
+                        "count": row["count"],
+                    }
+                    for row in by_method
+                ],
+                "dailyTotals": [
+                    {
+                        "date": row["day"].isoformat(),
+                        "total": float(row["total"] or 0),
+                        "count": row["count"],
+                    }
+                    for row in daily_rows
+                    if row.get("day")
+                ],
+                "monthlyTotals": [
+                    {
+                        "month": row["month"].strftime("%Y-%m") if row.get("month") else None,
+                        "total": float(row["total"] or 0),
+                        "count": row["count"],
+                    }
+                    for row in monthly_rows
+                    if row.get("month")
+                ],
             },
         })
     except Exception:
