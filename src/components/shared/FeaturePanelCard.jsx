@@ -52,12 +52,12 @@ const FeaturePanelCard = ({
                 <span>{badgeText}</span>
               </div>
             ) : null}
-            {title ? (
-              <CardTitle className="text-2xl font-semibold">{title}</CardTitle>
-            ) : null}
             {description ? (
-              <CardDescription>{description}</CardDescription>
+              <CardTitle className="text-2xl font-semibold">
+                {description}
+              </CardTitle>
             ) : null}
+            {title ? <CardDescription>{title}</CardDescription> : null}
           </div>
           {headerActions || headerContent ? (
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-shrink-0 md:items-end">

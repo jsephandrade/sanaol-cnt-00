@@ -38,6 +38,7 @@ const POS = () => {
   const {
     currentOrder,
     discount,
+    orderNumber,
     addToOrder,
     updateQuantity,
     removeFromOrder,
@@ -178,6 +179,7 @@ const POS = () => {
             <CurrentOrder
               currentOrder={currentOrder}
               discount={discount}
+              orderNumber={orderNumber}
               onUpdateQuantity={updateQuantity}
               onRemoveFromOrder={removeFromOrder}
               onClearOrder={clearOrder}

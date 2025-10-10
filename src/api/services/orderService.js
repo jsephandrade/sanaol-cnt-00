@@ -322,14 +322,58 @@ class OrderService {
     return normalizeApiResult(res);
   }
 
+  async generateOrderNumber(params = {}) {
+    const resolvePrefix = () => {
+      const channel = params?.channel || params?.type;
+      if (channel) {
+        const code = String(channel).trim();
+        if (code) return code[0].toUpperCase();
+      }
+      const prefix = params?.prefix;
+      if (prefix) {
+        const code = String(prefix).trim();
+        if (code) return code[0].toUpperCase();
+      }
+      return 'W';
+    };
+
+    if (shouldUseMocks()) {
+      await mockDelay(120);
+      const now = new Date();
+      const year = String(now.getFullYear()).slice(-2);
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const datePart = `${year}${month}${day}`;
+      const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const randomPart = Array.from(
+        { length: 6 },
+        () => chars[Math.floor(Math.random() * chars.length)]
+      ).join('');
+      const prefix = resolvePrefix();
+      const orderNumber = `${prefix}-${datePart}-${randomPart}`;
+      return {
+        success: true,
+        data: {
+          orderNumber,
+          orderReference: `${prefix}-${datePart}`,
+        },
+      };
+    }
+
+    const query = new URLSearchParams(params).toString();
+    const endpoint = `/orders/generate-number${query ? `?${query}` : ''}`;
+    return apiClient.get(endpoint);
+  }
+
   async createOrder(orderData) {
     if (shouldUseMocks()) {
       await mockDelay(1000);
       const now = new Date().toISOString();
       const newOrder = {
         id: Date.now().toString(),
-        orderNumber: `W-${String(Date.now()).slice(-4)}`,
         ...orderData,
+        orderNumber:
+          orderData?.orderNumber || `W-${String(Date.now()).slice(-6)}`,
         status: 'accepted',
         canonicalStatus: 'accepted',
         timeReceived: now,

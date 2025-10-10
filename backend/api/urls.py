@@ -96,6 +96,7 @@ urlpatterns = [
 
     # Orders
     path("orders", order_views.orders, name="orders"),
+    path("orders/generate-number", order_views.order_generate_number, name="order_generate_number"),
     path("orders/queue", order_views.order_queue, name="order_queue"),
     path("orders/history", order_views.order_history, name="order_history"),
     path("orders/bulk-progress", order_views.order_bulk_progress, name="order_bulk_progress"),

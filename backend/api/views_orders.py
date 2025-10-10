@@ -29,6 +29,45 @@ from .views_common import _actor_from_request, _has_permission, rate_limit
 logger = logging.getLogger(__name__)
 
 
+ORDER_NUMBER_RANDOM_CHARS = "0123456789"
+
+
+def _normalize_order_number_candidate(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    cleaned = str(value).strip().lstrip("#")
+    return cleaned.upper()
+
+
+def _order_reference_from_number(order_number: str) -> str:
+    if not order_number:
+        return ""
+    parts = [part for part in str(order_number).split("-") if part]
+    if len(parts) >= 2:
+        return f"{parts[0]}-{parts[1]}"
+    return str(order_number)
+
+
+def generate_unique_order_number(*, prefix: str = "W", order_model=None, max_attempts: int = 64) -> str:
+    prefix_clean = (prefix or "W").strip()[:1].upper() or "W"
+    if order_model is None:
+        from .models import Order as OrderModel
+
+        order_model = OrderModel
+
+    attempt = 0
+
+    while attempt < max_attempts:
+        random_component = get_random_string(
+            length=6, allowed_chars=ORDER_NUMBER_RANDOM_CHARS
+        )
+        candidate = f"{prefix_clean}-{random_component}"
+        if not order_model.objects.filter(order_number__iexact=candidate).exists():
+            return candidate
+        attempt += 1
+
+    raise RuntimeError("Unable to generate unique order number")
+
 
 def canonical_status(status: Optional[str]) -> str:
     if not status:
@@ -660,9 +699,19 @@ def orders(request):
             now_ts = dj_tz.now()
             promised_time = now_ts + timedelta(minutes=recommended_quote)
             eta_seconds = recommended_quote * 60
-            ts = now_ts
             order_prefix = requested_channel[:1].upper() or "W"
-            num = f"{order_prefix}-{ts.strftime('%y%m%d')}-{ts.strftime('%H%M%S')}"
+            requested_number = _normalize_order_number_candidate(
+                payload.get("orderNumber")
+                or payload.get("order_number")
+                or payload.get("orderNo")
+            )
+
+            if requested_number and not Order.objects.filter(order_number__iexact=requested_number).exists():
+                num = requested_number
+            else:
+                num = generate_unique_order_number(
+                    prefix=order_prefix, order_model=Order
+                )
 
             payment_method = payload.get("paymentMethod")
             if not payment_method:
@@ -730,6 +779,37 @@ def orders(request):
     except Exception:
         logger.exception("Failed to create order")
         return JsonResponse({"success": False, "message": "Failed to create order"}, status=500)
+
+
+@require_http_methods(["GET"])
+@rate_limit(limit=30, window_seconds=60)
+def order_generate_number(request):
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "order.place"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    channel = (request.GET.get("channel") or request.GET.get("type") or "walk-in").strip().lower()
+    prefix = channel[:1].upper() or "W"
+
+    try:
+        from .models import Order
+
+        order_number = generate_unique_order_number(prefix=prefix, order_model=Order)
+        reference = _order_reference_from_number(order_number)
+        return JsonResponse(
+            {
+                "success": True,
+                "data": {
+                    "orderNumber": order_number,
+                    "orderReference": reference,
+                },
+            }
+        )
+    except Exception:
+        logger.exception("Failed to generate order number")
+        return JsonResponse({"success": False, "message": "Unable to generate order number"}, status=500)
 
 
 @require_http_methods(["GET"])  # queue

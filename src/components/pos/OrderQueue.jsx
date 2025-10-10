@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, Smartphone, Clock, Check, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
+import { formatOrderNumber } from '@/lib/utils';
 
 const truthyValues = new Set([true, 'true', 1, '1']);
 const falsyValues = new Set([false, 'false', 0, '0']);
@@ -276,7 +277,10 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-semibold text-lg">
-                            #{order.orderNumber}
+                            #
+                            {formatOrderNumber(order.orderNumber) ||
+                              order.orderNumber ||
+                              'N/A'}
                           </h3>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />{' '}
@@ -444,7 +448,10 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-semibold text-lg">
-                            #{order.orderNumber}
+                            #
+                            {formatOrderNumber(order.orderNumber) ||
+                              order.orderNumber ||
+                              'N/A'}
                           </h3>
                           <p className="text-sm font-medium">
                             {order.customerName}

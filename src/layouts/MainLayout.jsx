@@ -57,7 +57,7 @@ const MainLayout = ({ children }) => {
             <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
               <div className="flex items-center gap-2">
                 {/* ⬇️ Shrink / Expand Sidebar button */}
-                <SidebarTrigger />
+                <SidebarTrigger title="Close Sidebar" />
               </div>
 
               <div className="flex items-center gap-3">

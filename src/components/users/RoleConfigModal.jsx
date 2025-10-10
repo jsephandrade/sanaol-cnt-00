@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,8 +17,16 @@ export const RoleConfigModal = ({ open, onOpenChange, role, onUpdateRole }) => {
   const [formData, setFormData] = useState({
     label: role?.label || '',
     description: role?.description || '',
-    permissions: [],
+    permissions: role?.permissions || [],
   });
+
+  useEffect(() => {
+    setFormData({
+      label: role?.label || '',
+      description: role?.description || '',
+      permissions: role?.permissions || [],
+    });
+  }, [role]);
 
   const availablePermissions = [
     'View Dashboard',

@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import { Button } from '@/components/ui/button';
+import { UserPlus } from 'lucide-react';
 import { AddUserModal } from './users/AddUserModal';
 import { EditUserModal } from './users/EditUserModal';
 import { RoleConfigModal } from './users/RoleConfigModal';
 import { UserTable } from './users/UserTable';
 import { RoleManagement } from './users/RoleManagement';
 import { ActiveUsersList } from './users/ActiveUsersList';
-import { UsersHeader } from './users/UsersHeader';
+// Header handled via FeaturePanelCard props
 import { UsersSearch } from './users/UsersSearch';
 import {
   Select,
@@ -21,7 +17,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { UsersFooter } from './users/UsersFooter';
+// Footer rendered inline for FeaturePanelCard
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
 import { PendingVerifications } from './users/PendingVerifications';
 import { useDebouncedValue } from '@/hooks/useDebounce';
@@ -145,69 +141,78 @@ const Users = () => {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
-        <Card>
-          <UsersHeader
-            onAddClick={() => setShowAddModal(true)}
-            canAdd={hasAnyRole(['admin'])}
-          />
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-              <div className="flex-1 min-w-[220px]">
-                <UsersSearch
-                  searchTerm={searchTerm}
-                  onChange={(value) => setSearchTerm(value)}
-                />
-              </div>
-
-              {/* Role filter using a sentinel value "_all" for the "All" item */}
-              <div className="w-full sm:w-[220px]">
-                <Select
-                  // Show "_all" when roleFilter is '' so the All item is selected
-                  value={roleFilter === '' ? '_all' : roleFilter}
-                  // Map "_all" back to '' so the hook gets a clean empty filter
-                  onValueChange={(v) => setRoleFilter(v === '_all' ? '' : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">All Roles</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="staff">Staff</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <FeaturePanelCard
+          title="User Management"
+          description="Manage system users and access"
+          headerActions={
+            hasAnyRole(['admin']) ? (
+              <Button
+                size="sm"
+                className="flex gap-1"
+                onClick={() => setShowAddModal(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add User
+              </Button>
+            ) : null
+          }
+          contentClassName="space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex-1 min-w-[220px]">
+              <UsersSearch
+                searchTerm={searchTerm}
+                onChange={(value) => setSearchTerm(value)}
+              />
             </div>
 
-            {loading || fetching ? (
-              <TableSkeleton
-                headers={['User', 'Role', 'Status', 'Actions']}
-                rows={5}
-              />
-            ) : error ? (
-              <ErrorState message={error} onRetry={refetch} />
-            ) : (
-              <UserTable
-                users={nonPendingUsers}
-                onEditUser={(user) => {
-                  setSelectedUser(user);
-                  setShowEditModal(true);
-                }}
-                onDeactivateUser={handleDeactivateUser}
-                onDeleteUser={handleDeleteUser}
-                getRoleBadgeVariant={getRoleBadgeVariant}
-                getInitials={getInitials}
-                isAdmin={isAdmin}
-              />
-            )}
-          </CardContent>
+            {/* Role filter using a sentinel value "_all" for the "All" item */}
+            <div className="w-full sm:w-[220px]">
+              <Select
+                // Show "_all" when roleFilter is '' so the All item is selected
+                value={roleFilter === '' ? '_all' : roleFilter}
+                // Map "_all" back to '' so the hook gets a clean empty filter
+                onValueChange={(v) => setRoleFilter(v === '_all' ? '' : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All Roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-          <UsersFooter
-            showing={nonPendingUsers.length}
-            total={pagination?.total ?? nonPendingUsers.length}
-          />
-        </Card>
+          {loading || fetching ? (
+            <TableSkeleton
+              headers={['User', 'Role', 'Status', 'Actions']}
+              rows={5}
+            />
+          ) : error ? (
+            <ErrorState message={error} onRetry={refetch} />
+          ) : (
+            <UserTable
+              users={nonPendingUsers}
+              onEditUser={(user) => {
+                setSelectedUser(user);
+                setShowEditModal(true);
+              }}
+              onDeactivateUser={handleDeactivateUser}
+              onDeleteUser={handleDeleteUser}
+              getRoleBadgeVariant={getRoleBadgeVariant}
+              getInitials={getInitials}
+              isAdmin={isAdmin}
+            />
+          )}
+          <div className="border-t pt-3 text-xs text-muted-foreground">
+            Showing {nonPendingUsers.length} of{' '}
+            {pagination?.total ?? nonPendingUsers.length} users
+          </div>
+        </FeaturePanelCard>
 
         {/* Admin/Manager-only: show verification queue below the Users card */}
         {showVerifyQueue && <PendingVerifications />}
@@ -215,62 +220,50 @@ const Users = () => {
 
       <div className="space-y-4">
         {rolesLoading ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Role Management</CardTitle>
-              <CardDescription>
-                Configure user roles and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="w-full">
-                      <div className="h-4 w-40 bg-muted rounded mb-2" />
-                      <div className="h-3 w-60 bg-muted rounded" />
-                    </div>
+          <FeaturePanelCard
+            title="Role Management"
+            description="Configure user roles and permissions"
+            contentClassName="space-y-4"
+          >
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="w-full">
+                    <div className="h-4 w-40 bg-muted rounded mb-2" />
+                    <div className="h-3 w-60 bg-muted rounded" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </FeaturePanelCard>
         ) : rolesError ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Role Management</CardTitle>
-              <CardDescription>
-                Configure user roles and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ErrorState message={rolesError} />
-            </CardContent>
-          </Card>
+          <FeaturePanelCard
+            title="Role Management"
+            description="Configure user roles and permissions"
+          >
+            <ErrorState message={rolesError} />
+          </FeaturePanelCard>
         ) : (
           <RoleManagement roles={roles} onConfigureRole={handleConfigureRole} />
         )}
 
         {loading ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Users</CardTitle>
-              <CardDescription>Currently active system users</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <div className="h-6 w-6 rounded-full bg-muted" />
-                    <div className="h-4 w-16 bg-muted rounded" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <FeaturePanelCard
+            title="Active Users"
+            description="Currently active system users"
+          >
+            <div className="flex flex-wrap gap-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-1">
+                  <div className="h-6 w-6 rounded-full bg-muted" />
+                  <div className="h-4 w-16 bg-muted rounded" />
+                </div>
+              ))}
+            </div>
+          </FeaturePanelCard>
         ) : (
           <ActiveUsersList
             users={nonPendingUsers.filter((u) => u.status === 'active')}

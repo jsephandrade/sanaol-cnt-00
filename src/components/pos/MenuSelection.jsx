@@ -75,7 +75,7 @@ const MenuSelection = ({
             handleActivate(event);
           }
         }}
-        className={`group relative h-full overflow-hidden border border-border/50 shadow-sm transition-all duration-300 ${
+        className={`group relative h-full min-w-[10.5rem] overflow-hidden border border-border/50 shadow-sm transition-all duration-300 sm:min-w-[11.5rem] ${
           isUnavailable
             ? 'cursor-not-allowed opacity-60'
             : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-primary/60'
@@ -130,7 +130,7 @@ const MenuSelection = ({
               </div>
             </div>
             <div className="mt-3">
-              <CardTitle className="text-l font-semibold leading-tight text-foreground line-clamp-2">
+              <CardTitle className="text-base font-semibold leading-tight text-foreground line-clamp-2 sm:text-lg">
                 {item.name}
               </CardTitle>
             </div>
@@ -139,26 +139,31 @@ const MenuSelection = ({
           <CardContent className="flex flex-1 flex-col p-4 pt-1">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
                   Starting at
                 </p>
-                <p className="text-lg font-semibold text-primary">
-                  PHP {Number(item.price).toFixed(2)}
-                </p>
+                <div className="flex items-baseline gap-1 text-primary">
+                  <span className="text-sm font-semibold text-muted-foreground sm:text-base">
+                    PHP
+                  </span>
+                  <span className="text-base font-semibold sm:text-lg">
+                    {Number(item.price).toFixed(2)}
+                  </span>
+                </div>
               </div>
               {showCategoryBadge && categoryLabel ? (
                 <Badge
                   variant="outline"
-                  className="rounded-full px-3 py-1 text-[10px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent"
+                  className="max-w-[7rem] rounded-full px-3 py-1 text-[9px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent sm:text-[10px]"
                 >
-                  {categoryLabel}
+                  <span className="block truncate">{categoryLabel}</span>
                 </Badge>
               ) : null}
             </div>
           </CardContent>
 
           <CardFooter className="mt-auto p-4 pt-0">
-            <div className="flex w-full items-center justify-between text-xs text-muted-foreground">
+            <div className="flex w-full items-center justify-between text-[11px] text-muted-foreground sm:text-xs">
               <div className="flex items-center gap-2">
                 <span>
                   {isUnavailable
@@ -168,9 +173,9 @@ const MenuSelection = ({
                 {!showCategoryBadge && categoryLabel ? (
                   <Badge
                     variant="outline"
-                    className="rounded-full px-2 py-[2px] text-[10px] font-medium bg-[#FFF3BF] text-[#5C4300] border-transparent"
+                    className="max-w-[7rem] rounded-full px-2 py-[2px] text-[9px] font-medium bg-[#FFF3BF] text-[#5C4300] border-transparent sm:text-[10px]"
                   >
-                    {categoryLabel}
+                    <span className="block truncate">{categoryLabel}</span>
                   </Badge>
                 ) : null}
               </div>
@@ -219,7 +224,7 @@ const MenuSelection = ({
               <h3 className="mb-3 text-sm font-medium text-muted-foreground">
                 Search results for "{searchTerm}"
               </h3>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-3 lg:gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(10.75rem,10.75rem))] justify-center gap-3 sm:gap-3 md:justify-start md:gap-4 lg:gap-5">
                 {filteredItems.length > 0 ? (
                   filteredItems.map((item) => (
                     <ItemCard
@@ -271,7 +276,7 @@ const MenuSelection = ({
                   value={category.id}
                   className="flex-1 overflow-y-auto p-0"
                 >
-                  <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 md:gap-3 lg:gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(10.75rem,10.75rem))] justify-center gap-3 p-3 sm:gap-3 md:justify-start md:gap-4 lg:gap-5">
                     {categoryItems.length > 0 ? (
                       categoryItems.map((item) => (
                         <ItemCard

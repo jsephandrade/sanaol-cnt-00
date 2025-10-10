@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { formatOrderNumber } from '@/lib/utils';
 
 const OrderHistoryModal = ({
   isOpen,
@@ -74,7 +75,12 @@ const OrderHistoryModal = ({
                   <div key={order.id} className="border rounded-md p-4">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <h3 className="font-semibold">#{order.orderNumber}</h3>
+                        <h3 className="font-semibold">
+                          #
+                          {formatOrderNumber(order.orderNumber) ||
+                            order.orderNumber ||
+                            'N/A'}
+                        </h3>
                         {tsValid && (
                           <p className="text-sm text-muted-foreground">
                             {dateStr} {timeStr}
