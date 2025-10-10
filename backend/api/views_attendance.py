@@ -25,11 +25,22 @@ def _parse_date(val):
 
 
 def _parse_time(val):
+    """Parse time strings in HH:MM or HH:MM:SS format into time objects."""
     try:
         if isinstance(val, time):
             return val
-        h, m = str(val or "").split(":", 1)
-        return time(hour=int(h), minute=int(m))
+        raw = str(val or "").strip()
+        if not raw:
+            return None
+        segments = raw.split(":")
+        if len(segments) >= 3:
+            h, m, s = segments[:3]
+        elif len(segments) == 2:
+            h, m = segments
+            s = "0"
+        else:
+            return None
+        return time(hour=int(h), minute=int(m), second=int(s))
     except Exception:
         return None
 
@@ -214,25 +225,52 @@ def attendance(request):
         notes = payload.get("notes") or ""
 
         with transaction.atomic():
-            existing = None
-            if not can_manage:
-                existing = AttendanceRecord.objects.filter(employee_id=emp.id, date=d).first()
-                if existing:
-                    # Idempotent response for repeat submissions
-                    if ci and not existing.check_in:
-                        existing.check_in = ci
-                        existing.status = status
-                        existing.notes = notes
-                        existing.save()
-                    return JsonResponse({"success": True, "data": _safe_att(existing)})
-            rec = AttendanceRecord.objects.create(
+            defaults = {
+                "check_in": ci,
+                "check_out": co,
+                "status": status,
+                "notes": notes,
+            }
+            rec, created = AttendanceRecord.objects.get_or_create(
                 employee=emp,
                 date=d,
-                check_in=ci,
-                check_out=co,
-                status=status,
-                notes=notes,
+                defaults=defaults,
             )
+            if created:
+                return JsonResponse({"success": True, "data": _safe_att(rec)})
+
+            if not can_manage:
+                updated = False
+                if ci and not rec.check_in:
+                    rec.check_in = ci
+                    rec.status = status
+                    updated = True
+                if co and not rec.check_out:
+                    rec.check_out = co
+                    updated = True
+                if notes and notes != rec.notes:
+                    rec.notes = notes
+                    updated = True
+                if updated:
+                    rec.save()
+                return JsonResponse({"success": True, "data": _safe_att(rec)})
+
+            # Managers/Admins can upsert the record with provided fields
+            updated = False
+            if "checkIn" in payload:
+                rec.check_in = ci
+                updated = True
+            if "checkOut" in payload:
+                rec.check_out = co
+                updated = True
+            if payload.get("status"):
+                rec.status = status
+                updated = True
+            if "notes" in payload:
+                rec.notes = notes
+                updated = True
+            if updated:
+                rec.save()
         return JsonResponse({"success": True, "data": _safe_att(rec)})
     except Exception:
         return JsonResponse({"success": False, "message": "Server error"}, status=500)

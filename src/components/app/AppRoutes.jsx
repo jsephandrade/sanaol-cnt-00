@@ -32,7 +32,9 @@ const SettingsPage = lazy(() => import('../../pages/SettingsPage'));
 // Lazy load components
 const MenuManagement = lazy(() => import('../MenuManagement'));
 const SalesAnalytics = lazy(() => import('../SalesAnalytics'));
-const EmployeeSchedule = lazy(() => import('../EmployeeSchedule'));
+const EmployeeSchedule = lazy(
+  () => import('@/components/EmployeeSchedule.jsx')
+);
 const CustomerFeedback = lazy(() => import('../CustomerFeedback'));
 const POS = lazy(() => import('../POS'));
 const Catering = lazy(() => import('../Catering'));

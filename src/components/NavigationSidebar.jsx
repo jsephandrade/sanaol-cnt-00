@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SidebarHeader,
   SidebarContent,
@@ -32,6 +32,7 @@ import logo from '@/assets/technomart-logo.png';
 
 export const NavigationSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const displayName = user?.name || 'Admin';
@@ -193,6 +194,17 @@ export const NavigationSidebar = () => {
                         >
                           <Link
                             to={item.href}
+                            onClick={(event) => {
+                              if (item.href === '/employees') {
+                                event.preventDefault();
+                                navigate(item.href, {
+                                  state: {
+                                    openAttendancePopup: true,
+                                    attendanceNavTimestamp: Date.now(),
+                                  },
+                                });
+                              }
+                            }}
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
                               'flex items-center gap-3 px-3 py-2.5 w-full',

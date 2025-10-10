@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthContext';
 import { useEmployees, useSchedule } from '@/hooks/useEmployees';
@@ -9,6 +9,7 @@ import AddScheduleDialog from '@/components/employee-schedule/AddScheduleDialog'
 import WeeklyScheduleCard from '@/components/employee-schedule/WeeklyScheduleCard';
 import EditScheduleDialog from '@/components/employee-schedule/EditScheduleDialog';
 import StaffOverviewCard from '@/components/employee-schedule/StaffOverviewCard';
+import ScheduleCalendar from '@/components/schedule/ScheduleCalendar';
 import AttendanceAdmin from '@/components/AttendanceAdmin';
 import LeaveManagement from '@/components/LeaveManagement';
 import AttendanceTimeCard from '@/components/employee-schedule/AttendanceTimeCard';
@@ -117,6 +118,36 @@ const EmployeeSchedule = () => {
       }
     }
   }, [attendanceDialogOpen, isStaffOnly, location, navigate]);
+
+  useEffect(() => {
+    if (!location.state?.openAttendancePopup) return;
+
+    if (!attendanceDialogOpen) {
+      setAttendanceDialogOpen(true);
+    }
+
+    const { openAttendancePopup, attendanceNavTimestamp, ...restState } =
+      location.state || {};
+
+    const nextState = Object.keys(restState).length > 0 ? restState : undefined;
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search || '',
+      },
+      {
+        replace: true,
+        state: nextState,
+      }
+    );
+  }, [
+    attendanceDialogOpen,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+  ]);
 
   const lookupEmployeeName = (employeeId) =>
     displayEmployees.find((e) => e?.id === employeeId)?.name || 'Unknown';
@@ -235,8 +266,8 @@ const EmployeeSchedule = () => {
 
   const scheduleContent = (
     <>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-        <div className="mt-2 space-y-6 xl:max-w-[960px]">
+      <div className="mt-2 space-y-6">
+        <div className="grid gap-2 items-start lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.6fr)] 2xl:grid-cols-[minmax(0,1.8fr)_minmax(0,0.6fr)]">
           <WeeklyScheduleCard
             daysOfWeek={DAYS_OF_WEEK}
             employeeList={displayEmployees}
@@ -259,19 +290,23 @@ const EmployeeSchedule = () => {
             onOpenAddSchedule={() => canManage && setDialogOpen(true)}
             canManage={canManage}
           />
-
-          {displayEmployees.length > 0 && (
-            <StaffOverviewCard
-              employeeList={displayEmployees}
+          <div className="space-y-6 lg:w-full lg:max-w-md lg:justify-self-end">
+            <ScheduleCalendar
               schedule={schedule}
+              employeeList={displayEmployees}
+              className="w-full max-w-none lg:max-w-sm lg:ml-auto"
             />
-          )}
+            {user && !isStaffOnly ? (
+              <AttendanceTimeCard user={user} className="w-full" />
+            ) : null}
+          </div>
         </div>
 
-        {user && !isStaffOnly && (
-          <div className="w-full max-w-xs self-stretch lg:self-start">
-            <AttendanceTimeCard user={user} />
-          </div>
+        {displayEmployees.length > 0 && (
+          <StaffOverviewCard
+            employeeList={displayEmployees}
+            schedule={schedule}
+          />
         )}
       </div>
     </>
@@ -347,7 +382,7 @@ const EmployeeSchedule = () => {
         showTrigger={false}
       />
 
-      {isStaffOnly && user && (
+      {user && (
         <Dialog
           open={attendanceDialogOpen}
           onOpenChange={setAttendanceDialogOpen}
