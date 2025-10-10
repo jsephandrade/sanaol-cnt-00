@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import {
@@ -28,6 +28,7 @@ import PaymentsHeader from '@/components/payments/PaymentsHeader';
 import PaymentsFilters from '@/components/payments/PaymentsFilters';
 import { paymentsService } from '@/api/services/paymentsService';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import { formatOrderNumber } from '@/lib/utils';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,10 +53,25 @@ const Payments = () => {
         timeRange: dateRange,
         status: selectedStatus === 'all' ? '' : selectedStatus,
       });
-      const mapped = (list || []).map((p) => ({
-        ...p,
-        date: p.date || p.timestamp || new Date().toISOString(),
-      }));
+      const mapped = (list || []).map((p) => {
+        const resolvedOrderNumber =
+          p.orderNumber ||
+          p.order_number ||
+          p.orderReference ||
+          p.order_reference ||
+          '';
+        const orderNumber = resolvedOrderNumber
+          ? String(resolvedOrderNumber)
+          : '';
+        const orderReference =
+          p.orderReference || p.order_reference || orderNumber;
+        return {
+          ...p,
+          orderNumber,
+          orderReference,
+          date: p.date || p.timestamp || new Date().toISOString(),
+        };
+      });
       setPayments(mapped);
     } catch (e) {
       setError(e?.message || 'Failed to load payments');
@@ -96,6 +112,16 @@ const Payments = () => {
     }
   };
 
+  const getOrderLabel = useCallback((payment) => {
+    const raw =
+      payment?.orderNumber || payment?.orderReference || payment?.orderId || '';
+    const formatted = formatOrderNumber(raw);
+    if (formatted) {
+      return formatted;
+    }
+    return raw ? String(raw) : '';
+  }, []);
+
   const formatPaymentDate = (value) => {
     if (!value) {
       return '';
@@ -116,15 +142,21 @@ const Payments = () => {
   const filteredPayments = useMemo(() => {
     const term = searchTerm.toLowerCase();
     return payments.filter((payment) => {
+      const orderLabel = getOrderLabel(payment).toLowerCase();
+      const orderIdText = String(payment.orderId || '').toLowerCase();
+      const customerText = (payment.customer || '').toLowerCase();
+      const referenceText = (payment.reference || '').toLowerCase();
       const matchesSearch =
-        payment.orderId.toLowerCase().includes(term) ||
-        (payment.customer && payment.customer.toLowerCase().includes(term));
+        orderLabel.includes(term) ||
+        orderIdText.includes(term) ||
+        customerText.includes(term) ||
+        referenceText.includes(term);
       const matchesStatus =
         selectedStatus === 'all' || payment.status === selectedStatus;
       const methodIsActive = methodActive[payment.method] ?? true;
       return matchesSearch && matchesStatus && methodIsActive;
     });
-  }, [payments, searchTerm, selectedStatus, methodActive]);
+  }, [payments, searchTerm, selectedStatus, methodActive, getOrderLabel]);
 
   const sortedPayments = useMemo(
     () =>
@@ -226,7 +258,7 @@ const Payments = () => {
                   <tr className="border-b bg-muted/50">
                     <th className="h-10 px-4 text-left font-medium">
                       <div className="flex items-center gap-1">
-                        Order ID <ArrowUpDown className="h-3 w-3" />
+                        Order # <ArrowUpDown className="h-3 w-3" />
                       </div>
                     </th>
                     <th className="h-10 px-4 text-left font-medium">
@@ -254,71 +286,75 @@ const Payments = () => {
                       </td>
                     </tr>
                   ) : sortedPayments.length > 0 ? (
-                    sortedPayments.map((payment) => (
-                      <tr
-                        key={payment.id}
-                        className="border-b transition-colors hover:bg-muted/50"
-                      >
-                        <td className="p-4 align-middle font-medium">
-                          {payment.orderId
-                            ? `${payment.orderId}`.slice(0, 6)
-                            : ''}
-                        </td>
-                        <td className="p-4 align-middle whitespace-nowrap">
-                          {formatPaymentDate(payment.date)}
-                        </td>
-                        <td className="p-4 align-middle">
-                          <div className="flex items-center gap-2">
-                            {getPaymentMethodIcon(payment.method)}
-                            <span className="capitalize">{payment.method}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 align-middle">
-                          {`\u20B1${payment.amount.toFixed(2)}`}
-                        </td>
-                        <td className="p-4 align-middle">
-                          <CustomBadge
-                            variant={getStatusBadgeVariant(payment.status)}
-                            className="capitalize"
-                          >
-                            {payment.status}
-                          </CustomBadge>
-                        </td>
-                        <td className="p-4 align-middle text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDownloadInvoice(payment)}
-                              >
-                                <Download className="mr-2 h-4 w-4" /> Download
-                                Invoice
-                              </DropdownMenuItem>
-                              {payment.status === 'completed' && (
+                    sortedPayments.map((payment) => {
+                      const orderLabel = getOrderLabel(payment);
+                      const orderDisplay = orderLabel ? `#${orderLabel}` : '#—';
+                      return (
+                        <tr
+                          key={payment.id}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <td className="p-4 align-middle font-medium">
+                            {orderDisplay}
+                          </td>
+                          <td className="p-4 align-middle whitespace-nowrap">
+                            {formatPaymentDate(payment.date)}
+                          </td>
+                          <td className="p-4 align-middle">
+                            <div className="flex items-center gap-2">
+                              {getPaymentMethodIcon(payment.method)}
+                              <span className="capitalize">
+                                {payment.method}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-4 align-middle">
+                            {`\u20B1${payment.amount.toFixed(2)}`}
+                          </td>
+                          <td className="p-4 align-middle">
+                            <CustomBadge
+                              variant={getStatusBadgeVariant(payment.status)}
+                              className="capitalize"
+                            >
+                              {payment.status}
+                            </CustomBadge>
+                          </td>
+                          <td className="p-4 align-middle text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
-                                  onClick={() => handleRefund(payment.id)}
+                                  onClick={() => handleDownloadInvoice(payment)}
                                 >
-                                  <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
-                                  Process Refund
+                                  <Download className="mr-2 h-4 w-4" /> Download
+                                  Invoice
                                 </DropdownMenuItem>
-                              )}
-                              {payment.status === 'failed' && (
-                                <DropdownMenuItem>
-                                  <ArrowDownUp className="mr-2 h-4 w-4" /> Retry
-                                  Payment
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))
+                                {payment.status === 'completed' && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleRefund(payment.id)}
+                                  >
+                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                    Process Refund
+                                  </DropdownMenuItem>
+                                )}
+                                {payment.status === 'failed' && (
+                                  <DropdownMenuItem>
+                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                    Retry Payment
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={6} className="h-24 text-center">
@@ -353,67 +389,67 @@ const Payments = () => {
         >
           {sortedPayments.length > 0 ? (
             <div className="space-y-4">
-              {sortedPayments.slice(0, 5).map((payment) => (
-                <div
-                  key={payment.id}
-                  className="flex items-center justify-between border-b pb-2 last:border-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`rounded-full p-1 ${
-                        payment.status === 'completed'
-                          ? 'bg-green-100'
-                          : payment.status === 'failed'
-                            ? 'bg-red-100'
-                            : payment.status === 'refunded'
-                              ? 'bg-amber-100'
-                              : 'bg-gray-100'
-                      }`}
-                    >
-                      {payment.status === 'completed' && (
-                        <Check className="h-4 w-4 text-green-600" />
-                      )}
-                      {payment.status === 'failed' && (
-                        <X className="h-4 w-4 text-red-600" />
-                      )}
-                      {payment.status === 'refunded' && (
-                        <ArrowDownUp className="h-4 w-4 text-amber-600" />
-                      )}
-                      {payment.status === 'pending' && (
-                        <Calendar className="h-4 w-4 text-gray-600" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {payment.orderId
-                            ? `${payment.orderId}`.slice(0, 6)
-                            : ''}
-                        </span>
-                        <CustomBadge
-                          variant={getStatusBadgeVariant(payment.status)}
-                          className="capitalize text-xs"
-                        >
-                          {payment.status}
-                        </CustomBadge>
+              {sortedPayments.slice(0, 5).map((payment) => {
+                const orderLabel = getOrderLabel(payment);
+                const orderDisplay = orderLabel ? `#${orderLabel}` : '#—';
+                return (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between border-b pb-2 last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`rounded-full p-1 ${
+                          payment.status === 'completed'
+                            ? 'bg-green-100'
+                            : payment.status === 'failed'
+                              ? 'bg-red-100'
+                              : payment.status === 'refunded'
+                                ? 'bg-amber-100'
+                                : 'bg-gray-100'
+                        }`}
+                      >
+                        {payment.status === 'completed' && (
+                          <Check className="h-4 w-4 text-green-600" />
+                        )}
+                        {payment.status === 'failed' && (
+                          <X className="h-4 w-4 text-red-600" />
+                        )}
+                        {payment.status === 'refunded' && (
+                          <ArrowDownUp className="h-4 w-4 text-amber-600" />
+                        )}
+                        {payment.status === 'pending' && (
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {payment.customer
-                          ? payment.customer
-                          : 'Walk-in Customer'}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{orderDisplay}</span>
+                          <CustomBadge
+                            variant={getStatusBadgeVariant(payment.status)}
+                            className="capitalize text-xs"
+                          >
+                            {payment.status}
+                          </CustomBadge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {payment.customer
+                            ? payment.customer
+                            : 'Walk-in Customer'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">
+                        {`\u20B1${payment.amount.toFixed(2)}`}
+                      </div>
+                      <div className="text-xs text-muted-foreground capitalize">
+                        {payment.method}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium">
-                      {`\u20B1${payment.amount.toFixed(2)}`}
-                    </div>
-                    <div className="text-xs text-muted-foreground capitalize">
-                      {payment.method}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="py-6 text-center">

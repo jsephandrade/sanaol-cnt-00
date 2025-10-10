@@ -7,7 +7,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import ManageEmployeesDialog from '@/components/employee-schedule/ManageEmployeesDialog';
 import AddScheduleDialog from '@/components/employee-schedule/AddScheduleDialog';
 import WeeklyScheduleCard from '@/components/employee-schedule/WeeklyScheduleCard';
-import CalendarViewCard from '@/components/employee-schedule/CalendarViewCard';
 import EditScheduleDialog from '@/components/employee-schedule/EditScheduleDialog';
 import StaffOverviewCard from '@/components/employee-schedule/StaffOverviewCard';
 import AttendanceAdmin from '@/components/AttendanceAdmin';
@@ -74,7 +73,6 @@ const EmployeeSchedule = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
-  const [date, setDate] = useState(new Date());
   const [newScheduleEntry, setNewScheduleEntry] = useState({
     ...DEFAULT_SCHEDULE_ENTRY,
   });
@@ -237,8 +235,8 @@ const EmployeeSchedule = () => {
 
   const scheduleContent = (
     <>
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="mt-2 flex-1">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+        <div className="mt-2 space-y-6 xl:max-w-[960px]">
           <WeeklyScheduleCard
             daysOfWeek={DAYS_OF_WEEK}
             employeeList={displayEmployees}
@@ -261,31 +259,21 @@ const EmployeeSchedule = () => {
             onOpenAddSchedule={() => canManage && setDialogOpen(true)}
             canManage={canManage}
           />
-        </div>
 
-        <div className="flex flex-col gap-7">
-          <div className="w-[280px]">
-            <CalendarViewCard
-              date={date}
-              setDate={setDate}
+          {displayEmployees.length > 0 && (
+            <StaffOverviewCard
+              employeeList={displayEmployees}
               schedule={schedule}
             />
-          </div>
-
-          {user && !isStaffOnly && (
-            <div className="w-[280px] self-end">
-              <AttendanceTimeCard user={user} />
-            </div>
           )}
         </div>
-      </div>
 
-      {displayEmployees.length > 0 && (
-        <StaffOverviewCard
-          employeeList={displayEmployees}
-          schedule={schedule}
-        />
-      )}
+        {user && !isStaffOnly && (
+          <div className="w-full max-w-xs self-stretch lg:self-start">
+            <AttendanceTimeCard user={user} />
+          </div>
+        )}
+      </div>
     </>
   );
 

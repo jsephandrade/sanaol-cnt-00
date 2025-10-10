@@ -12,13 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 import {
   Table,
   TableBody,
@@ -196,290 +190,284 @@ export default function LeaveManagement() {
 
       {/* Staff inline request form */}
       {!isManager && (
-        <Card className="max-w-md">
-          <CardHeader className="py-2">
-            <CardTitle className="text-sm">Leave Requests | Request</CardTitle>
-            <CardDescription className="text-xs">
-              Submit a leave request for review.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* Compact, left-aligned form */}
-            <div className="grid gap-2 py-1">
-              <div className="grid grid-cols-4 items-center gap-3">
-                <Label className="text-right">Type</Label>
-                <Select
-                  value={editing?.type || 'other'}
-                  onValueChange={(v) =>
-                    setEditing((x) => ({
-                      ...(x || {
-                        id: null,
-                        employeeId: '',
-                        startDate: '',
-                        endDate: '',
-                        type: 'other',
-                        status: 'pending',
-                        reason: '',
-                      }),
-                      type: v,
-                    }))
-                  }
-                >
-                  <SelectTrigger className="col-span-3 max-w-[14rem] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sick">Sick</SelectItem>
-                    <SelectItem value="vacation">Vacation</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-3">
-                <Label className="text-right">Start</Label>
-                <Input
-                  type="date"
-                  className="col-span-3 max-w-[14rem] h-8 text-xs"
-                  value={editing?.startDate || ''}
-                  onChange={(e) =>
-                    setEditing((x) => ({
-                      ...(x || {
-                        id: null,
-                        employeeId: '',
-                        startDate: '',
-                        endDate: '',
-                        type: 'other',
-                        status: 'pending',
-                        reason: '',
-                      }),
-                      startDate: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-3">
-                <Label className="text-right">End</Label>
-                <Input
-                  type="date"
-                  className="col-span-3 max-w-[14rem] h-8 text-xs"
-                  value={editing?.endDate || ''}
-                  onChange={(e) =>
-                    setEditing((x) => ({
-                      ...(x || {
-                        id: null,
-                        employeeId: '',
-                        startDate: '',
-                        endDate: '',
-                        type: 'other',
-                        status: 'pending',
-                        reason: '',
-                      }),
-                      endDate: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-3">
-                <Label className="text-right">Reason</Label>
-                <Input
-                  className="col-span-3 max-w-[14rem] h-8 text-xs"
-                  value={editing?.reason || ''}
-                  onChange={(e) =>
-                    setEditing((x) => ({
-                      ...(x || {
-                        id: null,
-                        employeeId: '',
-                        startDate: '',
-                        endDate: '',
-                        type: 'other',
-                        status: 'pending',
-                        reason: '',
-                      }),
-                      reason: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setEditing(null)}
+        <FeaturePanelCard
+          badgeText="Leave Request"
+          description="Submit a leave request for review"
+          className="max-w-md"
+          contentClassName="space-y-3"
+        >
+          {/* Compact, left-aligned form */}
+          <div className="grid gap-2 py-1">
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Type</Label>
+              <Select
+                value={editing?.type || 'other'}
+                onValueChange={(v) =>
+                  setEditing((x) => ({
+                    ...(x || {
+                      id: null,
+                      employeeId: '',
+                      startDate: '',
+                      endDate: '',
+                      type: 'other',
+                      status: 'pending',
+                      reason: '',
+                    }),
+                    type: v,
+                  }))
+                }
               >
-                Clear
-              </Button>
-              <Button size="sm" onClick={onSave}>
-                Submit
-              </Button>
+                <SelectTrigger className="col-span-3 max-w-[14rem] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sick">Sick</SelectItem>
+                  <SelectItem value="vacation">Vacation</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Start</Label>
+              <Input
+                type="date"
+                className="col-span-3 max-w-[14rem] h-8 text-xs"
+                value={editing?.startDate || ''}
+                onChange={(e) =>
+                  setEditing((x) => ({
+                    ...(x || {
+                      id: null,
+                      employeeId: '',
+                      startDate: '',
+                      endDate: '',
+                      type: 'other',
+                      status: 'pending',
+                      reason: '',
+                    }),
+                    startDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">End</Label>
+              <Input
+                type="date"
+                className="col-span-3 max-w-[14rem] h-8 text-xs"
+                value={editing?.endDate || ''}
+                onChange={(e) =>
+                  setEditing((x) => ({
+                    ...(x || {
+                      id: null,
+                      employeeId: '',
+                      startDate: '',
+                      endDate: '',
+                      type: 'other',
+                      status: 'pending',
+                      reason: '',
+                    }),
+                    endDate: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-3">
+              <Label className="text-right">Reason</Label>
+              <Input
+                className="col-span-3 max-w-[14rem] h-8 text-xs"
+                value={editing?.reason || ''}
+                onChange={(e) =>
+                  setEditing((x) => ({
+                    ...(x || {
+                      id: null,
+                      employeeId: '',
+                      startDate: '',
+                      endDate: '',
+                      type: 'other',
+                      status: 'pending',
+                      reason: '',
+                    }),
+                    reason: e.target.value,
+                  }))
+                }
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditing(null)}
+            >
+              Clear
+            </Button>
+            <Button size="sm" onClick={onSave}>
+              Submit
+            </Button>
+          </div>
+        </FeaturePanelCard>
       )}
 
       {isManager && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Leave Requests</CardTitle>
-            <CardDescription>Request and manage leave</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-              <div>
-                <Label>Employee</Label>
-                <Select
-                  value={filters.employeeId}
-                  onValueChange={(v) =>
-                    setFilters((f) => ({ ...f, employeeId: v }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="All employees" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_all">All</SelectItem>
-                    {employees.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Type</Label>
-                <Select
-                  value={filters.type}
-                  onValueChange={(v) => setFilters((f) => ({ ...f, type: v }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Any" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_any">Any</SelectItem>
-                    <SelectItem value="sick">Sick</SelectItem>
-                    <SelectItem value="vacation">Vacation</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Select
-                  value={filters.status}
-                  onValueChange={(v) =>
-                    setFilters((f) => ({ ...f, status: v }))
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Any" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_any">Any</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <FeaturePanelCard
+          badgeText="Leave Requests"
+          description="Request and manage leave"
+          contentClassName="space-y-4"
+        >
+          <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-4">
+            <div>
+              <Label>Employee</Label>
+              <Select
+                value={filters.employeeId}
+                onValueChange={(v) =>
+                  setFilters((f) => ({ ...f, employeeId: v }))
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="All employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All</SelectItem>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="overflow-x-auto mt-4">
-              <Table>
-                <TableHeader>
+            <div>
+              <Label>Type</Label>
+              <Select
+                value={filters.type}
+                onValueChange={(v) => setFilters((f) => ({ ...f, type: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_any">Any</SelectItem>
+                  <SelectItem value="sick">Sick</SelectItem>
+                  <SelectItem value="vacation">Vacation</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={filters.status}
+                onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_any">Any</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Start</TableHead>
+                  <TableHead>End</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Reason</TableHead>
+                  {isManager && (
+                    <TableHead className="text-right">Actions</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(records || []).length === 0 && !loading && (
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Start</TableHead>
-                    <TableHead>End</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableCell
+                      colSpan={isManager ? 7 : 6}
+                      className="text-center text-sm text-muted-foreground"
+                    >
+                      No leave records found.
+                    </TableCell>
+                  </TableRow>
+                )}
+                {(records || []).map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell>
+                      {r.employeeName || employeeMap[r.employeeId] || '—'}
+                    </TableCell>
+                    <TableCell className="capitalize">{r.type}</TableCell>
+                    <TableCell>{r.startDate}</TableCell>
+                    <TableCell>{r.endDate}</TableCell>
+                    <TableCell className="capitalize">
+                      <Badge
+                        variant="outline"
+                        className={
+                          r.status === 'approved'
+                            ? 'border-green-300 text-green-700'
+                            : r.status === 'pending'
+                              ? 'border-amber-300 text-amber-700'
+                              : r.status === 'rejected'
+                                ? 'border-red-300 text-red-700'
+                                : ''
+                        }
+                      >
+                        {r.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[280px] truncate">
+                      {r.reason || '—'}
+                    </TableCell>
                     {isManager && (
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(r)}
+                        >
+                          <EditIcon className="h-3.5 w-3.5 mr-1" /> Edit
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => onDelete(r.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                        </Button>
+                        {r.status === 'pending' && (
+                          <>
+                            <Button size="sm" onClick={() => onApprove(r)}>
+                              Approve
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => onReject(r)}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </TableCell>
                     )}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(records || []).length === 0 && !loading && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={isManager ? 7 : 6}
-                        className="text-center text-sm text-muted-foreground"
-                      >
-                        No leave records found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {(records || []).map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        {r.employeeName || employeeMap[r.employeeId] || '—'}
-                      </TableCell>
-                      <TableCell className="capitalize">{r.type}</TableCell>
-                      <TableCell>{r.startDate}</TableCell>
-                      <TableCell>{r.endDate}</TableCell>
-                      <TableCell className="capitalize">
-                        <Badge
-                          variant="outline"
-                          className={
-                            r.status === 'approved'
-                              ? 'border-green-300 text-green-700'
-                              : r.status === 'pending'
-                                ? 'border-amber-300 text-amber-700'
-                                : r.status === 'rejected'
-                                  ? 'border-red-300 text-red-700'
-                                  : ''
-                          }
-                        >
-                          {r.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[280px] truncate">
-                        {r.reason || '—'}
-                      </TableCell>
-                      {isManager && (
-                        <TableCell className="text-right space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(r)}
-                          >
-                            <EditIcon className="h-3.5 w-3.5 mr-1" /> Edit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => onDelete(r.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                          </Button>
-                          {r.status === 'pending' && (
-                            <>
-                              <Button size="sm" onClick={() => onApprove(r)}>
-                                Approve
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => onReject(r)}
-                              >
-                                Reject
-                              </Button>
-                            </>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {loading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading...
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+            {loading && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Loading...
+              </div>
+            )}
+          </div>
+        </FeaturePanelCard>
       )}
 
       {isManager && (

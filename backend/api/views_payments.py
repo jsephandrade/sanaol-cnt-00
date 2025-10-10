@@ -17,10 +17,32 @@ from django.db.utils import OperationalError, ProgrammingError
 from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
 
 
-def _serialize_db(p):
+def _lookup_order_number(order_id, order_numbers=None):
+    if not order_id:
+        return ""
+    key = str(order_id)
+    if order_numbers and key in order_numbers:
+        return order_numbers[key] or ""
+    try:
+        from .models import Order
+
+        return (
+            Order.objects.filter(id=key)
+            .values_list("order_number", flat=True)
+            .first()
+            or ""
+        )
+    except Exception:
+        return ""
+
+
+def _serialize_db(p, order_numbers=None):
+    order_id = str(p.order_id)
+    order_number = _lookup_order_number(order_id, order_numbers)
     return {
         "id": str(p.id),
-        "orderId": p.order_id,
+        "orderId": order_id,
+        "orderNumber": order_number,
         "amount": float(p.amount),
         "method": p.method,
         "status": p.status,
@@ -109,6 +131,7 @@ def order_payment(request, order_id: str):
             meta=({"idempotencyKey": idempo} if idempo else {}),
         )
         # Update the order's payment method for consistency
+        order_number = ""
         try:
             from .models import Order
             o = Order.objects.filter(id=order_id).first()
@@ -118,6 +141,8 @@ def order_payment(request, order_id: str):
                     o.save(update_fields=["payment_method", "updated_at"])
                 except Exception:
                     o.save(update_fields=["payment_method"])  # fallback if updated_at missing
+            if o and getattr(o, "order_number", None):
+                order_number = o.order_number or ""
         except Exception:
             pass
         # Audit log
@@ -135,7 +160,10 @@ def order_payment(request, order_id: str):
             )
         except Exception:
             pass
-        return JsonResponse({"success": True, "data": _serialize_db(p)})
+        mapping = None
+        if order_number:
+            mapping = {str(order_id): order_number}
+        return JsonResponse({"success": True, "data": _serialize_db(p, mapping)})
     except Exception:
         return JsonResponse({"success": False, "message": "Processing failed"}, status=500)
 
@@ -166,11 +194,27 @@ def payments_list(request):
             qs = qs.filter(method=method)
         if search:
             from django.db.models import Q
-            qs = qs.filter(
+
+            order_ids_from_number = []
+            try:
+                from .models import Order
+
+                order_ids_from_number = list(
+                    Order.objects.filter(order_number__icontains=search).values_list(
+                        "id", flat=True
+                    )
+                )
+            except Exception:
+                order_ids_from_number = []
+            id_values = [str(x) for x in order_ids_from_number if x]
+            query = (
                 Q(order_id__icontains=search)
                 | Q(customer__icontains=search)
                 | Q(reference__icontains=search)
             )
+            if id_values:
+                query |= Q(order_id__in=id_values)
+            qs = qs.filter(query)
         if date_range in {"24h", "7d", "30d"}:
             from datetime import timedelta
             start = dj_timezone.now() - (
@@ -185,7 +229,21 @@ def payments_list(request):
         total = qs.count()
         start_i = max(0, (page - 1) * max(1, limit))
         end_i = start_i + max(1, limit)
-        items = [_serialize_db(x) for x in qs[start_i:end_i]]
+        slice_items = list(qs[start_i:end_i])
+        order_numbers = {}
+        if slice_items:
+            order_ids = {str(x.order_id) for x in slice_items if x.order_id}
+            if order_ids:
+                try:
+                    from .models import Order
+
+                    order_numbers = {
+                        str(o.id): o.order_number or ""
+                        for o in Order.objects.filter(id__in=order_ids)
+                    }
+                except Exception:
+                    order_numbers = {}
+        items = [_serialize_db(x, order_numbers) for x in slice_items]
         return JsonResponse(
             {
                 "success": True,

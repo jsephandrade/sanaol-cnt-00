@@ -48,6 +48,9 @@ const CurrentOrder = ({
   const orderDescription = orderNumber
     ? `Order #${orderLabel}`
     : orderLabel || 'Pending Payment';
+  const itemSummary = `${currentOrder.length} item${
+    currentOrder.length === 1 ? '' : 's'
+  } in cart`;
 
   return (
     <div className="md:col-span-1 md:self-start">
@@ -55,10 +58,8 @@ const CurrentOrder = ({
         className="flex h-full flex-col md:max-h-[80vh]"
         badgeIcon={ShoppingCart}
         badgeText="Current Order"
-        title={`${currentOrder.length} item${
-          currentOrder.length === 1 ? '' : 's'
-        } in cart`}
-        description={orderDescription}
+        title={orderDescription}
+        description={itemSummary}
         contentClassName="flex flex-1 min-h-0 flex-col gap-5 !space-y-0"
       >
         <div className="flex-1 space-y-3 overflow-y-auto pr-1 min-h-0 md:max-h-[42vh] lg:max-h-[45vh]">
