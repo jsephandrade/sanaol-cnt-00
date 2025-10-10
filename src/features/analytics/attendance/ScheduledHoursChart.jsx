@@ -1,16 +1,22 @@
 import React from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import ChartCard from '../common/ChartCard';
+import { BarCategory, ChartCard } from '../common';
 
 export default function ScheduledHoursChart({ data, loading, error }) {
+  const renderTooltip = (value, name, item) => (
+    <div className="flex w-full items-stretch gap-2">
+      <div
+        className="mt-0.5 h-2.5 w-2.5 rounded-sm"
+        style={{ backgroundColor: item?.payload?.fill || item?.color }}
+      />
+      <div className="flex flex-1 justify-between leading-none">
+        <span className="text-muted-foreground">{name}</span>
+        <span className="font-mono font-medium text-foreground">
+          {value.toLocaleString()} hrs
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <ChartCard
       className="lg:col-span-2"
@@ -22,26 +28,24 @@ export default function ScheduledHoursChart({ data, loading, error }) {
       emptyMessage="No schedule data available."
       heightClass="h-72"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11 }}
-            interval={0}
-            angle={-15}
-            textAnchor="end"
-            height={50}
-          />
-          <YAxis tick={{ fontSize: 11 }} width={44} />
-          <Tooltip formatter={(value) => `${value} hrs`} />
-          <Bar
-            dataKey="hours"
-            radius={[4, 4, 0, 0]}
-            fill="hsl(var(--primary))"
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <BarCategory
+        data={data}
+        xKey="label"
+        series={[
+          {
+            key: 'value',
+            label: 'Hours',
+            variant: 'primary',
+          },
+        ]}
+        xAxisProps={{
+          interval: 0,
+          angle: -15,
+          textAnchor: 'end',
+          height: 50,
+        }}
+        tooltipProps={{ formatter: renderTooltip }}
+      />
     </ChartCard>
   );
 }

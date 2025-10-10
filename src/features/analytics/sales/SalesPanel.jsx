@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSalesReport } from '@/hooks/useReports';
-import { formatMethodLabel } from '../common/utils';
+import { formatDateLabel, formatMethodLabel } from '../common/utils';
 import SalesSummaryCards from './SalesSummaryCards';
 import SalesTrendCharts from './SalesTrendCharts';
 
@@ -14,23 +14,35 @@ export default function SalesPanel() {
   };
 
   const dailyData = useMemo(() => {
-    if (!data?.dailyTotals?.length) return [];
-    return data.dailyTotals
+    if (!data?.series?.length) return [];
+    return data.series
       .map((row) => ({
-        name: row.date,
-        amount: row.total,
+        t: row.t,
+        y: row.y,
+        count: row.count,
       }))
-      .sort((a, b) => new Date(a.name) - new Date(b.name));
+      .sort((a, b) => new Date(a.t) - new Date(b.t));
   }, [data]);
 
   const monthlyData = useMemo(() => {
     if (!data?.monthlyTotals?.length) return [];
     return data.monthlyTotals
-      .map((row) => ({
-        name: row.month,
-        amount: row.total,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .map((row) => {
+        const iso = row.t || row.month;
+        const labelSource =
+          typeof iso === 'string' && iso.includes('-') && iso.length === 7
+            ? `${iso}-01`
+            : iso;
+        return {
+          t: iso,
+          y: row.y ?? row.total,
+          label: formatDateLabel(labelSource, {
+            month: 'short',
+            year: 'numeric',
+          }),
+        };
+      })
+      .sort((a, b) => String(a.t).localeCompare(String(b.t)));
   }, [data]);
 
   const methods = useMemo(() => {
@@ -39,7 +51,7 @@ export default function SalesPanel() {
   }, [data]);
 
   const topMethodLabel = methods.length
-    ? formatMethodLabel(methods[0].method)
+    ? formatMethodLabel(methods[0].label || methods[0].method)
     : loading
       ? 'Loading...'
       : 'No data';

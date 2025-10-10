@@ -45,17 +45,19 @@ export default function AttendancePanel() {
       totals.set(name, (totals.get(name) || 0) + duration);
     });
 
-    return Array.from(totals.entries()).map(([name, value]) => ({
-      name,
-      hours: Math.round(value * 10) / 10,
-    }));
+    return Array.from(totals.entries())
+      .map(([name, value]) => ({
+        label: name,
+        value: Math.round(value * 10) / 10,
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [employees, schedule]);
 
   const statusData = useMemo(() => {
     const entries = attendanceSummary?.byStatus ?? [];
     return entries.map((entry) => ({
       name: formatMethodLabel(entry.status),
-      count: entry.count,
+      value: entry.count,
     }));
   }, [attendanceSummary]);
 

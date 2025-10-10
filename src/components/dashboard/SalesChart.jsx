@@ -1,86 +1,66 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
+import { TimeSeries } from '@/features/analytics/common';
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
-
-const TICK_STYLE = {
-  fontSize: 10,
-  fill: "hsl(var(--muted-foreground))"
-};
+  currency,
+  formatDateLabel,
+  generateTicks,
+} from '@/features/analytics/common/utils';
 
 const SalesChart = ({ data, title, description }) => {
+  const ticks = useMemo(() => generateTicks(data, 't', 6), [data]);
+
+  const renderTooltip = (value, name, item) => (
+    <div className="flex w-full items-stretch gap-2">
+      <div
+        className="mt-0.5 h-2.5 w-2.5 rounded-sm"
+        style={{ backgroundColor: item?.payload?.fill || item?.color }}
+      />
+      <div className="flex flex-1 justify-between leading-none">
+        <span className="text-muted-foreground">{name}</span>
+        <span className="font-mono font-medium text-foreground">
+          {currency(value)}
+        </span>
+      </div>
+    </div>
+  );
+
+  const renderTick = (value) =>
+    formatDateLabel(value, {
+      hour: 'numeric',
+      minute: 'numeric',
+    }) || value;
+
   return (
     <Card>
       <CardHeader className="py-2">
         <CardTitle className="text-sm">{title}</CardTitle>
-        <CardDescription className="text-xs">
-          {description}
-        </CardDescription>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="h-44 p-3">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 4, right: 8, left: 16, bottom: 0 }}
-          >
-            <defs>
-              <linearGradient id="colorPrimary" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="hsl(var(--primary))"
-                  stopOpacity={0.7}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="hsl(var(--primary))"
-                  stopOpacity={0.08}
-                />
-              </linearGradient>
-            </defs>
-            <XAxis
-              dataKey="name"
-              tick={TICK_STYLE}
-              interval="preserveStartEnd"
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={TICK_STYLE}
-              width={44}
-              axisLine={false}
-              tickLine={false}
-              tickCount={4}
-            />
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <Tooltip
-              wrapperStyle={{ fontSize: 11 }}
-              labelStyle={{ fontSize: 11 }}
-              contentStyle={{ padding: "6px 8px" }}
-            />
-            <Area
-              type="monotone"
-              dataKey="amount"
-              stroke="hsl(var(--primary))"
-              strokeWidth={1.5}
-              fill="url(#colorPrimary)"
-              dot={false}
-              activeDot={{ r: 3 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <TimeSeries
+          data={data}
+          xKey="t"
+          xTicks={ticks}
+          xTickFormatter={renderTick}
+          tooltipProps={{ formatter: renderTooltip }}
+          series={[
+            {
+              key: 'y',
+              label: 'Revenue',
+              type: 'area',
+              variant: 'primary',
+              fillOpacity: 0.18,
+              dot: false,
+            },
+          ]}
+        />
       </CardContent>
     </Card>
   );

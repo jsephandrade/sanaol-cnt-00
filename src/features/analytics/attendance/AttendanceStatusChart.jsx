@@ -1,16 +1,31 @@
-import React from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import ChartCard from '../common/ChartCard';
+import React, { useMemo } from 'react';
+import { ChartCard, Donut } from '../common';
+import { formatPercent } from '../common/utils';
 
 export default function AttendanceStatusChart({ data, loading, error }) {
+  const total = useMemo(
+    () =>
+      data.reduce(
+        (sum, item) => sum + Number(item.value || item.count || 0),
+        0
+      ),
+    [data]
+  );
+
+  const renderTooltip = (value, name) => {
+    const formatted = Number(value || 0).toLocaleString();
+    const percent = total ? formatPercent(value, total) : null;
+    return (
+      <div className="flex w-full items-center justify-between leading-none">
+        <span className="text-muted-foreground">{name}</span>
+        <span className="font-mono font-medium text-foreground">
+          {formatted}
+          {percent ? ` · ${percent}` : ''}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <ChartCard
       title="Attendance Status Distribution"
@@ -21,19 +36,7 @@ export default function AttendanceStatusChart({ data, loading, error }) {
       emptyMessage="No attendance status data available."
       heightClass="h-72"
     >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
-          <YAxis tick={{ fontSize: 11 }} width={44} />
-          <Tooltip />
-          <Bar
-            dataKey="count"
-            radius={[4, 4, 0, 0]}
-            fill="hsl(var(--primary))"
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <Donut data={data} legend tooltipProps={{ formatter: renderTooltip }} />
     </ChartCard>
   );
 }

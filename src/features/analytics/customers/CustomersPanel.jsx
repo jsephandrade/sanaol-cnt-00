@@ -15,13 +15,9 @@ export default function CustomersPanel() {
       const date = new Date(entry.date);
       if (Number.isNaN(date.getTime())) return;
 
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-        2,
-        '0'
-      )}-${String(date.getDate()).padStart(2, '0')}`;
-      const label = date.toLocaleDateString();
-      const current = totals.get(key) || { key, name: label, total: 0 };
-      current.total += Number(entry.amount ?? 0);
+      const key = date.toISOString().slice(0, 10);
+      const current = totals.get(key) || { key, t: key, y: 0 };
+      current.y += Number(entry.amount ?? 0);
       totals.set(key, current);
     });
 
@@ -54,6 +50,7 @@ export default function CustomersPanel() {
         purchases={recentPurchases}
         loading={loading}
         error={error}
+        className="col-span-1 lg:col-span-3"
       />
     </div>
   );

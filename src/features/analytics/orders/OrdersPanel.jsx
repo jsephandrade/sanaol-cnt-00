@@ -28,17 +28,13 @@ export default function OrdersPanel() {
       const date = new Date(entry.date);
       if (Number.isNaN(date.getTime())) return;
 
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-        2,
-        '0'
-      )}-${String(date.getDate()).padStart(2, '0')}`;
-      const label = date.toLocaleDateString();
+      const key = date.toISOString().slice(0, 10);
       let bucket = map.get(key);
 
       if (!bucket) {
         bucket = {
           key,
-          name: label,
+          t: key,
           revenue: 0,
           orders: 0,
           orderIds: new Set(),
@@ -76,10 +72,10 @@ export default function OrdersPanel() {
 
     return Array.from(totals.entries())
       .map(([method, amount]) => ({
-        name: formatMethodLabel(method),
-        amount,
+        label: formatMethodLabel(method),
+        value: amount,
       }))
-      .sort((a, b) => b.amount - a.amount);
+      .sort((a, b) => b.value - a.value);
   }, [history]);
 
   const recentTransactions = useMemo(() => {

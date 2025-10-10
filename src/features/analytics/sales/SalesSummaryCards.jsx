@@ -1,12 +1,6 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { MetricCard } from '../common';
 import { currency, RANGE_OPTIONS } from '../common/utils';
 
 export default function SalesSummaryCards({
@@ -18,14 +12,14 @@ export default function SalesSummaryCards({
   error,
 }) {
   return (
-    <Card className="col-span-1 lg:col-span-3">
-      <CardHeader className="pb-2">
+    <section className="col-span-1 space-y-4 lg:col-span-3">
+      <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">Key Metrics</CardTitle>
-            <CardDescription>
+          <div className="space-y-1">
+            <h2 className="text-lg font-medium">Key Metrics</h2>
+            <p className="text-sm text-muted-foreground">
               Revenue and order trends sourced from live transactions
-            </CardDescription>
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {RANGE_OPTIONS.map((option) => (
@@ -44,36 +38,33 @@ export default function SalesSummaryCards({
             ))}
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <SummaryTile
-            label="Total Revenue"
-            value={loading ? '--' : currency(summary.totalRevenue)}
-          />
-          <SummaryTile
-            label="Total Orders"
-            value={loading ? '--' : summary.totalOrders.toLocaleString()}
-          />
-          <SummaryTile
-            label="Avg. Order Value"
-            value={loading ? '--' : currency(summary.averageOrderValue)}
-          />
-          <SummaryTile label="Top Payment Method" value={topMethodLabel} />
-        </div>
         {error ? (
           <p className="mt-3 text-xs text-destructive">{error}</p>
         ) : null}
-      </CardContent>
-    </Card>
-  );
-}
+      </div>
 
-function SummaryTile({ label, value }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-2xl font-semibold">{value}</div>
-    </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Total Revenue"
+          value={loading ? '--' : currency(summary.totalRevenue)}
+          loading={loading}
+        />
+        <MetricCard
+          label="Total Orders"
+          value={loading ? '--' : summary.totalOrders.toLocaleString()}
+          loading={loading}
+        />
+        <MetricCard
+          label="Avg. Order Value"
+          value={loading ? '--' : currency(summary.averageOrderValue)}
+          loading={loading}
+        />
+        <MetricCard
+          label="Top Payment Method"
+          value={topMethodLabel}
+          loading={loading && !topMethodLabel}
+        />
+      </div>
+    </section>
   );
 }

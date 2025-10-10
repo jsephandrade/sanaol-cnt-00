@@ -23,13 +23,14 @@ const Dashboard = () => {
     });
 
   const salesTimeData = (stats?.salesByTime || []).map((item) => ({
-    name: item.time,
-    amount: item.amount,
+    t: item.t,
+    y: item.y,
+    label: item.label,
   }));
 
   const categorySalesData = (stats?.salesByCategory || []).map((item) => ({
-    name: item.category,
-    amount: item.amount,
+    label: item.label || item.category,
+    value: item.value,
   }));
 
   if (loading) {

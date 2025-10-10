@@ -10,8 +10,9 @@ export default function InventoryPanel() {
   const qtyByItem = useMemo(
     () =>
       items.map((item) => ({
-        name: item.name || 'Unnamed Item',
-        qty: Number(item.quantity ?? 0),
+        id: item.id,
+        label: item.name || 'Unnamed Item',
+        value: Number(item.quantity ?? 0),
         unit: item.unit || '',
       })),
     [items]

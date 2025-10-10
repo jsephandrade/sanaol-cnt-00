@@ -23,38 +23,53 @@ class ReportsService {
       const res = await apiClient.get(endpoint, {
         retry: { retries: 1 },
       });
-      const payload = res?.data || res || {};
+      const payload = res?.data?.data || res?.data || res || {};
+      const series = Array.isArray(payload.series)
+        ? payload.series
+            .filter((row) => row?.t)
+            .map((row) => ({
+              t: row.t,
+              y: normalizeNumber(row.y ?? row.total),
+              count: Number(row.count || 0),
+              label: row.label || null,
+            }))
+        : Array.isArray(payload.dailyTotals)
+          ? payload.dailyTotals
+              .filter((row) => row?.date)
+              .map((row) => ({
+                t: row.date,
+                y: normalizeNumber(row.total),
+                count: Number(row.count || 0),
+                label: null,
+              }))
+          : [];
+      const monthlyTotals = Array.isArray(payload.monthlyTotals)
+        ? payload.monthlyTotals
+            .filter((row) => row?.t || row?.month)
+            .map((row) => ({
+              t: row.t || row.month,
+              y: normalizeNumber(row.y ?? row.total),
+              count: Number(row.count || 0),
+            }))
+        : [];
+      const byMethod = Array.isArray(payload.byMethod)
+        ? payload.byMethod.map((row) => ({
+            method: row.method || 'unknown',
+            label: row.label || row.method || 'unknown',
+            total: normalizeNumber(row.total),
+            count: Number(row.count || 0),
+          }))
+        : [];
       return {
         totalRevenue: normalizeNumber(payload.totalRevenue),
         totalTransactions: Number(payload.totalTransactions || 0),
         totalOrders: Number(payload.totalOrders || 0),
         averageOrderValue: normalizeNumber(payload.averageOrderValue),
-        range: payload.range || null,
-        byMethod: Array.isArray(payload.byMethod)
-          ? payload.byMethod.map((row) => ({
-              method: row.method || 'unknown',
-              total: normalizeNumber(row.total),
-              count: Number(row.count || 0),
-            }))
-          : [],
-        dailyTotals: Array.isArray(payload.dailyTotals)
-          ? payload.dailyTotals
-              .filter((row) => row?.date)
-              .map((row) => ({
-                date: row.date,
-                total: normalizeNumber(row.total),
-                count: Number(row.count || 0),
-              }))
-          : [],
-        monthlyTotals: Array.isArray(payload.monthlyTotals)
-          ? payload.monthlyTotals
-              .filter((row) => row?.month)
-              .map((row) => ({
-                month: row.month,
-                total: normalizeNumber(row.total),
-                count: Number(row.count || 0),
-              }))
-          : [],
+        range: payload.range || payload.timeRange || null,
+        granularity: payload.granularity || null,
+        series,
+        byMethod,
+        monthlyTotals,
       };
     }
 
@@ -65,7 +80,7 @@ class ReportsService {
       averageOrderValue: 0,
       range: null,
       byMethod: [],
-      dailyTotals: [],
+      series: [],
       monthlyTotals: [],
     };
   }
@@ -147,6 +162,11 @@ class ReportsService {
       return list.map((item) => ({
         id: item.id,
         orderId: item.orderId || '',
+        orderNumber:
+          item.orderNumber ||
+          item.order_number ||
+          (item.meta && item.meta.orderNumber) ||
+          '',
         amount: normalizeNumber(item.amount),
         method: item.method || 'unknown',
         status: item.status || '',
