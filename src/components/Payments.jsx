@@ -274,7 +274,7 @@ const Payments = () => {
                           </div>
                         </td>
                         <td className="p-4 align-middle">
-                          �,�{payment.amount.toFixed(2)}
+                          {`\u20B1${payment.amount.toFixed(2)}`}
                         </td>
                         <td className="p-4 align-middle">
                           <CustomBadge
@@ -337,7 +337,9 @@ const Payments = () => {
             </span>
             <span className="text-sm text-foreground">
               Total:{' '}
-              <span className="font-semibold">�,�{totalForSelectedStatus}</span>
+              <span className="font-semibold">
+                {`\u20B1${totalForSelectedStatus}`}
+              </span>
             </span>
           </div>
         </FeaturePanelCard>
@@ -404,7 +406,7 @@ const Payments = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      �,�{payment.amount.toFixed(2)}
+                      {`\u20B1${payment.amount.toFixed(2)}`}
                     </div>
                     <div className="text-xs text-muted-foreground capitalize">
                       {payment.method}

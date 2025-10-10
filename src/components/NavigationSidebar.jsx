@@ -38,6 +38,7 @@ export const NavigationSidebar = () => {
   const displayRole = user?.role || 'admin';
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
   const isAdmin = true;
+  // no-op: initials are derived directly from displayName when needed
 
   // Read collapsed state; default to expanded if hook not present
   let isCollapsed = false;
@@ -48,14 +49,15 @@ export const NavigationSidebar = () => {
     isCollapsed = false;
   }
 
-  // Slightly wider "icon" (collapsed) width so logo/initials can be bigger
-  // You can tweak 96px -> 88px / 104px to your taste.
+  // Trim down icon-mode footprint to give the content area more room.
   const COLLAPSED_WIDTH_CSS = `
     /* Scope to the sidebar when it is in icon (collapsed) mode */
     .group[data-collapsible="icon"] {
-      --sidebar-width-icon: 96px;
+      --sidebar-width-icon: 56px;
     }
   `;
+
+  // removed decorative styles that were not applied anywhere in the markup
 
   const navigationGroups = [
     {
@@ -105,14 +107,14 @@ export const NavigationSidebar = () => {
 
   return (
     <>
-      {/* widen collapsed width */}
+      {/* Collapsed width */}
       <style>{COLLAPSED_WIDTH_CSS}</style>
 
       {/* Header with TechnoMart Logo — centered & larger in shrink mode */}
       <SidebarHeader>
-        <div className="flex items-center justify-center p-4">
+        <div className="flex items-center justify-center p-4 pt-6 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:p-1">
           <Link to="/" className="flex flex-col items-center">
-            {/* Expanded: logo + wordmark */}
+            {/* Expanded */}
             <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden">
               <img
                 src={logo}
@@ -122,12 +124,13 @@ export const NavigationSidebar = () => {
               <span className="text-xl font-bold">TechnoMart</span>
             </div>
 
-            {/* Collapsed: centered, bigger logo only */}
+            {/* Collapsed */}
             <img
               src={logo}
               alt="TechnoMart"
               className="hidden group-data-[collapsible=icon]:block object-contain
-                         group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
+                   group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5
+                   group-data-[collapsible=icon]:scale-115"
             />
           </Link>
         </div>
@@ -138,7 +141,9 @@ export const NavigationSidebar = () => {
         data-collapsed={isCollapsed ? 'true' : 'false'}
         className={cn('hide-scrollbar')}
       >
-        <div className={cn('flex flex-col py-1 px-3', isCollapsed && 'px-2')}>
+        <div
+          className={cn('flex flex-col py-1 px-3', isCollapsed && 'px-2 pt-10')}
+        >
           {visibleGroups.map((group, groupIndex) => (
             <SidebarGroup key={group.label} className="animate-fade-in">
               <SidebarGroupLabel
@@ -155,7 +160,7 @@ export const NavigationSidebar = () => {
                   className={cn(
                     'space-y-1',
                     isCollapsed && 'space-y-1.5',
-                    'group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'
+                    'group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:px-0'
                   )}
                 >
                   {group.items.map((item, itemIndex) => {
@@ -191,17 +196,15 @@ export const NavigationSidebar = () => {
                             aria-current={isActive ? 'page' : undefined}
                             className={cn(
                               'flex items-center gap-3 px-3 py-2.5 w-full',
-                              // Center icon perfectly when collapsed
-                              'group-data-[collapsible=icon]:justify-center',
-                              'group-data-[collapsible=icon]:px-0',
-                              'group-data-[collapsible=icon]:py-3'
+                              'group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center',
+                              'group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2'
                             )}
                           >
                             <Icon
                               className={cn(
                                 'h-5 w-5 transition-all duration-300 shrink-0',
                                 // Slightly larger icon in collapsed mode
-                                'group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5',
+                                'group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4',
                                 isActive
                                   ? 'text-sidebar-item-active scale-110'
                                   : 'text-white group-hover:text-white group-hover:scale-110'
@@ -256,13 +259,13 @@ export const NavigationSidebar = () => {
           </div>
         </div>
 
-        {/* Collapsed footer: centered & larger initials */}
-        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center p-3 border-t border-sidebar-border">
+        {/* Collapsed footer: centered & perfectly round avatar */}
+        <div className="hidden group-data-[collapsible=icon]:flex items-center justify-center border-t border-sidebar-border py-4">
           <div
-            className="rounded-full bg-sidebar-accent flex items-center justify-center
-                          w-12 h-12"
+            className="flex items-center justify-center rounded-full bg-sidebar-accent
+               w-7 h-7 aspect-square overflow-hidden shrink-0"
           >
-            <span className="text-base font-semibold text-sidebar-accent-foreground">
+            <span className="text-sm font-semibold text-sidebar-accent-foreground leading-none">
               {avatarInitial}
             </span>
           </div>
