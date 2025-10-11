@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import dashboardService from '@/api/services/dashboardService';
+import menuService from '@/api/services/menuService';
 
 export const useDashboard = (timeRange = 'today') => {
   const [stats, setStats] = useState(null);
@@ -14,12 +15,80 @@ export const useDashboard = (timeRange = 'today') => {
 
     try {
       const response = await dashboardService.getDashboardStats(timeRange);
-
-      if (response.success) {
-        setStats(response.data);
-      } else {
+      if (!response.success) {
         throw new Error('Failed to fetch dashboard stats');
       }
+
+      let payload = response.data;
+
+      if (!payload?.salesByCategory || payload.salesByCategory.length === 0) {
+        try {
+          const categoriesRes = await menuService.getCategories();
+          const categoryPayload =
+            categoriesRes?.data ?? categoriesRes?.categories ?? categoriesRes;
+          const categoryList = Array.isArray(categoryPayload)
+            ? categoryPayload
+            : [];
+
+          if (categoryList.length) {
+            let counts = {};
+            try {
+              const itemsRes = await menuService.getMenuItems({
+                limit: 500,
+                includeArchived: true,
+              });
+              const itemPayload = Array.isArray(itemsRes?.data)
+                ? itemsRes.data
+                : Array.isArray(itemsRes)
+                  ? itemsRes
+                  : [];
+              counts = itemPayload.reduce((acc, item) => {
+                const key =
+                  item?.category ||
+                  item?.categoryName ||
+                  item?.category_id ||
+                  'Uncategorized';
+                const normalized =
+                  String(key || 'Uncategorized').trim() || 'Uncategorized';
+                acc[normalized] = (acc[normalized] || 0) + 1;
+                return acc;
+              }, {});
+            } catch (itemsError) {
+              console.warn(
+                'Failed to load menu items for dashboard',
+                itemsError
+              );
+            }
+
+            const fallbackCategories = categoryList.map((category) => {
+              const labelRaw =
+                category?.name ||
+                category?.label ||
+                category?.category ||
+                category?.category_name ||
+                'Uncategorized';
+              const label =
+                String(labelRaw || 'Uncategorized').trim() || 'Uncategorized';
+              return {
+                label,
+                category: label,
+                value: counts[label] || 0,
+              };
+            });
+            payload = {
+              ...payload,
+              salesByCategory: fallbackCategories,
+            };
+          }
+        } catch (categoryError) {
+          console.warn(
+            'Failed to load menu categories for dashboard',
+            categoryError
+          );
+        }
+      }
+
+      setStats(payload);
     } catch (error) {
       setError(error.message);
       toast({

@@ -1,12 +1,12 @@
 import apiClient from '../client';
 
 const mockDelay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
-const USE_MOCKS = !(
-  typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  (import.meta.env.VITE_ENABLE_MOCKS === 'false' ||
-    import.meta.env.VITE_ENABLE_MOCKS === '0')
-);
+const envFlags =
+  (typeof import.meta !== 'undefined' && import.meta.env) || undefined;
+const mocksFlag = envFlags?.VITE_ENABLE_MOCKS
+  ? String(envFlags.VITE_ENABLE_MOCKS).toLowerCase()
+  : '';
+const USE_MOCKS = ['true', '1', 'yes'].includes(mocksFlag);
 
 class AttendanceService {
   // Attendance

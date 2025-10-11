@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, time
 from decimal import Decimal
+import math
 from typing import Tuple
 from uuid import UUID
 
 from django.core.cache import cache
-from django.db.models import Sum, F, Value, DecimalField, Count
+from django.db.models import Sum, F, Value, DecimalField, Count, Q
 from django.db.models.functions import TruncDate, TruncHour, TruncMonth, Coalesce
 from django.http import JsonResponse
 from django.utils import timezone as dj_tz
@@ -34,13 +35,13 @@ def _resolve_range(raw: str | None) -> Tuple[datetime, datetime, str]:
             end_dt = datetime.fromisoformat(end_s)
             tz = dj_tz.get_current_timezone()
             if dj_tz.is_naive(start_dt):
-            start_dt = dj_tz.make_aware(start_dt, tz)
-        else:
-            start_dt = dj_tz.localtime(start_dt, tz)
-        if dj_tz.is_naive(end_dt):
-            end_dt = dj_tz.make_aware(end_dt, tz)
-        else:
-            end_dt = dj_tz.localtime(end_dt, tz)
+                start_dt = dj_tz.make_aware(start_dt, tz)
+            else:
+                start_dt = dj_tz.localtime(start_dt, tz)
+            if dj_tz.is_naive(end_dt):
+                end_dt = dj_tz.make_aware(end_dt, tz)
+            else:
+                end_dt = dj_tz.localtime(end_dt, tz)
             if start_dt > end_dt:
                 start_dt, end_dt = end_dt, start_dt
             label = f"{start_dt.date().isoformat()} .. {end_dt.date().isoformat()}"
@@ -56,11 +57,33 @@ def _resolve_range(raw: str | None) -> Tuple[datetime, datetime, str]:
     return default_start, now_local, label
 
 
-def _decimal_to_float(value: Decimal | None) -> float:
+def _decimal_to_float(value: Decimal | float | None) -> float:
+    """
+    Convert Decimal/float values coming from aggregates into a finite float.
+
+    ORM sums can occasionally yield Decimal('NaN') or +/-Infinity when the
+    underlying data is corrupt (e.g. multiplication with NaN). We guard against
+    that here so the API never serialises those tokens, which would crash the
+    frontend charts.
+    """
+    if value is None:
+        return 0.0
+
     try:
-        return float(value or 0)
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                return 0.0
+            numeric = float(value)
+        else:
+            numeric = float(value)
     except Exception:
         return 0.0
+
+    if not math.isfinite(numeric):
+        # NaN or Infinity should collapse to zero for downstream consumers.
+        return 0.0
+
+    return numeric
 
 
 def _parse_int(value, default):
@@ -231,12 +254,22 @@ def dashboard_overview(request):
         ]
         sales_by_time = _downsample(sales_by_time, max_points)
 
+        completed_order_ids = {
+            str(order_id)
+            for order_id in completed_payments.values_list("order_id", flat=True)
+            if order_id
+        }
+
+        category_base_filter = Q(
+            order__created_at__gte=start,
+            order__created_at__lte=end,
+        )
+        category_status_filter = Q(order__status=Order.STATUS_COMPLETED)
+        if completed_order_ids:
+            category_status_filter |= Q(order__id__in=completed_order_ids)
+
         category_rows = (
-            OrderItem.objects.filter(
-                order__created_at__gte=start,
-                order__created_at__lte=end,
-                order__status=Order.STATUS_COMPLETED,
-            )
+            OrderItem.objects.filter(category_base_filter & category_status_filter)
             .annotate(category_name=Coalesce("menu_item__category", Value("Uncategorized")))
             .values("category_name")
             .annotate(
@@ -257,11 +290,17 @@ def dashboard_overview(request):
         ]
 
         popular_start = max(start, end - timedelta(days=7))
+        popular_base_filter = Q(
+            order__created_at__gte=popular_start,
+            order__created_at__lte=end,
+        )
+        popular_status_filter = Q(order__status=Order.STATUS_COMPLETED)
+        if completed_order_ids:
+            popular_status_filter |= Q(order__id__in=completed_order_ids)
+
         popular_rows = (
             OrderItem.objects.filter(
-                order__created_at__gte=popular_start,
-                order__created_at__lte=end,
-                order__status=Order.STATUS_COMPLETED,
+                popular_base_filter & popular_status_filter
             )
             .values("item_name")
             .annotate(

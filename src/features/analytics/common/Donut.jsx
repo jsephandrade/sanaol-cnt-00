@@ -36,15 +36,36 @@ export default function Donut({
     [data]
   );
 
-  const config = useMemo(
-    () => ({
-      [valueKey]: {
-        label: label || valueKey,
-        color: palette[0]?.color,
-      },
-    }),
-    [label, palette, valueKey]
-  );
+  const config = useMemo(() => {
+    if (!data.length) {
+      return {
+        [valueKey]: {
+          label: label || valueKey,
+          color: palette[0]?.color || getSeriesColor(0),
+        },
+      };
+    }
+
+    return data.reduce((acc, entry, index) => {
+      const rawLabel = entry?.[nameKey];
+      const sliceLabel =
+        typeof rawLabel === 'string' && rawLabel.trim().length
+          ? rawLabel
+          : `${label || nameKey || 'Slice'} ${index + 1}`;
+      const sliceColor =
+        entry?.color ||
+        palette[index % palette.length]?.color ||
+        palette[0]?.color ||
+        getSeriesColor(index);
+
+      acc[sliceLabel] = {
+        label: sliceLabel,
+        color: sliceColor,
+      };
+
+      return acc;
+    }, {});
+  }, [data, label, nameKey, palette, valueKey]);
 
   return (
     <ChartContainer
@@ -62,7 +83,7 @@ export default function Donut({
           <AnalyticsLegend
             verticalAlign="bottom"
             align="center"
-            {...legendProps}
+            {...{ nameKey, ...legendProps }}
           />
         ) : null}
         <Pie

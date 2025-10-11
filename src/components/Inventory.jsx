@@ -1,16 +1,17 @@
 import React, { startTransition, useCallback, useMemo, useState } from 'react';
 import InventoryRecentActivity from '@/components/inventory/InventoryRecentActivity';
 import { toast } from 'sonner';
-import InventoryHeader from '@/components/inventory/InventoryHeader';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import InventoryTabs from '@/components/inventory/InventoryTabs';
 import InventoryFooter from '@/components/inventory/InventoryFooter';
 import InventoryModals from '@/components/inventory/InventoryModals';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import { Button } from '@/components/ui/button';
 import {
   useInventoryManagement,
   useInventoryActivities,
 } from '@/hooks/useInventoryManagement';
+import { PlusCircle } from 'lucide-react';
 
 const Inventory = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -192,7 +193,14 @@ const Inventory = () => {
           title="Raw Materials Inventory"
           description="Track and manage inventory items"
           headerActions={
-            <InventoryHeader onAddItem={() => setShowAddModal(true)} />
+            <Button
+              size="sm"
+              className="flex items-center gap-1"
+              onClick={() => setShowAddModal(true)}
+            >
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              <span>Add Item</span>
+            </Button>
           }
           contentClassName="space-y-4"
         >

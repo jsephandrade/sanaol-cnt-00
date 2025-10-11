@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { BarCategory } from '@/features/analytics/common';
+import { BarCategory, ChartCard } from '@/features/analytics/common';
 import { currency } from '@/features/analytics/common/utils';
 
 const CategoryChart = ({ data, title, description }) => {
@@ -26,26 +19,33 @@ const CategoryChart = ({ data, title, description }) => {
   );
 
   return (
-    <Card>
-      <CardHeader className="py-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <CardDescription className="text-xs">{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="h-44 p-3">
-        <BarCategory
-          data={data}
-          xKey="label"
-          series={[
-            {
-              key: 'value',
-              label: 'Revenue',
-              variant: 'secondary',
-            },
-          ]}
-          tooltipProps={{ formatter: renderTooltip }}
-        />
-      </CardContent>
-    </Card>
+    <ChartCard
+      title={title}
+      description={description}
+      data={data}
+      emptyMessage="No category sales logged yet."
+      heightClass="h-[260px]"
+      className="min-h-[320px]"
+    >
+      <BarCategory
+        data={data}
+        xKey="label"
+        margin={{ top: 24, right: 18, left: 8, bottom: 16 }}
+        xAxisProps={{ tickMargin: 16 }}
+        yAxisProps={{
+          tickFormatter: (value) => currency(value),
+          width: 80,
+        }}
+        series={[
+          {
+            key: 'value',
+            label: 'Revenue',
+            variant: 'chart-4',
+          },
+        ]}
+        tooltipProps={{ formatter: renderTooltip }}
+      />
+    </ChartCard>
   );
 };
 

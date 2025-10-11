@@ -33,13 +33,17 @@ import logo from '@/assets/technomart-logo.png';
 export const NavigationSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole, can } = useAuth();
 
   const displayName = user?.name || 'Admin';
-  const displayRole = user?.role || 'admin';
+  const normalizedRole = (user?.role || 'staff').toLowerCase();
+  const displayRole =
+    normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
-  const isAdmin = true;
-  // no-op: initials are derived directly from displayName when needed
+  const isAdmin =
+    typeof hasRole === 'function'
+      ? hasRole('admin')
+      : normalizedRole === 'admin';
 
   // Read collapsed state; default to expanded if hook not present
   let isCollapsed = false;
@@ -71,38 +75,80 @@ export const NavigationSidebar = () => {
     {
       label: 'Operations',
       items: [
-        { name: 'Menu Management', href: '/menu', icon: MenuIcon },
-        { name: 'Catering', href: '/catering', icon: Utensils },
+        {
+          name: 'Menu Management',
+          href: '/menu',
+          icon: MenuIcon,
+          roles: ['manager', 'admin'],
+        },
+        {
+          name: 'Catering',
+          href: '/catering',
+          icon: Utensils,
+          roles: ['manager', 'admin'],
+        },
         { name: 'Inventory', href: '/inventory', icon: Package },
       ],
     },
     {
       label: 'Management',
       items: [
-        { name: 'Analytics', href: '/analytics', icon: TrendingUp },
+        {
+          name: 'Analytics',
+          href: '/analytics',
+          icon: TrendingUp,
+          roles: ['manager', 'admin'],
+          permission: 'reports.sales.view',
+        },
         {
           name: 'Employee Management',
           href: '/employees',
           icon: CalendarClock,
         },
         { name: 'Payments', href: '/payments', icon: CreditCard },
-        { name: 'Users', href: '/users', icon: Users, adminOnly: true },
+        { name: 'Users', href: '/users', icon: Users, roles: ['admin'] },
       ],
     },
     {
       label: 'Support',
       items: [
-        { name: 'Activity Logs', href: '/logs', icon: FileText },
+        {
+          name: 'Activity Logs',
+          href: '/logs',
+          icon: FileText,
+          roles: ['manager', 'admin'],
+        },
         { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Customer Feedback', href: '/feedback', icon: MessageSquare },
+        {
+          name: 'Customer Feedback',
+          href: '/feedback',
+          icon: MessageSquare,
+          roles: ['manager', 'admin'],
+        },
       ],
     },
   ];
 
+  const roleMatches = (role) => {
+    if (!role) return false;
+    if (typeof hasRole === 'function') {
+      return hasRole(role);
+    }
+    return normalizedRole === role.toLowerCase();
+  };
+
+  const canSeeNavItem = (item) => {
+    const roleAllowed =
+      !item.roles || item.roles.some((role) => roleMatches(role)) || isAdmin;
+    const permissionAllowed =
+      !item.permission || (typeof can === 'function' && can(item.permission));
+    return roleAllowed && permissionAllowed;
+  };
+
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.adminOnly || isAdmin),
+      items: group.items.filter(canSeeNavItem),
     }))
     .filter((group) => group.items.length > 0);
 

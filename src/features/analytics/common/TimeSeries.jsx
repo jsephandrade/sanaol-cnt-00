@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 import {
   Area,
   Bar,
@@ -46,11 +46,18 @@ export default function TimeSeries({
   tooltipLabelFormatter,
   tooltipProps = {},
   showGrid = true,
-  margin = { top: 8, right: 16, left: 8, bottom: 0 },
+  margin = { top: 16, right: 24, left: 12, bottom: 12 },
   className = '',
 }) {
+  const {
+    tick: providedXAxisTick = {},
+    minTickGap: providedMinTickGap = 24,
+    ...restXAxisProps
+  } = xAxisProps;
   const resolvedAxes = yAxes.length ? yAxes : defaultAxes;
   const defaultAxisId = resolvedAxes[0]?.id ?? 'main';
+  const rawChartId = useId();
+  const chartId = rawChartId.replace(/:/g, '');
 
   const config = useMemo(
     () =>
@@ -70,26 +77,70 @@ export default function TimeSeries({
     return undefined;
   }, [xTicks]);
 
+  const { areaDefs, areaFillMap } = useMemo(() => {
+    const defs = [];
+    const map = new Map();
+    series.forEach((item, index) => {
+      if (item.type !== 'area') return;
+      const variantToken = item.variant || 'chart-1';
+      const color = item.color || getSeriesColor(index, variantToken);
+      const gradientId = `${chartId}-gradient-${index}`;
+      const stops = item.gradientStops || [
+        { offset: '0%', stopColor: color, stopOpacity: 0.45 },
+        { offset: '55%', stopColor: color, stopOpacity: 0.25 },
+        { offset: '100%', stopColor: color, stopOpacity: 0 },
+      ];
+      defs.push({ id: gradientId, stops });
+      map.set(item.key || `series-${index}`, gradientId);
+    });
+    return { areaDefs: defs, areaFillMap: map };
+  }, [series, chartId]);
+
   return (
     <ChartContainer
       className={cn('h-full w-full aspect-auto', className)}
       config={config}
     >
       <ComposedChart data={data} margin={margin}>
+        {areaDefs.length ? (
+          <defs>
+            {areaDefs.map((gradient) => (
+              <linearGradient
+                key={gradient.id}
+                id={gradient.id}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                {gradient.stops.map((stop) => (
+                  <stop
+                    key={`${gradient.id}-${stop.offset}`}
+                    offset={stop.offset}
+                    stopColor={stop.stopColor}
+                    stopOpacity={stop.stopOpacity}
+                  />
+                ))}
+              </linearGradient>
+            ))}
+          </defs>
+        ) : null}
         {showGrid ? (
           <CartesianGrid
             stroke={gridStyle.stroke}
             strokeDasharray={gridStyle.strokeDasharray}
+            vertical={false}
           />
         ) : null}
         <XAxis
           dataKey={xKey}
-          tick={{ ...axisTickStyle, ...(xAxisProps.tick || {}) }}
+          tick={{ ...axisTickStyle, ...providedXAxisTick }}
           axisLine={false}
           tickLine={false}
-          minTickGap={xAxisProps.minTickGap ?? 24}
+          minTickGap={providedMinTickGap}
           ticks={computedTicks}
           tickFormatter={xTickFormatter}
+          {...restXAxisProps}
         />
         {resolvedAxes.map((axis) => (
           <YAxis
@@ -115,27 +166,32 @@ export default function TimeSeries({
         />
         {legend ? <AnalyticsLegend {...legendProps} /> : null}
         {series.map((item, index) => {
-          const variantToken = item.variant || 'primary';
+          const variantToken = item.variant || 'chart-1';
           const color =
             item.color || getSeriesColor(index, item.variant || variantToken);
           const axisId = item.yAxisId || defaultAxisId;
-          const common = {
-            key: item.key,
+          const seriesKey =
+            item.reactKey || item.key || `series-${index.toString()}`;
+          const baseProps = {
             dataKey: item.key,
             yAxisId: axisId,
             stroke: color,
-            strokeWidth: item.strokeWidth ?? 1.5,
             name: item.label || item.key,
           };
 
           if (item.type === 'line') {
             return (
               <Line
-                {...common}
+                key={seriesKey}
+                {...baseProps}
                 type={item.curve || 'monotone'}
+                strokeWidth={item.strokeWidth ?? 2.2}
+                strokeLinecap={item.strokeLinecap ?? 'round'}
                 dot={item.dot ?? false}
                 activeDot={
-                  item.activeDot === undefined ? { r: 3 } : item.activeDot
+                  item.activeDot === undefined
+                    ? { r: 4, strokeWidth: 0 }
+                    : item.activeDot
                 }
               />
             );
@@ -144,24 +200,34 @@ export default function TimeSeries({
           if (item.type === 'bar') {
             return (
               <Bar
-                {...common}
-                fill={color}
-                radius={item.radius ?? [4, 4, 0, 0]}
+                key={seriesKey}
+                {...baseProps}
+                fill={item.fill || color}
+                radius={item.radius ?? [10, 10, 6, 6]}
                 barSize={item.barSize}
+                maxBarSize={item.maxBarSize ?? 48}
                 stackId={item.stackId}
               />
             );
           }
 
+          const gradientKey = item.key || `series-${index}`;
+          const gradientId = areaFillMap.get(gradientKey);
+
           return (
             <Area
-              {...common}
+              key={seriesKey}
+              {...baseProps}
               type={item.curve || 'monotone'}
+              strokeWidth={item.strokeWidth ?? 2}
+              strokeOpacity={item.strokeOpacity ?? 0.9}
               fill={
                 item.fill ||
-                getFillColor(variantToken, item.fillOpacity ?? 0.16)
+                (gradientId
+                  ? `url(#${gradientId})`
+                  : getFillColor(variantToken, item.fillOpacity ?? 0.22))
               }
-              activeDot={item.activeDot ?? { r: 3 }}
+              activeDot={item.activeDot ?? { r: 4 }}
             />
           );
         })}

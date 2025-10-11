@@ -321,11 +321,9 @@ const AppRoutes = () => {
             path="/inventory"
             element={
               <ProtectedRoute>
-                <RoleGuard disallowRoles={['staff']}>
-                  <MainLayout title="Inventory Management">
-                    <Inventory />
-                  </MainLayout>
-                </RoleGuard>
+                <MainLayout title="Inventory Management">
+                  <Inventory />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -333,11 +331,9 @@ const AppRoutes = () => {
             path="/payments"
             element={
               <ProtectedRoute>
-                <RoleGuard disallowRoles={['staff']}>
-                  <MainLayout title="Payment Management">
-                    <Payments />
-                  </MainLayout>
-                </RoleGuard>
+                <MainLayout title="Payment Management">
+                  <Payments />
+                </MainLayout>
               </ProtectedRoute>
             }
           />

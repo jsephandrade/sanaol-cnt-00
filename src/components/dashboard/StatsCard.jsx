@@ -11,8 +11,29 @@ const StatsCard = ({
   helper,
   loading = false,
   disabled = false,
+  accent = 'neutral',
+  trendDirection: trendDirectionProp,
 }) => {
   const formattedValue = loading ? '--' : formatter(value);
+  let trendDirection = trendDirectionProp;
+
+  if (!trendDirection) {
+    if (typeof change === 'number') {
+      if (change === 0) {
+        trendDirection = 'flat';
+      } else {
+        trendDirection = change > 0 ? 'up' : 'down';
+      }
+    } else if (typeof change === 'string') {
+      const trimmed = change.trim();
+      if (trimmed.startsWith('-')) {
+        trendDirection = 'down';
+      } else if (trimmed.startsWith('+')) {
+        trendDirection = 'up';
+      }
+    }
+  }
+
   return (
     <MetricCard
       label={title}
@@ -23,6 +44,8 @@ const StatsCard = ({
       helper={helper}
       loading={loading}
       disabled={disabled}
+      accent={accent}
+      trendDirection={trendDirection}
       className="min-h-[120px]"
     />
   );

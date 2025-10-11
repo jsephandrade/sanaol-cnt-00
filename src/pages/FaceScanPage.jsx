@@ -18,7 +18,7 @@ import {
   ArrowLeft,
   RefreshCw,
 } from 'lucide-react';
-import Header from '@/components/auth/Header';
+
 import PageTransition from '@/components/PageTransition';
 
 const FaceScanPage = () => {
@@ -96,8 +96,6 @@ const FaceScanPage = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <Header />
-
         <div className="flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md space-y-6">
             <Link

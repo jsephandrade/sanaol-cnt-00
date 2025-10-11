@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import Header from '@/components/auth/Header';
 import PageTransition from '@/components/PageTransition';
 import authService from '@/api/services/authService';
 
@@ -95,7 +94,6 @@ const ResetPasswordPage = () => {
   return (
     <PageTransition>
       <div className="min-h-screen flex flex-col bg-white">
-        <Header />
         <main className="flex-1 flex items-center justify-center px-4 py-10">
           <div className="w-full max-w-md bg-white p-6 rounded-xl shadow-lg">
             <h1 className="text-2xl font-semibold mb-2">Reset Password</h1>

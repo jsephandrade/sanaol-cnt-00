@@ -9,8 +9,6 @@ import { CustomersPanel } from '@/features/analytics/customers';
 export default function SalesAnalytics() {
   return (
     <div className="space-y-6 animate-fade-in">
-      <h2 className="text-2xl font-semibold">Analytics</h2>
-
       <Tabs defaultValue="sales" className="w-full">
         <TabsList className="inline-flex flex-wrap gap-2 justify-start w-fit">
           <TabsTrigger value="sales">Sales Reports</TabsTrigger>

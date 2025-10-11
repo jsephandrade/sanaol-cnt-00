@@ -2,10 +2,11 @@ from decimal import Decimal
 from datetime import timedelta
 
 from django.conf import settings
-from django.test import Client, TestCase
+from django.test import Client, SimpleTestCase, TestCase
 from django.utils import timezone as dj_tz
 import jwt
 
+from api import views_dashboard
 from api.models import (
     AppUser,
     CashEntry,
@@ -104,3 +105,18 @@ class DashboardOverviewTests(TestCase):
     def test_overview_requires_authentication(self):
         resp = self.client.get("/api/dashboard/overview")
         self.assertEqual(resp.status_code, 401)
+
+
+class DecimalToFloatTests(SimpleTestCase):
+    def test_handles_decimal_nan(self):
+        self.assertEqual(views_dashboard._decimal_to_float(Decimal("NaN")), 0.0)
+
+    def test_handles_decimal_infinity(self):
+        self.assertEqual(views_dashboard._decimal_to_float(Decimal("Infinity")), 0.0)
+        self.assertEqual(views_dashboard._decimal_to_float(Decimal("-Infinity")), 0.0)
+
+    def test_handles_float_nan(self):
+        self.assertEqual(views_dashboard._decimal_to_float(float("nan")), 0.0)
+
+    def test_handles_none(self):
+        self.assertEqual(views_dashboard._decimal_to_float(None), 0.0)

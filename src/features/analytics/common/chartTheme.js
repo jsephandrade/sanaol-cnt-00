@@ -14,12 +14,12 @@ const tokenColor = (token, alpha) => {
 };
 
 const paletteTokens = [
-  'primary',
-  'accent',
-  'secondary',
-  'primary-dark',
-  'destructive',
-  'muted-foreground',
+  'chart-1',
+  'chart-2',
+  'chart-3',
+  'chart-4',
+  'chart-5',
+  'chart-6',
 ];
 
 export const chartTheme = {
@@ -27,26 +27,26 @@ export const chartTheme = {
   text: tokenColor('muted-foreground'),
   fontSize: {
     xs: 10,
-    sm: 11,
-    base: 12,
+    sm: 12,
+    base: 13,
   },
   grid: {
-    stroke: `hsl(var(--border) / 0.35)`,
-    strokeDasharray: '3 3',
+    stroke: tokenColor('border', 0.55),
+    strokeDasharray: '2 6',
   },
   axis: {
     tick: {
-      fontSize: 11,
-      fill: tokenColor('muted-foreground'),
+      fontSize: 12,
+      fill: tokenColor('muted-foreground', 0.85),
     },
     label: {
       fontSize: 12,
-      fill: tokenColor('muted-foreground'),
+      fill: tokenColor('muted-foreground', 0.9),
     },
   },
   tooltip: {
-    backgroundColor: tokenColor('popover'),
-    borderColor: tokenColor('border'),
+    backgroundColor: tokenColor('popover', 0.95),
+    borderColor: tokenColor('border', 0.5),
     color: tokenColor('popover-foreground'),
   },
 };
