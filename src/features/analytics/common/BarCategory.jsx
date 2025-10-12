@@ -1,16 +1,16 @@
 import React, { useId, useMemo } from 'react';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { ResponsiveBar } from '@nivo/bar';
 import { cn } from '@/lib/utils';
 import { ChartContainer } from '@/components/ui/chart';
 import { axisTickStyle, getSeriesColor, gridStyle } from './chartTheme';
 import { AnalyticsLegend, AnalyticsTooltip } from './chartElements';
 
-// Default fallback series
+/** ----------------- your existing helpers (kept as-is) ----------------- */
+
 const DEFAULT_SERIES = [{ key: 'value', label: 'Value', variant: 'primary' }];
 const DEFAULT_MARGIN = { top: 8, right: 16, bottom: 0, left: 8 };
 const NON_NUMERIC_CHARS = /[^0-9.,-]+/g;
 
-// Format number or fallback
 const defaultValueFormatter = (value) =>
   typeof value === 'number'
     ? value.toLocaleString(undefined, {
@@ -19,7 +19,6 @@ const defaultValueFormatter = (value) =>
       })
     : value;
 
-// Utility checks
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -47,9 +46,8 @@ const readValue = (source, key) => {
 };
 
 const writeValue = (target, key, value) => {
-  if (!isPlainObject(target) || key == null || typeof key === 'function') {
+  if (!isPlainObject(target) || key == null || typeof key === 'function')
     return;
-  }
   if (typeof key !== 'string') {
     target[key] = value;
     return;
@@ -76,77 +74,52 @@ const writeValue = (target, key, value) => {
   }
 };
 
-/**
- * Convert various input into a safe finite number, or fallback.
- */
 const toFiniteNumber = (value, fallback = 0) => {
-  if (value === null || value === undefined) {
-    return fallback;
-  }
-  if (typeof value === 'number') {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'number')
     return Number.isFinite(value) ? value : fallback;
-  }
   if (typeof value === 'bigint') {
     const numeric = Number(value);
     return Number.isFinite(numeric) ? numeric : fallback;
   }
-  if (typeof value === 'boolean') {
-    return value ? 1 : 0;
-  }
+  if (typeof value === 'boolean') return value ? 1 : 0;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return fallback;
     let cleaned = trimmed.replace(NON_NUMERIC_CHARS, '');
     cleaned = cleaned.replace(/,/g, '');
-    // filter out pure “.” or “-” or “-.”
     if (
       cleaned === '' ||
       cleaned === '.' ||
       cleaned === '-' ||
       cleaned === '-.'
-    ) {
+    )
       return fallback;
-    }
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : fallback;
   }
   return fallback;
 };
 
-/**
- * Normalize category labels: ensures valid string or fallback “Item #”.
- */
 const normaliseCategoryLabel = (value, index) => {
-  if (value === null || value === undefined) {
-    return `Item ${index + 1}`;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed || `Item ${index + 1}`;
-  }
-  if (typeof value === 'number') {
+  if (value === null || value === undefined) return `Item ${index + 1}`;
+  if (typeof value === 'string') return value.trim() || `Item ${index + 1}`;
+  if (typeof value === 'number')
     return Number.isFinite(value) ? String(value) : `Item ${index + 1}`;
-  }
-  if (value instanceof Date) {
+  if (value instanceof Date)
     return Number.isNaN(value.getTime())
       ? `Item ${index + 1}`
       : value.toISOString();
-  }
   try {
     const text = String(value).trim();
     return text || `Item ${index + 1}`;
-  } catch (error) {
+  } catch {
     return `Item ${index + 1}`;
   }
 };
 
-/**
- * Sanitize margin props: ensure numeric values.
- */
 const sanitizeMargin = (value) => {
-  if (!value || typeof value !== 'object') {
-    return { ...DEFAULT_MARGIN };
-  }
+  if (!value || typeof value !== 'object') return { ...DEFAULT_MARGIN };
   const margin = { ...DEFAULT_MARGIN };
   ['top', 'right', 'bottom', 'left'].forEach((key) => {
     if (value[key] == null) return;
@@ -154,16 +127,11 @@ const sanitizeMargin = (value) => {
       typeof value[key] === 'number'
         ? value[key]
         : Number.parseFloat(value[key]);
-    if (Number.isFinite(numeric)) {
-      margin[key] = numeric;
-    }
+    if (Number.isFinite(numeric)) margin[key] = numeric;
   });
   return margin;
 };
 
-/**
- * Normalize series definitions
- */
 const normaliseSeries = (series = DEFAULT_SERIES) => {
   const list = Array.isArray(series) && series.length ? series : DEFAULT_SERIES;
   return list
@@ -176,12 +144,12 @@ const normaliseSeries = (series = DEFAULT_SERIES) => {
         variant,
         color,
         gradientStops,
-        fill,
-        stackId,
-        barSize,
-        maxBarSize,
-        minPointSize,
-        radius,
+        fill, // ignored by Nivo (we use defs/fill rules)
+        stackId, // Nivo stacks by same "groupMode", not by id per key
+        barSize, // Nivo controls via padding; we’ll ignore this per-series
+        maxBarSize, // not applicable directly
+        minPointSize, // not applicable
+        radius, // we’ll map to borderRadius globally
         barProps,
         ...rest
       } = item;
@@ -199,11 +167,6 @@ const normaliseSeries = (series = DEFAULT_SERIES) => {
         color: resolvedColor,
         variant: resolvedVariant,
         gradientStops,
-        fill,
-        stackId,
-        barSize,
-        maxBarSize,
-        minPointSize,
         radius,
         barProps: { ...rest, ...(barProps || {}) },
       };
@@ -211,9 +174,6 @@ const normaliseSeries = (series = DEFAULT_SERIES) => {
     .filter(Boolean);
 };
 
-/**
- * Build gradient defs, mapping each series key to its gradient id
- */
 const buildGradients = (chartId, seriesDefs) => {
   const defs = [];
   const map = new Map();
@@ -221,31 +181,33 @@ const buildGradients = (chartId, seriesDefs) => {
   seriesDefs.forEach((seriesItem, index) => {
     const gradientId = `${chartId}-bar-${index}`;
     const stops = seriesItem.gradientStops || [
-      { offset: '0%', stopColor: seriesItem.color, stopOpacity: 0.95 },
-      { offset: '100%', stopColor: seriesItem.color, stopOpacity: 0.45 },
+      { offset: 0, stopColor: seriesItem.color, stopOpacity: 0.95 },
+      { offset: 1, stopColor: seriesItem.color, stopOpacity: 0.45 },
     ];
-    defs.push({ id: gradientId, stops });
+    defs.push({
+      id: gradientId,
+      type: 'linearGradient',
+      colors: stops.map((s) => ({
+        offset: s.offset, // 0..1 for Nivo
+        color: s.stopColor,
+        opacity: s.stopOpacity,
+      })),
+    });
     map.set(seriesItem.key, gradientId);
   });
 
   return { defs, map };
 };
 
-/**
- * Convert raw data + series into cleaned chart rows and numeric values
- */
 const normaliseDataset = (data, seriesDefs, xKey) => {
   if (!Array.isArray(data) || !seriesDefs.length) {
     return { rows: [], values: [] };
   }
-
   const rows = [];
   const numericValues = [];
 
   data.forEach((item, index) => {
-    if (!isPlainObject(item)) {
-      return;
-    }
+    if (!isPlainObject(item)) return;
 
     const nextRow = { ...item };
 
@@ -268,36 +230,22 @@ const normaliseDataset = (data, seriesDefs, xKey) => {
   return { rows, values: numericValues };
 };
 
-/**
- * Compute a “nice” domain for numeric values, with padding.
- */
 const computeDomain = (values) => {
   const finite = values.filter((v) => Number.isFinite(v));
-  if (!finite.length) {
-    return [0, 1];
-  }
-
+  if (!finite.length) return [0, 1];
   const min = Math.min(...finite);
   const max = Math.max(...finite);
-
   if (min === max) {
-    if (min === 0) {
-      return [0, 1];
-    }
-    if (min > 0) {
-      return [0, min * 1.1];
-    }
+    if (min === 0) return [0, 1];
+    if (min > 0) return [0, min * 1.1];
     return [min * 1.1, 0];
   }
-
   const span = max - min;
   const padding = span * 0.05;
   const lower = Math.min(min, 0) - padding;
   const upper = Math.max(max, 0) + padding;
-
   const safeLower = Number.isFinite(lower) ? lower : 0;
   const safeUpper = Number.isFinite(upper) ? upper : 1;
-
   if (safeLower === safeUpper) {
     return safeLower === 0
       ? [0, 1]
@@ -306,9 +254,6 @@ const computeDomain = (values) => {
   return [safeLower, safeUpper];
 };
 
-/**
- * Safely coerce a value into a usable domain array [finite, finite].
- */
 const safeDomainProp = (dom) => {
   if (
     Array.isArray(dom) &&
@@ -322,20 +267,17 @@ const safeDomainProp = (dom) => {
   return [0, 1];
 };
 
-/**
- * Safe tick formatter: filter out invalid ticks
- */
 const safeTickFormatter = (tick) => {
   if (tick == null) return '';
-  if (typeof tick === 'number') {
+  if (typeof tick === 'number')
     return Number.isFinite(tick) ? String(tick) : '';
-  }
-  // If string that can parse to finite
   const num = Number(tick);
   return Number.isFinite(num) ? String(num) : '';
 };
 
-export default function BarCategory({
+/** ----------------- Nivo BarCategory ----------------- */
+
+export default function BarCategoryNivo({
   data = [],
   xKey = 'name',
   series = DEFAULT_SERIES,
@@ -345,13 +287,14 @@ export default function BarCategory({
   tooltipFormatter = defaultValueFormatter,
   tooltipLabelFormatter,
   tooltipProps = {},
-  layout = 'vertical',
+  layout = 'vertical', // 'vertical' (default) or 'horizontal'
   margin = DEFAULT_MARGIN,
   className = '',
   xAxisProps = {},
   yAxisProps = {},
 }) {
   const seriesDefs = useMemo(() => normaliseSeries(series), [series]);
+
   const { rows: chartData, values: numericValues } = useMemo(
     () => normaliseDataset(data, seriesDefs, xKey),
     [data, seriesDefs, xKey]
@@ -363,32 +306,27 @@ export default function BarCategory({
   );
 
   const computedNumericDomain = useMemo(() => {
-    // defensive: ensure it's a 2-element finite domain
     const dom = Array.isArray(numericDomain) ? numericDomain : [0, 1];
     let [mn, mx] = dom;
     if (!Number.isFinite(mn)) mn = 0;
     if (!Number.isFinite(mx)) mx = 1;
     if (mn === mx) {
-      if (mn === 0) {
-        mx = 1;
-      } else if (mn > 0) {
-        mx = mn * 1.1;
-      } else {
-        mn = mn * 1.1;
-      }
+      if (mn === 0) mx = 1;
+      else if (mn > 0) mx = mn * 1.1;
+      else mn = mn * 1.1;
     }
-    if (!Number.isFinite(mn) || !Number.isFinite(mx) || mn >= mx) {
-      return [0, 1];
-    }
+    if (!Number.isFinite(mn) || !Number.isFinite(mx) || mn >= mx) return [0, 1];
     return [mn, mx];
   }, [numericDomain]);
 
-  const seriesConfig = useMemo(() => {
-    return seriesDefs.reduce((acc, item) => {
-      acc[item.key] = { label: item.label, color: item.color };
-      return acc;
-    }, {});
-  }, [seriesDefs]);
+  const seriesConfig = useMemo(
+    () =>
+      seriesDefs.reduce((acc, item) => {
+        acc[item.key] = { label: item.label, color: item.color };
+        return acc;
+      }, {}),
+    [seriesDefs]
+  );
 
   const chartId = useId().replace(/:/g, '');
   const { defs: gradientDefs, map: gradientMap } = useMemo(
@@ -400,11 +338,11 @@ export default function BarCategory({
   const isVertical = layout !== 'horizontal';
   const hasRenderableData = chartData.length > 0 && seriesDefs.length > 0;
 
+  // Axis props mapping
   const {
     tick: xTick,
     tickMargin: xTickMargin,
     domain: xDomainProp,
-    type: xTypeProp,
     ticks: xTicksProp,
     ...restXAxis
   } = xAxisProps || {};
@@ -413,23 +351,85 @@ export default function BarCategory({
     tick: yTick,
     tickMargin: yTickMargin,
     domain: yDomainProp,
-    type: yTypeProp,
-    ticks: yTicksProp,
     width: yWidth,
-    dataKey: yDataKeyProp,
     ...restYAxis
   } = yAxisProps || {};
 
-  // Derive safe domains
-  const xDomainSafe =
-    !isVertical && xDomainProp === undefined
-      ? safeDomainProp(computedNumericDomain)
-      : safeDomainProp(xDomainProp || computedNumericDomain);
+  // Derive safe domains for the numeric axis
+  const valueDomain = safeDomainProp(computedNumericDomain);
 
-  const yDomainSafe =
-    isVertical && yDomainProp === undefined
-      ? safeDomainProp(computedNumericDomain)
-      : safeDomainProp(yDomainProp || computedNumericDomain);
+  // Nivo expects:
+  // - data: array of { [xKey]: indexLabel, [key1]: number, [key2]: number, ... }
+  // - keys: string[]
+  const keys = seriesDefs.map((s) => s.key);
+
+  // Colors: use gradient defs if present, otherwise solid colors per key
+  const hasGradients = gradientDefs.length > 0;
+  const fillRules = hasGradients
+    ? keys.map((k) => ({ match: { id: k }, id: gradientMap.get(k) }))
+    : [];
+
+  const colorByKey = new Map(seriesDefs.map((s) => [s.key, s.color]));
+
+  // Custom tooltip that reuses your formatters
+  const CustomTooltip = (nivo) => {
+    // nivo: { id, value, color, indexValue, data }
+    const label =
+      typeof tooltipLabelFormatter === 'function'
+        ? tooltipLabelFormatter(nivo.indexValue, nivo.data)
+        : nivo.indexValue;
+    const value =
+      typeof tooltipFormatter === 'function'
+        ? tooltipFormatter(nivo.value)
+        : nivo.value;
+
+    // If you have a shared tooltip component, you can use it here:
+    if (AnalyticsTooltip) {
+      return (
+        <AnalyticsTooltip
+          {...tooltipProps}
+          payload={[
+            {
+              name: seriesConfig[nivo.id]?.label ?? String(nivo.id),
+              value,
+              color: nivo.color,
+            },
+          ]}
+          label={label}
+        />
+      );
+    }
+
+    // Minimal fallback:
+    return (
+      <div
+        style={{
+          background: 'var(--popover)',
+          color: 'var(--popover-foreground)',
+          border: '1px solid var(--border)',
+          padding: '6px 8px',
+          borderRadius: 6,
+          fontSize: 12,
+        }}
+      >
+        <div style={{ opacity: 0.7, marginBottom: 4 }}>{label}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: 10,
+              height: 10,
+              background: nivo.color,
+              borderRadius: 2,
+            }}
+          />
+          <span>
+            {seriesConfig[nivo.id]?.label ?? String(nivo.id)}: {value}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   if (!hasRenderableData) {
     return (
@@ -449,146 +449,113 @@ export default function BarCategory({
       className={cn('h-full w-full aspect-auto', className)}
       config={seriesConfig}
     >
-      <BarChart
-        data={chartData}
-        layout={layout}
-        margin={safeMargin}
-        barGap={12}
-        barCategoryGap="18%"
-      >
-        {gradientDefs.length ? (
-          <defs>
-            {gradientDefs.map((gradient) => (
-              <linearGradient
-                key={gradient.id}
-                id={gradient.id}
-                x1="0"
-                y1="0"
-                x2={isVertical ? '0' : '1'}
-                y2={isVertical ? '1' : '0'}
-              >
-                {gradient.stops.map((stop) => (
-                  <stop
-                    key={`${gradient.id}-${stop.offset}`}
-                    offset={stop.offset}
-                    stopColor={stop.stopColor}
-                    stopOpacity={stop.stopOpacity}
-                  />
-                ))}
-              </linearGradient>
-            ))}
-          </defs>
-        ) : null}
+      {legend ? <AnalyticsLegend {...legendProps} /> : null}
 
-        <CartesianGrid
-          stroke={gridStyle.stroke}
-          strokeDasharray={gridStyle.strokeDasharray}
-          vertical={false}
+      <div style={{ height: '100%', width: '100%', minHeight: 120 }}>
+        <ResponsiveBar
+          data={chartData}
+          keys={keys}
+          indexBy={xKey}
+          groupMode={stacked ? 'stacked' : 'grouped'}
+          layout={isVertical ? 'vertical' : 'horizontal'}
+          margin={safeMargin}
+          padding={0.25} // spacing between bars
+          innerPadding={6} // spacing within groups
+          indexScale={{ type: 'band', round: true }}
+          valueScale={{
+            type: 'linear',
+            min: valueDomain[0],
+            max: valueDomain[1],
+          }}
+          // Grids (match your theme-ish)
+          enableGridX={!isVertical}
+          enableGridY={isVertical}
+          gridXValues={isVertical ? undefined : xTicksProp || undefined}
+          gridYValues={isVertical ? xTicksProp || undefined : undefined}
+          // Colors
+          colors={(bar) => {
+            if (hasGradients) return undefined; // use defs/fill rules
+            return colorByKey.get(bar.id) || bar.color;
+          }}
+          defs={hasGradients ? gradientDefs : undefined}
+          fill={hasGradients ? fillRules : undefined}
+          // Rounded corners (approximate your radius defaults)
+          borderRadius={isVertical ? 4 : 4}
+          // Axes
+          axisBottom={
+            isVertical
+              ? {
+                  tickSize: 0,
+                  tickPadding: xTickMargin ?? 12,
+                  tickRotation: 0,
+                  format: (v) => safeTickFormatter(v),
+                  ...axisTickStyle,
+                  ...restXAxis,
+                }
+              : {
+                  tickSize: 0,
+                  tickPadding: xTickMargin ?? 12,
+                  tickRotation: 0,
+                  format: (v) => safeTickFormatter(v),
+                  ...axisTickStyle,
+                  ...restXAxis,
+                }
+          }
+          axisLeft={
+            isVertical
+              ? {
+                  tickSize: 0,
+                  tickPadding: yTickMargin ?? 8,
+                  tickRotation: 0,
+                  format: (v) => safeTickFormatter(v),
+                  ...(yWidth ? { legendOffset: yWidth } : {}),
+                  ...axisTickStyle,
+                  ...restYAxis,
+                }
+              : {
+                  tickSize: 0,
+                  tickPadding: yTickMargin ?? 8,
+                  tickRotation: 0,
+                  format: (v) => safeTickFormatter(v),
+                  ...(yWidth ? { legendOffset: yWidth } : {}),
+                  ...axisTickStyle,
+                  ...restYAxis,
+                }
+          }
+          // Labels on bars
+          enableLabel={false}
+          // Tooltip
+          tooltip={CustomTooltip}
+          // Role / a11y
+          role="img"
+          ariaLabel="Bar chart"
+          // Animate
+          animate={true}
+          motionConfig="gentle"
+          // Theme hooks (line/grid colors)
+          theme={{
+            grid: {
+              line: {
+                stroke: gridStyle.stroke,
+                strokeDasharray: gridStyle.strokeDasharray,
+              },
+            },
+            axis: {
+              ticks: {
+                text: {
+                  // map your tick font props as needed
+                  fontSize: axisTickStyle?.fontSize ?? 12,
+                },
+              },
+            },
+          }}
         />
-
-        <XAxis
-          dataKey={xKey}
-          type={xTypeProp || (isVertical ? 'category' : 'number')}
-          axisLine={false}
-          tickLine={false}
-          tick={{ ...axisTickStyle, ...(xTick || {}) }}
-          tickMargin={xTickMargin ?? 12}
-          domain={xDomainSafe}
-          ticks={
-            Array.isArray(xTicksProp)
-              ? xTicksProp.filter((t) => Number.isFinite(Number(t)))
-              : undefined
-          }
-          tickFormatter={safeTickFormatter}
-          {...restXAxis}
-        />
-
-        <YAxis
-          type={yTypeProp || (isVertical ? 'number' : 'category')}
-          dataKey={isVertical ? yDataKeyProp : (yDataKeyProp ?? xKey)}
-          axisLine={false}
-          tickLine={false}
-          tick={{ ...axisTickStyle, ...(yTick || {}) }}
-          tickMargin={yTickMargin ?? 8}
-          width={yWidth ?? (isVertical ? 48 : undefined)}
-          domain={yDomainSafe}
-          ticks={
-            Array.isArray(yTicksProp)
-              ? yTicksProp.filter((t) => Number.isFinite(Number(t)))
-              : undefined
-          }
-          tickFormatter={safeTickFormatter}
-          {...restYAxis}
-        />
-
-        <AnalyticsTooltip
-          valueFormatter={tooltipFormatter}
-          labelFormatter={tooltipLabelFormatter}
-          {...tooltipProps}
-        />
-
-        {legend ? <AnalyticsLegend {...legendProps} /> : null}
-
-        {seriesDefs.map((seriesItem, index) => {
-          const stackId =
-            seriesItem.stackId !== undefined
-              ? seriesItem.stackId
-              : stacked
-                ? 'stack'
-                : undefined;
-
-          const gradientId = gradientMap.get(seriesItem.key);
-          const fillColor =
-            seriesItem.fill ??
-            (gradientId ? `url(#${gradientId})` : seriesItem.color);
-
-          const resolvedBarSize = toFiniteNumber(seriesItem.barSize, undefined);
-          const resolvedMaxBarSize =
-            toFiniteNumber(seriesItem.maxBarSize, undefined) ?? 48;
-
-          const resolvedMinPoint =
-            typeof seriesItem.minPointSize === 'function'
-              ? seriesItem.minPointSize
-              : toFiniteNumber(seriesItem.minPointSize, undefined);
-
-          const radius =
-            seriesItem.radius ?? (isVertical ? [12, 12, 8, 8] : [8, 12, 12, 8]);
-
-          const barProps = { ...(seriesItem.barProps || {}) };
-
-          if (Number.isFinite(resolvedBarSize)) {
-            barProps.barSize = resolvedBarSize;
-          }
-          if (Number.isFinite(resolvedMaxBarSize)) {
-            barProps.maxBarSize = resolvedMaxBarSize;
-          }
-          if (
-            typeof resolvedMinPoint === 'function' ||
-            Number.isFinite(resolvedMinPoint)
-          ) {
-            barProps.minPointSize = resolvedMinPoint;
-          }
-
-          return (
-            <Bar
-              key={seriesItem.key ?? index}
-              dataKey={seriesItem.key}
-              name={seriesItem.label}
-              fill={fillColor}
-              stackId={stackId}
-              radius={radius}
-              {...barProps}
-            />
-          );
-        })}
-      </BarChart>
+      </div>
     </ChartContainer>
   );
 }
 
-/**
- * Expose internals for testing / debugging
- */
+/** expose internals for tests if you need them */
 export const __TEST_ONLY__ = {
   toFiniteNumber,
   normaliseDataset,
