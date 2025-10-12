@@ -1,5 +1,5 @@
 import React, { useId, useMemo } from 'react';
-import { ResponsiveBar } from '@nivo/bar';
+import { ResponsiveBar } from '@/components/charts';
 import { cn } from '@/lib/utils';
 import { ChartContainer } from '@/components/ui/chart';
 import { axisTickStyle, getSeriesColor, gridStyle } from './chartTheme';
@@ -144,11 +144,6 @@ const normaliseSeries = (series = DEFAULT_SERIES) => {
         variant,
         color,
         gradientStops,
-        fill, // ignored by Nivo (we use defs/fill rules)
-        stackId, // Nivo stacks by same "groupMode", not by id per key
-        barSize, // Nivo controls via padding; we’ll ignore this per-series
-        maxBarSize, // not applicable directly
-        minPointSize, // not applicable
         radius, // we’ll map to borderRadius globally
         barProps,
         ...rest
@@ -339,21 +334,11 @@ export default function BarCategoryNivo({
   const hasRenderableData = chartData.length > 0 && seriesDefs.length > 0;
 
   // Axis props mapping
-  const {
-    tick: xTick,
-    tickMargin: xTickMargin,
-    domain: xDomainProp,
-    ticks: xTicksProp,
-    ...restXAxis
-  } = xAxisProps || {};
+  const { tickMargin: xTickMargin, ticks: xTicksProp, ...restXAxis } =
+    xAxisProps || {};
 
-  const {
-    tick: yTick,
-    tickMargin: yTickMargin,
-    domain: yDomainProp,
-    width: yWidth,
-    ...restYAxis
-  } = yAxisProps || {};
+  const { tickMargin: yTickMargin, width: yWidth, ...restYAxis } =
+    yAxisProps || {};
 
   // Derive safe domains for the numeric axis
   const valueDomain = safeDomainProp(computedNumericDomain);
@@ -373,34 +358,51 @@ export default function BarCategoryNivo({
 
   // Custom tooltip that reuses your formatters
   const CustomTooltip = (nivo) => {
-    // nivo: { id, value, color, indexValue, data }
-    const label =
+    const rawLabel =
       typeof tooltipLabelFormatter === 'function'
         ? tooltipLabelFormatter(nivo.indexValue, nivo.data)
         : nivo.indexValue;
-    const value =
-      typeof tooltipFormatter === 'function'
-        ? tooltipFormatter(nivo.value)
-        : nivo.value;
 
-    // If you have a shared tooltip component, you can use it here:
+    const resolvedFormatter =
+      tooltipProps?.formatter ||
+      (typeof tooltipFormatter === 'function'
+        ? (value, name, item, index, payload) =>
+            tooltipFormatter(value, name, payload || item?.payload)
+        : undefined);
+
+    const payloadEntry = {
+      dataKey: nivo.id,
+      name: seriesConfig[nivo.id]?.label ?? String(nivo.id),
+      value: nivo.value,
+      color: nivo.color,
+      payload: {
+        ...nivo.data,
+        fill: nivo.color,
+      },
+    };
+
     if (AnalyticsTooltip) {
       return (
         <AnalyticsTooltip
+          active
           {...tooltipProps}
-          payload={[
-            {
-              name: seriesConfig[nivo.id]?.label ?? String(nivo.id),
-              value,
-              color: nivo.color,
-            },
-          ]}
-          label={label}
+          payload={[payloadEntry]}
+          label={rawLabel}
+          formatter={resolvedFormatter}
         />
       );
     }
 
-    // Minimal fallback:
+    const formattedValue = resolvedFormatter
+      ? resolvedFormatter(
+          payloadEntry.value,
+          payloadEntry.name,
+          payloadEntry,
+          0,
+          payloadEntry.payload
+        )
+      : payloadEntry.value;
+
     return (
       <div
         style={{
@@ -412,7 +414,7 @@ export default function BarCategoryNivo({
           fontSize: 12,
         }}
       >
-        <div style={{ opacity: 0.7, marginBottom: 4 }}>{label}</div>
+        <div style={{ opacity: 0.7, marginBottom: 4 }}>{rawLabel}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span
             style={{
@@ -424,7 +426,7 @@ export default function BarCategoryNivo({
             }}
           />
           <span>
-            {seriesConfig[nivo.id]?.label ?? String(nivo.id)}: {value}
+            {payloadEntry.name}: {formattedValue}
           </span>
         </div>
       </div>
@@ -562,3 +564,5 @@ export const __TEST_ONLY__ = {
   computeDomain,
   safeDomainProp,
 };
+
+export { toFiniteNumber, computeDomain };
