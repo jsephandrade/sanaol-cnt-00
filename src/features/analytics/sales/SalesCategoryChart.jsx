@@ -1,8 +1,8 @@
 import React from 'react';
-import { ChartCard, Donut } from '@/features/analytics/common';
-import { currency } from '@/features/analytics/common/utils';
+import { ChartCard, Donut } from '../common';
+import { currency } from '../common/utils';
 
-const CategoryChart = ({ data, title, description }) => {
+const SalesCategoryChart = ({ data = [], loading, error }) => {
   const renderTooltip = (value, name, item) => (
     <div className="flex w-full items-stretch gap-2">
       <div
@@ -20,12 +20,14 @@ const CategoryChart = ({ data, title, description }) => {
 
   return (
     <ChartCard
-      title={title}
-      description={description}
+      title="Sales by Category"
+      description="Share of revenue by menu category"
+      loading={loading}
+      error={error}
       data={data}
-      emptyMessage="No category sales logged yet."
+      emptyMessage="No category sales logged for this range."
       heightClass="h-[260px]"
-      className="min-h-[320px]"
+      className="lg:col-span-1"
     >
       <Donut
         data={data}
@@ -34,7 +36,6 @@ const CategoryChart = ({ data, title, description }) => {
         tooltipFormatter={(value) => currency(value)}
         tooltipLabelFormatter={(label) => label}
         tooltipProps={{ formatter: renderTooltip }}
-        legend
         legendProps={{
           verticalAlign: 'bottom',
           align: 'center',
@@ -45,4 +46,4 @@ const CategoryChart = ({ data, title, description }) => {
   );
 };
 
-export default CategoryChart;
+export default SalesCategoryChart;

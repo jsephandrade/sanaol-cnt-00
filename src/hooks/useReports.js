@@ -32,7 +32,7 @@ export function useSalesReport(initialRange = '30d', options = {}) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchReport(range);
+    fetchReport(range).catch(() => {});
   }, [autoFetch, fetchReport, range]);
 
   return {
@@ -71,7 +71,7 @@ export function useInventoryReport(options = {}) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchReport();
+    fetchReport().catch(() => {});
   }, [autoFetch, fetchReport]);
 
   return {
@@ -108,7 +108,7 @@ export function useOrdersReport(options = {}) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchReport();
+    fetchReport().catch(() => {});
   }, [autoFetch, fetchReport]);
 
   return {
@@ -145,7 +145,7 @@ export function useStaffAttendanceReport(options = {}) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchReport();
+    fetchReport().catch(() => {});
   }, [autoFetch, fetchReport]);
 
   return {
@@ -189,7 +189,7 @@ export function useCustomerHistory(initialFilters = {}, options = {}) {
 
   useEffect(() => {
     if (!autoFetch) return;
-    fetchHistory(filters);
+    fetchHistory(filters).catch(() => {});
   }, [autoFetch, fetchHistory, filters]);
 
   return {

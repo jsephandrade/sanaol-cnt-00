@@ -5,10 +5,12 @@ import { ChartContainer } from '@/components/ui/chart';
 import { axisTickStyle, getSeriesColor, gridStyle } from './chartTheme';
 import { AnalyticsLegend, AnalyticsTooltip } from './chartElements';
 
+// Default fallback series
 const DEFAULT_SERIES = [{ key: 'value', label: 'Value', variant: 'primary' }];
 const DEFAULT_MARGIN = { top: 8, right: 16, bottom: 0, left: 8 };
 const NON_NUMERIC_CHARS = /[^0-9.,-]+/g;
 
+// Format number or fallback
 const defaultValueFormatter = (value) =>
   typeof value === 'number'
     ? value.toLocaleString(undefined, {
@@ -17,6 +19,7 @@ const defaultValueFormatter = (value) =>
       })
     : value;
 
+// Utility checks
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -73,6 +76,9 @@ const writeValue = (target, key, value) => {
   }
 };
 
+/**
+ * Convert various input into a safe finite number, or fallback.
+ */
 const toFiniteNumber = (value, fallback = 0) => {
   if (value === null || value === undefined) {
     return fallback;
@@ -90,8 +96,15 @@ const toFiniteNumber = (value, fallback = 0) => {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) return fallback;
-    const cleaned = trimmed.replace(NON_NUMERIC_CHARS, '').replace(/,/g, '');
-    if (!cleaned || cleaned === '.' || cleaned === '-' || cleaned === '-.') {
+    let cleaned = trimmed.replace(NON_NUMERIC_CHARS, '');
+    cleaned = cleaned.replace(/,/g, '');
+    // filter out pure “.” or “-” or “-.”
+    if (
+      cleaned === '' ||
+      cleaned === '.' ||
+      cleaned === '-' ||
+      cleaned === '-.'
+    ) {
       return fallback;
     }
     const parsed = Number(cleaned);
@@ -100,6 +113,9 @@ const toFiniteNumber = (value, fallback = 0) => {
   return fallback;
 };
 
+/**
+ * Normalize category labels: ensures valid string or fallback “Item #”.
+ */
 const normaliseCategoryLabel = (value, index) => {
   if (value === null || value === undefined) {
     return `Item ${index + 1}`;
@@ -124,6 +140,9 @@ const normaliseCategoryLabel = (value, index) => {
   }
 };
 
+/**
+ * Sanitize margin props: ensure numeric values.
+ */
 const sanitizeMargin = (value) => {
   if (!value || typeof value !== 'object') {
     return { ...DEFAULT_MARGIN };
@@ -142,6 +161,9 @@ const sanitizeMargin = (value) => {
   return margin;
 };
 
+/**
+ * Normalize series definitions
+ */
 const normaliseSeries = (series = DEFAULT_SERIES) => {
   const list = Array.isArray(series) && series.length ? series : DEFAULT_SERIES;
   return list
@@ -189,6 +211,9 @@ const normaliseSeries = (series = DEFAULT_SERIES) => {
     .filter(Boolean);
 };
 
+/**
+ * Build gradient defs, mapping each series key to its gradient id
+ */
 const buildGradients = (chartId, seriesDefs) => {
   const defs = [];
   const map = new Map();
@@ -206,6 +231,9 @@ const buildGradients = (chartId, seriesDefs) => {
   return { defs, map };
 };
 
+/**
+ * Convert raw data + series into cleaned chart rows and numeric values
+ */
 const normaliseDataset = (data, seriesDefs, xKey) => {
   if (!Array.isArray(data) || !seriesDefs.length) {
     return { rows: [], values: [] };
@@ -240,8 +268,11 @@ const normaliseDataset = (data, seriesDefs, xKey) => {
   return { rows, values: numericValues };
 };
 
+/**
+ * Compute a “nice” domain for numeric values, with padding.
+ */
 const computeDomain = (values) => {
-  const finite = values.filter((value) => Number.isFinite(value));
+  const finite = values.filter((v) => Number.isFinite(v));
   if (!finite.length) {
     return [0, 1];
   }
@@ -260,8 +291,7 @@ const computeDomain = (values) => {
   }
 
   const span = max - min;
-  const padding =
-    span !== 0 ? span * 0.05 : Math.max(Math.abs(min), Math.abs(max)) * 0.05;
+  const padding = span * 0.05;
   const lower = Math.min(min, 0) - padding;
   const upper = Math.max(max, 0) + padding;
 
@@ -273,23 +303,36 @@ const computeDomain = (values) => {
       ? [0, 1]
       : [Math.min(0, safeLower), Math.max(0, safeUpper)];
   }
-
   return [safeLower, safeUpper];
 };
 
-const toOptionalNumber = (value) => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
+/**
+ * Safely coerce a value into a usable domain array [finite, finite].
+ */
+const safeDomainProp = (dom) => {
+  if (
+    Array.isArray(dom) &&
+    dom.length === 2 &&
+    Number.isFinite(dom[0]) &&
+    Number.isFinite(dom[1]) &&
+    dom[0] < dom[1]
+  ) {
+    return dom;
   }
-  if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
+  return [0, 1];
+};
+
+/**
+ * Safe tick formatter: filter out invalid ticks
+ */
+const safeTickFormatter = (tick) => {
+  if (tick == null) return '';
+  if (typeof tick === 'number') {
+    return Number.isFinite(tick) ? String(tick) : '';
   }
-  if (typeof value === 'bigint') {
-    const numeric = Number(value);
-    return Number.isFinite(numeric) ? numeric : undefined;
-  }
-  return undefined;
+  // If string that can parse to finite
+  const num = Number(tick);
+  return Number.isFinite(num) ? String(num) : '';
 };
 
 export default function BarCategory({
@@ -319,6 +362,27 @@ export default function BarCategory({
     [numericValues]
   );
 
+  const computedNumericDomain = useMemo(() => {
+    // defensive: ensure it's a 2-element finite domain
+    const dom = Array.isArray(numericDomain) ? numericDomain : [0, 1];
+    let [mn, mx] = dom;
+    if (!Number.isFinite(mn)) mn = 0;
+    if (!Number.isFinite(mx)) mx = 1;
+    if (mn === mx) {
+      if (mn === 0) {
+        mx = 1;
+      } else if (mn > 0) {
+        mx = mn * 1.1;
+      } else {
+        mn = mn * 1.1;
+      }
+    }
+    if (!Number.isFinite(mn) || !Number.isFinite(mx) || mn >= mx) {
+      return [0, 1];
+    }
+    return [mn, mx];
+  }, [numericDomain]);
+
   const seriesConfig = useMemo(() => {
     return seriesDefs.reduce((acc, item) => {
       acc[item.key] = { label: item.label, color: item.color };
@@ -341,6 +405,7 @@ export default function BarCategory({
     tickMargin: xTickMargin,
     domain: xDomainProp,
     type: xTypeProp,
+    ticks: xTicksProp,
     ...restXAxis
   } = xAxisProps || {};
 
@@ -348,26 +413,23 @@ export default function BarCategory({
     tick: yTick,
     tickMargin: yTickMargin,
     domain: yDomainProp,
-    width: yWidth,
     type: yTypeProp,
+    ticks: yTicksProp,
+    width: yWidth,
     dataKey: yDataKeyProp,
     ...restYAxis
   } = yAxisProps || {};
 
-  const computedNumericDomain = useMemo(() => {
-    if (
-      !Number.isFinite(numericDomain?.[0]) ||
-      !Number.isFinite(numericDomain?.[1])
-    ) {
-      return [0, 1];
-    }
-    if (numericDomain[0] === numericDomain[1]) {
-      return numericDomain[0] === 0
-        ? [0, 1]
-        : [Math.min(0, numericDomain[0]), Math.max(0, numericDomain[1])];
-    }
-    return numericDomain;
-  }, [numericDomain]);
+  // Derive safe domains
+  const xDomainSafe =
+    !isVertical && xDomainProp === undefined
+      ? safeDomainProp(computedNumericDomain)
+      : safeDomainProp(xDomainProp || computedNumericDomain);
+
+  const yDomainSafe =
+    isVertical && yDomainProp === undefined
+      ? safeDomainProp(computedNumericDomain)
+      : safeDomainProp(yDomainProp || computedNumericDomain);
 
   if (!hasRenderableData) {
     return (
@@ -381,15 +443,6 @@ export default function BarCategory({
       </ChartContainer>
     );
   }
-
-  const xDomain =
-    !isVertical && xDomainProp === undefined
-      ? computedNumericDomain
-      : xDomainProp;
-  const yDomain =
-    isVertical && yDomainProp === undefined
-      ? computedNumericDomain
-      : yDomainProp;
 
   return (
     <ChartContainer
@@ -440,7 +493,13 @@ export default function BarCategory({
           tickLine={false}
           tick={{ ...axisTickStyle, ...(xTick || {}) }}
           tickMargin={xTickMargin ?? 12}
-          {...(xDomain !== undefined ? { domain: xDomain } : {})}
+          domain={xDomainSafe}
+          ticks={
+            Array.isArray(xTicksProp)
+              ? xTicksProp.filter((t) => Number.isFinite(Number(t)))
+              : undefined
+          }
+          tickFormatter={safeTickFormatter}
           {...restXAxis}
         />
 
@@ -452,7 +511,13 @@ export default function BarCategory({
           tick={{ ...axisTickStyle, ...(yTick || {}) }}
           tickMargin={yTickMargin ?? 8}
           width={yWidth ?? (isVertical ? 48 : undefined)}
-          {...(yDomain !== undefined ? { domain: yDomain } : {})}
+          domain={yDomainSafe}
+          ticks={
+            Array.isArray(yTicksProp)
+              ? yTicksProp.filter((t) => Number.isFinite(Number(t)))
+              : undefined
+          }
+          tickFormatter={safeTickFormatter}
           {...restYAxis}
         />
 
@@ -474,41 +539,39 @@ export default function BarCategory({
 
           const gradientId = gradientMap.get(seriesItem.key);
           const fillColor =
-            seriesItem.fill ||
+            seriesItem.fill ??
             (gradientId ? `url(#${gradientId})` : seriesItem.color);
 
-          const resolvedBarSize = toOptionalNumber(seriesItem.barSize);
+          const resolvedBarSize = toFiniteNumber(seriesItem.barSize, undefined);
           const resolvedMaxBarSize =
-            toOptionalNumber(seriesItem.maxBarSize) ?? 48;
+            toFiniteNumber(seriesItem.maxBarSize, undefined) ?? 48;
 
           const resolvedMinPoint =
             typeof seriesItem.minPointSize === 'function'
               ? seriesItem.minPointSize
-              : toOptionalNumber(seriesItem.minPointSize);
+              : toFiniteNumber(seriesItem.minPointSize, undefined);
 
           const radius =
             seriesItem.radius ?? (isVertical ? [12, 12, 8, 8] : [8, 12, 12, 8]);
 
-          const barProps = {
-            ...(seriesItem.barProps || {}),
-          };
+          const barProps = { ...(seriesItem.barProps || {}) };
 
-          if (resolvedBarSize !== undefined) {
+          if (Number.isFinite(resolvedBarSize)) {
             barProps.barSize = resolvedBarSize;
           }
-          if (resolvedMaxBarSize !== undefined) {
+          if (Number.isFinite(resolvedMaxBarSize)) {
             barProps.maxBarSize = resolvedMaxBarSize;
           }
           if (
             typeof resolvedMinPoint === 'function' ||
-            typeof resolvedMinPoint === 'number'
+            Number.isFinite(resolvedMinPoint)
           ) {
             barProps.minPointSize = resolvedMinPoint;
           }
 
           return (
             <Bar
-              key={seriesItem.key || index}
+              key={seriesItem.key ?? index}
               dataKey={seriesItem.key}
               name={seriesItem.label}
               fill={fillColor}
@@ -523,8 +586,12 @@ export default function BarCategory({
   );
 }
 
+/**
+ * Expose internals for testing / debugging
+ */
 export const __TEST_ONLY__ = {
   toFiniteNumber,
   normaliseDataset,
   computeDomain,
+  safeDomainProp,
 };

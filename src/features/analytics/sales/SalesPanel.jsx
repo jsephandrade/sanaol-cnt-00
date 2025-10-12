@@ -3,6 +3,8 @@ import { useSalesReport } from '@/hooks/useReports';
 import { formatDateLabel, formatMethodLabel } from '../common/utils';
 import SalesSummaryCards from './SalesSummaryCards';
 import SalesTrendCharts from './SalesTrendCharts';
+import SalesCategoryChart from './SalesCategoryChart';
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function SalesPanel() {
   const { data, loading, error, range, setRange } = useSalesReport('30d');
@@ -56,6 +58,31 @@ export default function SalesPanel() {
       ? 'Loading...'
       : 'No data';
 
+  const dashboardRange = useMemo(() => {
+    if (range === '7d') return '7d';
+    if (range === '30d') return '30d';
+    if (range === '24h') return 'today';
+    return range || 'today';
+  }, [range]);
+
+  const {
+    stats: dashboardStats,
+    loading: dashboardLoading,
+    error: dashboardError,
+  } = useDashboard(dashboardRange);
+
+  const categoryData = useMemo(() => {
+    if (!dashboardStats?.salesByCategory?.length) {
+      return [];
+    }
+    return dashboardStats.salesByCategory.map((item) => ({
+      label: item.label || item.category || 'Uncategorized',
+      value: Number(
+        item.value ?? item.amount ?? item.total ?? item.y ?? item.count ?? 0
+      ),
+    }));
+  }, [dashboardStats?.salesByCategory]);
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <SalesSummaryCards
@@ -71,6 +98,12 @@ export default function SalesPanel() {
         dailyData={dailyData}
         monthlyData={monthlyData}
         loading={loading}
+      />
+
+      <SalesCategoryChart
+        data={categoryData}
+        loading={dashboardLoading}
+        error={dashboardError}
       />
     </div>
   );
