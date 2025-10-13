@@ -4,7 +4,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
 import {
   ComposedChart,
@@ -15,7 +15,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import {
   CHART_STYLES,
@@ -26,8 +26,15 @@ import {
   formatCompactCurrency,
 } from '@/utils/chartConfig';
 
-const SalesChart = ({ data, title, description }) => {
+const SalesChart = ({
+  data,
+  title,
+  description,
+  timeRange = 'today',
+  timeRangeLabel = 'Today',
+}) => {
   const gradient = CHART_GRADIENTS.revenue();
+  const showComparison = timeRange === 'today';
 
   return (
     <Card className="border-0 bg-gradient-to-br from-background to-muted/20 hover:shadow-lg transition-all duration-300">
@@ -51,9 +58,7 @@ const SalesChart = ({ data, title, description }) => {
             margin={CHART_MARGINS.default}
             {...ANIMATION_CONFIG.entrance}
           >
-            <defs>
-              {gradient.definition}
-            </defs>
+            <defs>{gradient.definition}</defs>
             <CartesianGrid
               strokeDasharray={CHART_STYLES.grid.strokeDasharray}
               opacity={CHART_STYLES.grid.opacity}
@@ -86,11 +91,11 @@ const SalesChart = ({ data, title, description }) => {
               }}
               iconType="line"
             />
-            {/* Today's sales - Blue area chart with gradient */}
+            {/* Current period sales - Blue area chart with gradient */}
             <Area
               type="monotone"
               dataKey="today"
-              name="Today"
+              name={timeRangeLabel}
               stroke="hsl(var(--primary))"
               strokeWidth={2}
               fill={`url(#${gradient.id})`}
@@ -103,25 +108,27 @@ const SalesChart = ({ data, title, description }) => {
               animationDuration={800}
               animationEasing="ease-out"
             />
-            {/* Yesterday's sales - Gray dashed line */}
-            <Line
-              type="monotone"
-              dataKey="yesterday"
-              name="Yesterday"
-              stroke="hsl(var(--muted-foreground))"
-              strokeWidth={1.5}
-              strokeDasharray="5 5"
-              dot={false}
-              activeDot={{
-                r: 3,
-                strokeWidth: 2,
-                stroke: 'hsl(var(--background))',
-                fill: 'hsl(var(--muted-foreground))',
-              }}
-              isAnimationActive={true}
-              animationDuration={800}
-              animationEasing="ease-out"
-            />
+            {/* Yesterday's sales - Gray dashed line (only for "today" view) */}
+            {showComparison && (
+              <Line
+                type="monotone"
+                dataKey="yesterday"
+                name="Yesterday"
+                stroke="hsl(var(--muted-foreground))"
+                strokeWidth={1.5}
+                strokeDasharray="5 5"
+                dot={false}
+                activeDot={{
+                  r: 3,
+                  strokeWidth: 2,
+                  stroke: 'hsl(var(--background))',
+                  fill: 'hsl(var(--muted-foreground))',
+                }}
+                isAnimationActive={true}
+                animationDuration={800}
+                animationEasing="ease-out"
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </CardContent>

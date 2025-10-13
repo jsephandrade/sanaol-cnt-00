@@ -4,7 +4,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
 import {
   BarChart,
@@ -16,7 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
   Cell,
-  LabelList
+  LabelList,
 } from 'recharts';
 import {
   CHART_STYLES,
@@ -27,7 +27,16 @@ import {
   formatCompactCurrency,
 } from '@/utils/chartConfig';
 
-const CategoryChart = ({ data, title, description }) => {
+const CategoryChart = ({
+  data,
+  title,
+  description,
+  timeRange = 'today',
+  timeRangeLabel = 'Today',
+  dateRangeDisplay,
+}) => {
+  const showComparison = timeRange === 'today';
+
   // Show empty state if no data
   if (!data || data.length === 0) {
     return (
@@ -49,7 +58,9 @@ const CategoryChart = ({ data, title, description }) => {
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted/50 flex items-center justify-center">
               <div className="w-6 h-6 rounded-full bg-muted" />
             </div>
-            <p className="text-sm text-muted-foreground">No category data available</p>
+            <p className="text-sm text-muted-foreground">
+              No category data available
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -66,6 +77,11 @@ const CategoryChart = ({ data, title, description }) => {
             </CardTitle>
             <CardDescription className="text-xs mt-1">
               {description}
+              {dateRangeDisplay && (
+                <span className="block mt-0.5 font-medium text-primary/80">
+                  {dateRangeDisplay}
+                </span>
+              )}
             </CardDescription>
           </div>
           <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -113,10 +129,10 @@ const CategoryChart = ({ data, title, description }) => {
               }}
               iconType="rect"
             />
-            {/* Today's sales - Primary colored bars */}
+            {/* Current period sales - Primary colored bars */}
             <Bar
               dataKey="today"
-              name="Today"
+              name={timeRangeLabel}
               radius={[6, 6, 0, 0]}
               maxBarSize={24}
               fill="hsl(var(--primary))"
@@ -135,29 +151,31 @@ const CategoryChart = ({ data, title, description }) => {
                 }}
               />
             </Bar>
-            {/* Yesterday's sales - Gray bars */}
-            <Bar
-              dataKey="yesterday"
-              name="Yesterday"
-              radius={[6, 6, 0, 0]}
-              maxBarSize={24}
-              fill="hsl(var(--muted-foreground))"
-              fillOpacity={0.4}
-              isAnimationActive={true}
-              animationDuration={800}
-              animationEasing="ease-out"
-            >
-              <LabelList
+            {/* Yesterday's sales - Gray bars (only for "today" view) */}
+            {showComparison && (
+              <Bar
                 dataKey="yesterday"
-                position="top"
-                formatter={(value) => formatCompactCurrency(value)}
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  fill: 'hsl(var(--muted-foreground))',
-                }}
-              />
-            </Bar>
+                name="Yesterday"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={24}
+                fill="hsl(var(--muted-foreground))"
+                fillOpacity={0.4}
+                isAnimationActive={true}
+                animationDuration={800}
+                animationEasing="ease-out"
+              >
+                <LabelList
+                  dataKey="yesterday"
+                  position="top"
+                  formatter={(value) => formatCompactCurrency(value)}
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    fill: 'hsl(var(--muted-foreground))',
+                  }}
+                />
+              </Bar>
+            )}
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

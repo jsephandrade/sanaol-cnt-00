@@ -25,8 +25,12 @@ def _parse_range(val: str | None):
         return now - timedelta(days=1), now
     s = str(val).lower().strip()
     if s == "today" or s == "24h":
-        # Start of today
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Start of today in Manila timezone
+        # Convert to local timezone first, then get start of day, then convert back to UTC for DB queries
+        local_now = dj_tz.localtime(now)
+        start_of_day_local = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Convert back to UTC for database queries
+        start = dj_tz.make_aware(start_of_day_local.replace(tzinfo=None), dj_tz.get_current_timezone())
         return start, now
     if s == "7d":
         return now - timedelta(days=7), now
@@ -55,9 +59,15 @@ def reports_dashboard(request):
         r = request.GET.get("range", "today")
         start, end = _parse_range(r)
 
-        # Get start of month for monthly sales
+        # Calculate yesterday's date range for comparisons
+        yesterday_start = start - timedelta(days=1)
+        yesterday_end = yesterday_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+        # Get start of month for monthly sales (in Manila timezone)
         now = dj_tz.now()
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        local_now = dj_tz.localtime(now)
+        month_start_local = local_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        month_start = dj_tz.make_aware(month_start_local.replace(tzinfo=None), dj_tz.get_current_timezone())
 
         # Daily sales (today)
         daily_payments = PaymentTransaction.objects.filter(
@@ -67,6 +77,18 @@ def reports_dashboard(request):
         )
         daily_sales = daily_payments.aggregate(total=Sum("amount"))["total"] or 0
 
+        # Yesterday's sales for comparison
+        daily_sales_yesterday = PaymentTransaction.objects.filter(
+            created_at__gte=yesterday_start,
+            created_at__lte=yesterday_end,
+            status=PaymentTransaction.STATUS_COMPLETED
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        # Calculate percentage change for daily sales
+        daily_sales_change = 0.0
+        if daily_sales_yesterday > 0:
+            daily_sales_change = ((daily_sales - daily_sales_yesterday) / daily_sales_yesterday) * 100
+
         # Monthly sales
         monthly_payments = PaymentTransaction.objects.filter(
             created_at__gte=month_start,
@@ -75,6 +97,20 @@ def reports_dashboard(request):
         )
         monthly_sales = monthly_payments.aggregate(total=Sum("amount"))["total"] or 0
 
+        # Last month's sales for comparison
+        last_month_start = (month_start - timedelta(days=1)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        last_month_end = month_start - timedelta(seconds=1)
+        monthly_sales_last_month = PaymentTransaction.objects.filter(
+            created_at__gte=last_month_start,
+            created_at__lte=last_month_end,
+            status=PaymentTransaction.STATUS_COMPLETED
+        ).aggregate(total=Sum("amount"))["total"] or 0
+
+        # Calculate percentage change for monthly sales
+        monthly_sales_change = 0.0
+        if monthly_sales_last_month > 0:
+            monthly_sales_change = ((monthly_sales - monthly_sales_last_month) / monthly_sales_last_month) * 100
+
         # Order count for today
         orders_today = Order.objects.filter(
             created_at__gte=start,
@@ -82,50 +118,109 @@ def reports_dashboard(request):
         ).exclude(status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED])
         order_count = orders_today.count()
 
-        # Sales by time of day (hourly breakdown)
+        # Yesterday's order count for comparison
+        orders_yesterday = Order.objects.filter(
+            created_at__gte=yesterday_start,
+            created_at__lte=yesterday_end
+        ).exclude(status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED])
+        order_count_yesterday = orders_yesterday.count()
+
+        # Calculate percentage change for order count
+        order_count_change = 0.0
+        if order_count_yesterday > 0:
+            order_count_change = ((order_count - order_count_yesterday) / order_count_yesterday) * 100
+
+        # Sales by time - hourly for today, daily for multi-day ranges
         # Use Order.created_at for accurate sale timing (when order was placed)
         # Send ISO timestamps to frontend for timezone conversion
         sales_by_time = []
-        for hour in range(0, 24):  # Every 1 hour
-            # Create timezone-aware boundaries for accurate comparison
-            hour_start = start.replace(hour=hour, minute=0, second=0, microsecond=0)
-            hour_end = hour_start + timedelta(hours=1)
-
-            # Aggregate by Order.total_amount for actual sale values
-            # Filter out cancelled/voided orders for accurate reporting
-            hour_total = Order.objects.filter(
-                created_at__gte=hour_start,
-                created_at__lt=hour_end
-            ).exclude(
-                status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
-            ).aggregate(total=Sum("total_amount"))["total"] or 0
-
-            # Send ISO timestamp for frontend timezone conversion
-            # Frontend will convert this to user's local timezone
-            sales_by_time.append({
-                "time": hour_start.isoformat(),  # ISO format with timezone info
-                "amount": float(hour_total)
-            })
-
-        # Yesterday's sales for comparison (same hourly breakdown)
-        yesterday_start = start - timedelta(days=1)
-        yesterday_end = yesterday_start.replace(hour=23, minute=59, second=59, microsecond=999999)
         sales_by_time_yesterday = []
-        for hour in range(0, 24):  # Every 1 hour
-            hour_start = yesterday_start.replace(hour=hour, minute=0, second=0, microsecond=0)
-            hour_end = hour_start + timedelta(hours=1)
 
-            hour_total = Order.objects.filter(
-                created_at__gte=hour_start,
-                created_at__lt=hour_end
-            ).exclude(
-                status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
-            ).aggregate(total=Sum("total_amount"))["total"] or 0
+        # Determine if this is a single-day or multi-day range
+        time_diff = (end - start).total_seconds() / 3600  # hours
 
-            sales_by_time_yesterday.append({
-                "time": hour_start.isoformat(),
-                "amount": float(hour_total)
-            })
+        if time_diff <= 24:  # Single day - use hourly breakdown
+            for hour in range(0, 24):  # Every 1 hour
+                # Create timezone-aware boundaries for accurate comparison
+                hour_start = start.replace(hour=hour, minute=0, second=0, microsecond=0)
+                hour_end = hour_start + timedelta(hours=1)
+
+                # Aggregate by Order.total_amount for actual sale values
+                # Filter out cancelled/voided orders for accurate reporting
+                hour_total = Order.objects.filter(
+                    created_at__gte=hour_start,
+                    created_at__lt=hour_end
+                ).exclude(
+                    status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+                ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+                # Send ISO timestamp for frontend timezone conversion
+                sales_by_time.append({
+                    "time": hour_start.isoformat(),  # ISO format with timezone info
+                    "amount": float(hour_total)
+                })
+
+            # Yesterday's sales for comparison (same hourly breakdown)
+            for hour in range(0, 24):  # Every 1 hour
+                hour_start = yesterday_start.replace(hour=hour, minute=0, second=0, microsecond=0)
+                hour_end = hour_start + timedelta(hours=1)
+
+                hour_total = Order.objects.filter(
+                    created_at__gte=hour_start,
+                    created_at__lt=hour_end
+                ).exclude(
+                    status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+                ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+                sales_by_time_yesterday.append({
+                    "time": hour_start.isoformat(),
+                    "amount": float(hour_total)
+                })
+        else:  # Multi-day range - use daily breakdown
+            # Calculate number of days in range
+            num_days = int((end - start).total_seconds() / 86400) + 1
+
+            # Get daily sales for the selected range
+            for day_offset in range(num_days):
+                day_start = start + timedelta(days=day_offset)
+                # Ensure we're working with start of day in local timezone
+                local_day_start = dj_tz.localtime(day_start)
+                day_start_normalized = local_day_start.replace(hour=0, minute=0, second=0, microsecond=0)
+                day_start_aware = dj_tz.make_aware(day_start_normalized.replace(tzinfo=None), dj_tz.get_current_timezone())
+                day_end = day_start_aware + timedelta(days=1)
+
+                day_total = Order.objects.filter(
+                    created_at__gte=day_start_aware,
+                    created_at__lt=day_end
+                ).exclude(
+                    status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+                ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+                sales_by_time.append({
+                    "time": day_start_aware.isoformat(),
+                    "amount": float(day_total)
+                })
+
+            # For comparison, get the previous period (same number of days before)
+            comparison_start = start - timedelta(days=num_days)
+            for day_offset in range(num_days):
+                day_start = comparison_start + timedelta(days=day_offset)
+                local_day_start = dj_tz.localtime(day_start)
+                day_start_normalized = local_day_start.replace(hour=0, minute=0, second=0, microsecond=0)
+                day_start_aware = dj_tz.make_aware(day_start_normalized.replace(tzinfo=None), dj_tz.get_current_timezone())
+                day_end = day_start_aware + timedelta(days=1)
+
+                day_total = Order.objects.filter(
+                    created_at__gte=day_start_aware,
+                    created_at__lt=day_end
+                ).exclude(
+                    status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+                ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+                sales_by_time_yesterday.append({
+                    "time": day_start_aware.isoformat(),
+                    "amount": float(day_total)
+                })
 
         # Sales by category (from menu items in orders)
         # Include all valid order statuses except cancelled/voided
@@ -139,8 +234,9 @@ def reports_dashboard(request):
 
         for item in order_items:
             # Only count items with non-empty categories
-            if item.category and item.category.strip():
-                category_sales[item.category] += float(item.price * item.quantity)
+            category = getattr(item, 'category', None)
+            if category and category.strip():
+                category_sales[category] += float(item.price * item.quantity)
 
         # Convert to list format, filter out any zero amounts
         sales_by_category = [
@@ -159,8 +255,9 @@ def reports_dashboard(request):
         ).select_related('menu_item')
 
         for item in order_items_yesterday:
-            if item.category and item.category.strip():
-                category_sales_yesterday[item.category] += float(item.price * item.quantity)
+            category = getattr(item, 'category', None)
+            if category and category.strip():
+                category_sales_yesterday[category] += float(item.price * item.quantity)
 
         sales_by_category_yesterday = [
             {"category": cat, "amount": amount}
@@ -182,6 +279,21 @@ def reports_dashboard(request):
         popular_items = [
             {"name": item["item_name"], "count": item["count"]}
             for item in popular_items_data
+        ]
+
+        # Yesterday's popular items for comparison
+        popular_items_yesterday_data = OrderItem.objects.filter(
+            order__created_at__gte=yesterday_start,
+            order__created_at__lte=yesterday_end
+        ).exclude(
+            order__status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+        ).values('item_name').annotate(
+            count=Sum('quantity')
+        ).order_by('-count')[:5]
+
+        popular_items_yesterday = [
+            {"name": item["item_name"], "count": item["count"]}
+            for item in popular_items_yesterday_data
         ]
 
         # Recent sales (last 10 completed orders)
@@ -209,14 +321,23 @@ def reports_dashboard(request):
             "success": True,
             "data": {
                 "dailySales": float(daily_sales),
+                "dailySalesYesterday": float(daily_sales_yesterday),
+                "dailySalesChange": float(daily_sales_change),
                 "monthlySales": float(monthly_sales),
+                "monthlySalesLastMonth": float(monthly_sales_last_month),
+                "monthlySalesChange": float(monthly_sales_change),
                 "orderCount": order_count,
+                "orderCountYesterday": order_count_yesterday,
+                "orderCountChange": float(order_count_change),
                 "salesByTime": sales_by_time,
                 "salesByTimeYesterday": sales_by_time_yesterday,
                 "salesByCategory": sales_by_category,
                 "salesByCategoryYesterday": sales_by_category_yesterday,
                 "popularItems": popular_items,
+                "popularItemsYesterday": popular_items_yesterday,
                 "recentSales": recent_sales,
+                "dateRangeStart": start.isoformat(),
+                "dateRangeEnd": end.isoformat(),
             }
         })
     except Exception as e:
