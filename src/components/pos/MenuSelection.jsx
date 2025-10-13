@@ -137,27 +137,27 @@ const MenuSelection = ({
           </CardHeader>
 
           <CardContent className="flex flex-1 flex-col p-4 pt-1">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
-                  Starting at
-                </p>
-                <div className="flex items-baseline gap-1 text-primary">
-                  <span className="text-sm font-semibold text-muted-foreground sm:text-base">
-                    PHP
-                  </span>
-                  <span className="text-base font-semibold sm:text-lg">
-                    {Number(item.price).toFixed(2)}
-                  </span>
-                </div>
+            <div>
+              <p className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
+                Starting at
+              </p>
+              <div className="flex items-baseline gap-1 text-primary">
+                <span className="text-sm font-semibold text-muted-foreground sm:text-base">
+                  PHP
+                </span>
+                <span className="text-base font-semibold sm:text-lg">
+                  {Number(item.price).toFixed(2)}
+                </span>
               </div>
               {showCategoryBadge && categoryLabel ? (
-                <Badge
-                  variant="outline"
-                  className="max-w-[7rem] rounded-full px-3 py-1 text-[9px] font-medium bg-[#E7F2EF] text-[#000000] border-transparent sm:text-[10px]"
-                >
-                  <span className="block truncate">{categoryLabel}</span>
-                </Badge>
+                <div className="mt-2">
+                  <Badge
+                    variant="outline"
+                    className="rounded-full px-3 py-1 text-[9px] font-medium bg-[#FFF3BF] text-[#5C4300] border-transparent sm:text-[10px]"
+                  >
+                    {categoryLabel}
+                  </Badge>
+                </div>
               ) : null}
             </div>
           </CardContent>

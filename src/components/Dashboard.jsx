@@ -22,15 +22,65 @@ const Dashboard = () => {
       enabled: isVerifier && Boolean(token),
     });
 
-  const salesTimeData = (stats?.salesByTime || []).map((item) => ({
-    name: item.time,
-    amount: item.amount,
-  }));
+  // Merge today and yesterday sales data for comparison chart
+  const salesTimeData = (stats?.salesByTime || []).map((item, index) => {
+    const date = new Date(item.time);
+    const hour = date.getHours();
 
-  const categorySalesData = (stats?.salesByCategory || []).map((item) => ({
-    name: item.category,
-    amount: item.amount,
-  }));
+    // Format as 12-hour time with AM/PM
+    let timeLabel;
+    if (hour === 0) {
+      timeLabel = '12AM';
+    } else if (hour < 12) {
+      timeLabel = `${hour}AM`;
+    } else if (hour === 12) {
+      timeLabel = '12PM';
+    } else {
+      timeLabel = `${hour - 12}PM`;
+    }
+
+    // Get corresponding yesterday's data
+    const yesterdayData = stats?.salesByTimeYesterday?.[index];
+
+    return {
+      name: timeLabel,
+      today: item.amount,
+      yesterday: yesterdayData?.amount || 0,
+    };
+  });
+
+  // Merge today and yesterday category sales data for comparison
+  const categorySalesData = React.useMemo(() => {
+    const todayCategories = stats?.salesByCategory || [];
+    const yesterdayCategories = stats?.salesByCategoryYesterday || [];
+
+    // Create a map of all unique categories
+    const categoryMap = new Map();
+
+    // Add today's data
+    todayCategories.forEach(item => {
+      categoryMap.set(item.category, {
+        name: item.category,
+        today: item.amount,
+        yesterday: 0
+      });
+    });
+
+    // Add yesterday's data
+    yesterdayCategories.forEach(item => {
+      if (categoryMap.has(item.category)) {
+        categoryMap.get(item.category).yesterday = item.amount;
+      } else {
+        categoryMap.set(item.category, {
+          name: item.category,
+          today: 0,
+          yesterday: item.amount
+        });
+      }
+    });
+
+    return Array.from(categoryMap.values());
+  }, [stats?.salesByCategory, stats?.salesByCategoryYesterday]);
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -41,11 +91,19 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <h2 className="text-2xl font-semibold">Dashboard</h2>
+    <div className="space-y-6 animate-fade-in p-1">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Welcome back! Here's what's happening with your canteen today.
+          </p>
+        </div>
+      </div>
 
       {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Today's Sales"
           value={stats?.dailySales || 0}
@@ -83,7 +141,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SalesChart
           data={salesTimeData}
           title="Sales by Time of Day"
@@ -97,7 +155,7 @@ const Dashboard = () => {
       </div>
 
       {/* Popular Items & Recent Sales */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PopularItems items={stats?.popularItems || []} />
         <RecentSales sales={stats?.recentSales || []} />
       </div>

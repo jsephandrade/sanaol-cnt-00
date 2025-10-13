@@ -143,6 +143,13 @@ class MenuService {
     return { success: true, data: raw?.data || raw };
   }
 
+  async createCategory(categoryData) {
+    const res = await apiClient.post('/menu/categories', categoryData, {
+      retry: { retries: 1 },
+    });
+    return { success: true, data: res?.data || res };
+  }
+
   async uploadItemImage(itemId, imageFile) {
     const formData = new FormData();
     formData.append('image', imageFile);

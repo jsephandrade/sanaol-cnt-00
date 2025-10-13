@@ -601,43 +601,95 @@ def menu_item_image(request, item_id):
     return JsonResponse({"success": True, "data": {"imageUrl": image_url}})
 
 
-@require_http_methods(["GET"]) 
+@require_http_methods(["GET", "POST"])
 def menu_categories(request):
-    try:
-        from .models import MenuItem
-        rows = (
-            MenuItem.objects.filter(archived=False)
-            .values_list("category")
-            .order_by("category")
-            .distinct()
-        )
-        cats = [c[0] or "" for c in rows]
-        # Optional counts
-        out = []
-        for name in cats:
-            count = MenuItem.objects.filter(category=name, archived=False).count()
-            out.append({
-                "id": (name or "").lower().replace(" ", "_") or "uncategorized",
-                "name": name or "Uncategorized",
-                "itemCount": count,
-            })
-        return JsonResponse({"success": True, "data": out})
-    except Exception:
-        if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
-            return JsonResponse({"success": False, "data": [], "message": "Failed to load categories"}, status=500)
-        # Fallback based on in-memory items (dev only)
+    if request.method == "GET":
         try:
-            names = sorted({(i.get("category") or "") for i in MENU_ITEMS if not i.get("archived")})
+            from .models import MenuCategory, MenuItem
+            # Get categories from MenuCategory table
+            categories = MenuCategory.objects.all().order_by("sort_order", "name")
             out = []
-            for name in names:
+            for cat in categories:
+                # Count items in this category
+                count = MenuItem.objects.filter(category=cat.name, archived=False).count()
                 out.append({
-                    "id": (name or "").lower().replace(" ", "_") or "uncategorized",
-                    "name": name or "Uncategorized",
-                    "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
+                    "id": str(cat.id),
+                    "name": cat.name,
+                    "description": cat.description or "",
+                    "itemCount": count,
+                    "sortOrder": cat.sort_order,
                 })
             return JsonResponse({"success": True, "data": out})
         except Exception:
-            return JsonResponse({"success": True, "data": []})
+            if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+                return JsonResponse({"success": False, "data": [], "message": "Failed to load categories"}, status=500)
+            # Fallback based on in-memory items (dev only)
+            try:
+                names = sorted({(i.get("category") or "") for i in MENU_ITEMS if not i.get("archived")})
+                out = []
+                for name in names:
+                    out.append({
+                        "id": (name or "").lower().replace(" ", "_") or "uncategorized",
+                        "name": name or "Uncategorized",
+                        "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
+                    })
+                return JsonResponse({"success": True, "data": out})
+            except Exception:
+                return JsonResponse({"success": True, "data": []})
+
+    # POST - Create new category
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "menu.manage") and not _has_permission(actor, "inventory.menu.manage"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    try:
+        from .models import MenuCategory
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+        name = (payload.get("name") or "").strip()
+
+        if not name:
+            return JsonResponse({"success": False, "message": "Category name is required"}, status=400)
+
+        # Check if category already exists
+        if MenuCategory.objects.filter(name__iexact=name).exists():
+            return JsonResponse({"success": False, "message": "Category already exists"}, status=400)
+
+        description = (payload.get("description") or "").strip()
+        sort_order = payload.get("sortOrder", 0)
+
+        try:
+            sort_order = int(sort_order)
+        except:
+            sort_order = 0
+
+        category = MenuCategory.objects.create(
+            name=name,
+            description=description,
+            sort_order=sort_order
+        )
+
+        result = {
+            "id": str(category.id),
+            "name": category.name,
+            "description": category.description,
+            "sortOrder": category.sort_order,
+            "itemCount": 0,
+        }
+
+        _record_menu_audit(
+            request,
+            actor,
+            action="Category created",
+            details=f"Created category '{name}'",
+            severity="info",
+            meta={"id": str(category.id), "name": name},
+        )
+
+        return JsonResponse({"success": True, "data": result})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Failed to create category: {str(e)}"}, status=500)
 
 
 __all__ = [

@@ -739,6 +739,27 @@ class ReorderSetting(models.Model):
 # -----------------------------
 
 
+class MenuCategory(models.Model):
+    """Category for organizing menu items."""
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=128, unique=True)
+    description = models.TextField(blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "menu_category"
+        ordering = ["sort_order", "name"]
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["sort_order"]),
+        ]
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class MenuItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -970,6 +991,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     menu_item = models.ForeignKey('MenuItem', on_delete=models.SET_NULL, null=True, blank=True)
     item_name = models.CharField(max_length=255)
+    category = models.CharField(max_length=128, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     quantity = models.PositiveIntegerField(default=1)
     state = models.CharField(max_length=16, choices=STATE_CHOICES, default=STATE_QUEUED)

@@ -1,21 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Smartphone, Clock, Check, ChevronDown } from 'lucide-react';
+import { Package, Smartphone, Clock, Check } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { formatOrderNumber } from '@/lib/utils';
 
 const truthyValues = new Set([true, 'true', 1, '1']);
 const falsyValues = new Set([false, 'false', 0, '0']);
-const MAX_VISIBLE_PER_SECTION = 4;
 
 const normalizeStatus = (value) => {
   if (!value) return '';
@@ -172,19 +170,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
     [visibleOrders]
   );
 
-  const [showAllWalkIn, setShowAllWalkIn] = useState(false);
-  const [showAllOnline, setShowAllOnline] = useState(false);
-
-  const walkInHasMore = walkInOrders.length > MAX_VISIBLE_PER_SECTION;
-  const onlineHasMore = onlineOrders.length > MAX_VISIBLE_PER_SECTION;
-
-  const displayedWalkInOrders = showAllWalkIn
-    ? walkInOrders
-    : walkInOrders.slice(0, MAX_VISIBLE_PER_SECTION);
-  const displayedOnlineOrders = showAllOnline
-    ? onlineOrders
-    : onlineOrders.slice(0, MAX_VISIBLE_PER_SECTION);
-
   const formatTimeAgo = (input) => {
     const d = input instanceof Date ? input : new Date(input);
     const ts = d.getTime();
@@ -250,11 +235,8 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
         </CardHeader>
         <CardContent className="p-0">
           {walkInOrders.length > 0 ? (
-            <div className="relative">
-              <div
-                className={`divide-y ${walkInHasMore && !showAllWalkIn ? 'max-h-96 overflow-hidden' : ''}`}
-              >
-                {displayedWalkInOrders.map((order) => {
+            <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
+              {walkInOrders.map((order) => {
                   const status = getOrderStatus(order);
                   const statusLabel = formatStatusLabel(status);
                   const isPending = [
@@ -351,10 +333,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                     </div>
                   );
                 })}
-              </div>
-              {walkInHasMore && !showAllWalkIn && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -365,35 +343,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
             </div>
           )}
         </CardContent>
-        {walkInHasMore && (
-          <CardFooter className="border-t py-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {displayedWalkInOrders.length} of {walkInOrders.length}{' '}
-              walk-in orders
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group flex items-center gap-1"
-              onClick={() => setShowAllWalkIn((prev) => !prev)}
-              aria-expanded={showAllWalkIn}
-              aria-label={
-                showAllWalkIn
-                  ? 'Collapse walk-in orders'
-                  : 'Expand walk-in orders'
-              }
-            >
-              <span className="text-sm font-medium">
-                {showAllWalkIn ? 'Show Less' : 'Show All'}
-              </span>
-              <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-300 ease-in-out ${showAllWalkIn ? 'rotate-180' : ''}`}
-                />
-              </span>
-            </Button>
-          </CardFooter>
-        )}
       </Card>
 
       {/* Online Orders */}
@@ -421,11 +370,8 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
         </CardHeader>
         <CardContent className="p-0">
           {onlineOrders.length > 0 ? (
-            <div className="relative">
-              <div
-                className={`divide-y ${onlineHasMore && !showAllOnline ? 'max-h-96 overflow-hidden' : ''}`}
-              >
-                {displayedOnlineOrders.map((order) => {
+            <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
+              {onlineOrders.map((order) => {
                   const status = getOrderStatus(order);
                   const statusLabel = formatStatusLabel(status);
                   const isPending = [
@@ -525,10 +471,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                     </div>
                   );
                 })}
-              </div>
-              {onlineHasMore && !showAllOnline && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -537,35 +479,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
             </div>
           )}
         </CardContent>
-        {onlineHasMore && (
-          <CardFooter className="border-t py-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {displayedOnlineOrders.length} of {onlineOrders.length}{' '}
-              online orders
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group flex items-center gap-1"
-              onClick={() => setShowAllOnline((prev) => !prev)}
-              aria-expanded={showAllOnline}
-              aria-label={
-                showAllOnline
-                  ? 'Collapse online orders'
-                  : 'Expand online orders'
-              }
-            >
-              <span className="text-sm font-medium">
-                {showAllOnline ? 'Show Less' : 'Show All'}
-              </span>
-              <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-300 ease-in-out ${showAllOnline ? 'rotate-180' : ''}`}
-                />
-              </span>
-            </Button>
-          </CardFooter>
-        )}
       </Card>
 
       {/* Statistics Overview */}

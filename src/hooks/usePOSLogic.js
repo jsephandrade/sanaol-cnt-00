@@ -232,11 +232,9 @@ export const usePOSLogic = () => {
         type: 'walk-in',
         orderNumber: identifiers.number,
         orderReference: identifiers.reference,
-        payment: {
-          method: paymentMethod,
-          tenderedAmount,
-          change,
-        },
+        paymentMethod: paymentMethod,
+        tenderedAmount,
+        change,
       };
       const res = await orderService.createOrder(payload);
       const data = res?.data ?? res;

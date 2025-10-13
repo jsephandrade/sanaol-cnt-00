@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 const formatDetails = (details) => {
   if (details == null) {
@@ -30,26 +31,51 @@ const formatTimestamp = (timestamp) => {
   return date.toISOString();
 };
 
-const exportActivityLogs = (logs = []) => {
+const exportActivityLogs = async (logs = []) => {
   const safeLogs = Array.isArray(logs) ? logs : [];
 
-  const worksheetData = safeLogs.map((log) => ({
-    Action: log?.action ?? '',
-    Type: log?.type ?? '',
-    User: log?.user ?? '',
-    'User ID': log?.userId ?? '',
-    Timestamp: formatTimestamp(log?.timestamp),
-    Details: formatDetails(log?.details),
-  }));
+  // Create a new workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Activity Logs');
 
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData, {
-    header: ['Action', 'Type', 'User', 'User ID', 'Timestamp', 'Details'],
+  // Define columns
+  worksheet.columns = [
+    { header: 'Action', key: 'action', width: 20 },
+    { header: 'Type', key: 'type', width: 15 },
+    { header: 'User', key: 'user', width: 25 },
+    { header: 'User ID', key: 'userId', width: 15 },
+    { header: 'Timestamp', key: 'timestamp', width: 25 },
+    { header: 'Details', key: 'details', width: 40 },
+  ];
+
+  // Add rows
+  safeLogs.forEach((log) => {
+    worksheet.addRow({
+      action: log?.action ?? '',
+      type: log?.type ?? '',
+      user: log?.user ?? '',
+      userId: log?.userId ?? '',
+      timestamp: formatTimestamp(log?.timestamp),
+      details: formatDetails(log?.details),
+    });
   });
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Activity Logs');
+  // Style the header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' },
+  };
 
-  XLSX.writeFile(workbook, 'activity-logs.xlsx');
+  // Generate Excel file buffer
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  // Save the file
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  saveAs(blob, 'activity-logs.xlsx');
 
   return workbook;
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SidebarHeader,
@@ -34,6 +34,7 @@ export const NavigationSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const activeItemRef = useRef(null);
 
   const displayName = user?.name || 'Admin';
   const displayRole = user?.role || 'admin';
@@ -106,6 +107,16 @@ export const NavigationSidebar = () => {
     }))
     .filter((group) => group.items.length > 0);
 
+  // Scroll active item into view when location changes
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [location.pathname]);
+
   return (
     <>
       {/* Collapsed width */}
@@ -174,6 +185,7 @@ export const NavigationSidebar = () => {
                         key={item.name}
                         className="animate-slide-in"
                         style={{ animationDelay }}
+                        ref={isActive ? activeItemRef : null}
                       >
                         <SidebarMenuButton
                           asChild

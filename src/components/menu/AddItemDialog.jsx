@@ -12,10 +12,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { PlusCircle } from 'lucide-react';
 
-const AddItemDialog = ({ open, onOpenChange, newItem, setNewItem, onAdd }) => {
+const AddItemDialog = ({ open, onOpenChange, newItem, setNewItem, onAdd, categories, onAddCategory }) => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -91,14 +98,40 @@ const AddItemDialog = ({ open, onOpenChange, newItem, setNewItem, onAdd }) => {
             <Label htmlFor="category" className="text-right">
               Category
             </Label>
-            <Input
-              id="category"
-              value={newItem.category}
-              onChange={(e) =>
-                setNewItem({ ...newItem, category: e.target.value })
-              }
-              className="col-span-3"
-            />
+            <div className="col-span-3 flex gap-2">
+              <Select
+                value={newItem.category}
+                onValueChange={(value) =>
+                  setNewItem({ ...newItem, category: value })
+                }
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories && categories.length > 0 ? (
+                    categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No categories available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onAddCategory}
+                title="Add new category"
+              >
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">

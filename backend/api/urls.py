@@ -142,6 +142,7 @@ urlpatterns = [
     ),
 
     # Reports
+    path("reports/dashboard", rpt_views.reports_dashboard, name="reports_dashboard"),
     path("reports/sales", rpt_views.reports_sales, name="reports_sales"),
     path("reports/inventory", rpt_views.reports_inventory, name="reports_inventory"),
     path("reports/orders", rpt_views.reports_orders, name="reports_orders"),

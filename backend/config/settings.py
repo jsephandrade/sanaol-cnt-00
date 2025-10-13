@@ -95,7 +95,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 SITE_ID = 1
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Manila"
 USE_TZ = True
 
 # CORS

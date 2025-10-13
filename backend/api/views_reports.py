@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
+from collections import defaultdict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_tz
+from django.db.models import Sum, Count, Q
 
 from .views_common import _actor_from_request, _has_permission
 
@@ -22,8 +24,10 @@ def _parse_range(val: str | None):
     if not val:
         return now - timedelta(days=1), now
     s = str(val).lower().strip()
-    if s == "24h":
-        return now - timedelta(hours=24), now
+    if s == "today" or s == "24h":
+        # Start of today
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        return start, now
     if s == "7d":
         return now - timedelta(days=7), now
     if s == "30d":
@@ -34,6 +38,190 @@ def _parse_range(val: str | None):
         return datetime.fromisoformat(start_s), datetime.fromisoformat(end_s)
     except Exception:
         return now - timedelta(days=1), now
+
+
+@require_http_methods(["GET"])  # /reports/dashboard
+def reports_dashboard(request):
+    """Aggregate dashboard statistics: sales, orders, popular items, recent sales."""
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "reports.dashboard.view"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    try:
+        from .models import Order, OrderItem, PaymentTransaction, MenuItem
+
+        r = request.GET.get("range", "today")
+        start, end = _parse_range(r)
+
+        # Get start of month for monthly sales
+        now = dj_tz.now()
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Daily sales (today)
+        daily_payments = PaymentTransaction.objects.filter(
+            created_at__gte=start,
+            created_at__lte=end,
+            status=PaymentTransaction.STATUS_COMPLETED
+        )
+        daily_sales = daily_payments.aggregate(total=Sum("amount"))["total"] or 0
+
+        # Monthly sales
+        monthly_payments = PaymentTransaction.objects.filter(
+            created_at__gte=month_start,
+            created_at__lte=end,
+            status=PaymentTransaction.STATUS_COMPLETED
+        )
+        monthly_sales = monthly_payments.aggregate(total=Sum("amount"))["total"] or 0
+
+        # Order count for today
+        orders_today = Order.objects.filter(
+            created_at__gte=start,
+            created_at__lte=end
+        ).exclude(status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED])
+        order_count = orders_today.count()
+
+        # Sales by time of day (hourly breakdown)
+        # Use Order.created_at for accurate sale timing (when order was placed)
+        # Send ISO timestamps to frontend for timezone conversion
+        sales_by_time = []
+        for hour in range(0, 24):  # Every 1 hour
+            # Create timezone-aware boundaries for accurate comparison
+            hour_start = start.replace(hour=hour, minute=0, second=0, microsecond=0)
+            hour_end = hour_start + timedelta(hours=1)
+
+            # Aggregate by Order.total_amount for actual sale values
+            # Filter out cancelled/voided orders for accurate reporting
+            hour_total = Order.objects.filter(
+                created_at__gte=hour_start,
+                created_at__lt=hour_end
+            ).exclude(
+                status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+            ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+            # Send ISO timestamp for frontend timezone conversion
+            # Frontend will convert this to user's local timezone
+            sales_by_time.append({
+                "time": hour_start.isoformat(),  # ISO format with timezone info
+                "amount": float(hour_total)
+            })
+
+        # Yesterday's sales for comparison (same hourly breakdown)
+        yesterday_start = start - timedelta(days=1)
+        yesterday_end = yesterday_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+        sales_by_time_yesterday = []
+        for hour in range(0, 24):  # Every 1 hour
+            hour_start = yesterday_start.replace(hour=hour, minute=0, second=0, microsecond=0)
+            hour_end = hour_start + timedelta(hours=1)
+
+            hour_total = Order.objects.filter(
+                created_at__gte=hour_start,
+                created_at__lt=hour_end
+            ).exclude(
+                status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+            ).aggregate(total=Sum("total_amount"))["total"] or 0
+
+            sales_by_time_yesterday.append({
+                "time": hour_start.isoformat(),
+                "amount": float(hour_total)
+            })
+
+        # Sales by category (from menu items in orders)
+        # Include all valid order statuses except cancelled/voided
+        category_sales = defaultdict(float)
+        order_items = OrderItem.objects.filter(
+            order__created_at__gte=start,
+            order__created_at__lte=end
+        ).exclude(
+            order__status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+        ).select_related('menu_item')
+
+        for item in order_items:
+            # Only count items with non-empty categories
+            if item.category and item.category.strip():
+                category_sales[item.category] += float(item.price * item.quantity)
+
+        # Convert to list format, filter out any zero amounts
+        sales_by_category = [
+            {"category": cat, "amount": amount}
+            for cat, amount in category_sales.items()
+            if amount > 0
+        ]
+
+        # Yesterday's sales by category for comparison
+        category_sales_yesterday = defaultdict(float)
+        order_items_yesterday = OrderItem.objects.filter(
+            order__created_at__gte=yesterday_start,
+            order__created_at__lte=yesterday_end
+        ).exclude(
+            order__status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+        ).select_related('menu_item')
+
+        for item in order_items_yesterday:
+            if item.category and item.category.strip():
+                category_sales_yesterday[item.category] += float(item.price * item.quantity)
+
+        sales_by_category_yesterday = [
+            {"category": cat, "amount": amount}
+            for cat, amount in category_sales_yesterday.items()
+            if amount > 0
+        ]
+
+        # Popular items (most ordered today)
+        # Include all valid orders except cancelled/voided
+        popular_items_data = OrderItem.objects.filter(
+            order__created_at__gte=start,
+            order__created_at__lte=end
+        ).exclude(
+            order__status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+        ).values('item_name').annotate(
+            count=Sum('quantity')
+        ).order_by('-count')[:5]
+
+        popular_items = [
+            {"name": item["item_name"], "count": item["count"]}
+            for item in popular_items_data
+        ]
+
+        # Recent sales (last 10 completed orders)
+        recent_orders = Order.objects.filter(
+            created_at__gte=start,
+            created_at__lte=end
+        ).exclude(
+            status__in=[Order.STATUS_CANCELLED, Order.STATUS_VOIDED]
+        ).order_by('-created_at')[:10]
+
+        recent_sales = []
+        for order in recent_orders:
+            # Get payment method from associated payment
+            payment = PaymentTransaction.objects.filter(order_id=order.order_number).first()
+            payment_method = payment.method if payment else order.payment_method or "cash"
+
+            recent_sales.append({
+                "id": order.order_number,
+                "total": float(order.total_amount),
+                "date": order.created_at.isoformat() if order.created_at else None,
+                "paymentMethod": payment_method
+            })
+
+        return JsonResponse({
+            "success": True,
+            "data": {
+                "dailySales": float(daily_sales),
+                "monthlySales": float(monthly_sales),
+                "orderCount": order_count,
+                "salesByTime": sales_by_time,
+                "salesByTimeYesterday": sales_by_time_yesterday,
+                "salesByCategory": sales_by_category,
+                "salesByCategoryYesterday": sales_by_category_yesterday,
+                "popularItems": popular_items,
+                "recentSales": recent_sales,
+            }
+        })
+    except Exception as e:
+        logger.exception("Failed to generate dashboard stats")
+        return JsonResponse({"success": False, "message": f"Unable to generate dashboard stats: {str(e)}"}, status=500)
 
 
 @require_http_methods(["GET"])  # /reports/sales
@@ -161,6 +349,7 @@ def reports_customer_history(request):
 
 
 __all__ = [
+    "reports_dashboard",
     "reports_sales",
     "reports_inventory",
     "reports_orders",

@@ -665,11 +665,13 @@ def orders(request):
                 modifiers = it.get("modifiers") or []
                 allergens = it.get("allergens") or []
                 notes = it.get("notes") or ""
+                category = mi.category or ""
                 line_blueprints.append(
                     {
                         "menu_item": mi,
                         "quantity": qty,
                         "price": price,
+                        "category": category,
                         "station_code": station_code,
                         "station_name": station_name,
                         "cook_seconds_estimate": cook_seconds_estimate,
@@ -744,6 +746,7 @@ def orders(request):
                     order=o,
                     menu_item=blueprint["menu_item"],
                     item_name=blueprint["menu_item"].name,
+                    category=blueprint["category"],
                     price=blueprint["price"],
                     quantity=blueprint["quantity"],
                     state="queued",
