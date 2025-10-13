@@ -74,9 +74,9 @@ const ActivityLogsCard = ({
     });
   };
 
-  const handleExportLogs = React.useCallback(() => {
+  const handleExportLogs = React.useCallback(async () => {
     try {
-      exportActivityLogs(sortedLogs);
+      await exportActivityLogs(sortedLogs);
       toast.success('Activity logs exported');
     } catch (error) {
       console.error('Failed to export activity logs', error);

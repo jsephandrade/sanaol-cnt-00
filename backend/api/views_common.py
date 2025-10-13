@@ -192,6 +192,8 @@ DEFAULT_ROLE_PERMISSIONS = {
     # Admin implicitly has all permissions via wildcard
     "admin": {"all"},
     "manager": {
+        # Dashboard
+        "dashboard.view",
         # Account Management
         "account.login",
         "account.logout",
@@ -242,6 +244,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "verify.review",
     },
     "staff": {
+        # Dashboard
+        "dashboard.view",
         # Account Management
         "account.login",
         "account.logout",

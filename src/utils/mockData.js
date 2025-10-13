@@ -287,18 +287,18 @@ export const dashboardStats = {
   ],
   recentSales: salesData.slice(0, 3),
   salesByCategory: [
-    { category: 'Main Course', amount: 427137.5 }, // Converted to Philippine Peso
-    { category: 'Sides', amount: 117840.0 }, // Converted to Philippine Peso
-    { category: 'Desserts', amount: 92262.5 }, // Converted to Philippine Peso
-    { category: 'Beverages', amount: 87765.0 }, // Converted to Philippine Peso
-    { category: 'Salads', amount: 56620.0 }, // Converted to Philippine Peso
+    { label: 'Main Course', category: 'Main Course', value: 427137.5 }, // Converted to Philippine Peso
+    { label: 'Sides', category: 'Sides', value: 117840.0 },
+    { label: 'Desserts', category: 'Desserts', value: 92262.5 },
+    { label: 'Beverages', category: 'Beverages', value: 87765.0 },
+    { label: 'Salads', category: 'Salads', value: 56620.0 },
   ],
   salesByTime: [
-    { time: '8am-10am', amount: 42275.0 }, // Converted to Philippine Peso
-    { time: '10am-12pm', amount: 87812.5 }, // Converted to Philippine Peso
-    { time: '12pm-2pm', amount: 162737.5 }, // Converted to Philippine Peso
-    { time: '2pm-4pm', amount: 96632.5 }, // Converted to Philippine Peso
-    { time: '4pm-6pm', amount: 142265.0 }, // Converted to Philippine Peso
-    { time: '6pm-8pm', amount: 249902.5 }, // Converted to Philippine Peso
+    { t: '08:00', y: 42275.0, label: '8am-10am' }, // Converted to Philippine Peso
+    { t: '10:00', y: 87812.5, label: '10am-12pm' },
+    { t: '12:00', y: 162737.5, label: '12pm-2pm' },
+    { t: '14:00', y: 96632.5, label: '2pm-4pm' },
+    { t: '16:00', y: 142265.0, label: '4pm-6pm' },
+    { t: '18:00', y: 249902.5, label: '6pm-8pm' },
   ],
 };

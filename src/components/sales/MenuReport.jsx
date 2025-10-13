@@ -1,57 +1,57 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import BarCategory from '@/features/analytics/common/BarCategory';
+import Donut from '@/features/analytics/common/Donut';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+
+const formatCurrency = (value) =>
+  `₱${Number(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) => {
   const generateMenuReport = () => {
     const doc = new jsPDF();
     const currentDate = new Date().toLocaleDateString();
 
-    // Header
     doc.setFontSize(20);
     doc.text('Menu Analytics Report', 20, 20);
     doc.setFontSize(12);
     doc.text(`Generated on: ${currentDate}`, 20, 30);
 
-    // Menu Performance Summary
     doc.setFontSize(16);
     doc.text('Menu Performance Summary', 20, 50);
 
     doc.setFontSize(12);
-    doc.text(`Best Performer: ${topSellingItemsData[0]?.name}`, 20, 65);
-    doc.text(`Revenue: ₱${topSellingItemsData[0]?.value.toFixed(2)}`, 20, 75);
-    doc.text(`Needs Attention: ${lowestSellingItemsData[0]?.name}`, 20, 85);
+    doc.text(`Best Performer: ${topSellingItemsData[0]?.name ?? 'N/A'}`, 20, 65);
+    doc.text(
+      `Revenue: ${formatCurrency(topSellingItemsData[0]?.value ?? 0)}`,
+      20,
+      75
+    );
+    doc.text(
+      `Needs Attention: ${lowestSellingItemsData[0]?.name ?? 'N/A'}`,
+      20,
+      85
+    );
     doc.text(`Total Menu Items: ${menuItems.length}`, 20, 95);
 
-    // Top Selling Items Table
     doc.text('Top Selling Items', 20, 115);
     const topItemsTable = topSellingItemsData.map((item) => [
       item.name,
-      `₱${item.value.toFixed(2)}`,
+      formatCurrency(item.value),
     ]);
 
     doc.autoTable({
@@ -60,12 +60,11 @@ const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) 
       body: topItemsTable,
     });
 
-    // Lowest Selling Items Table
     const finalY = doc.lastAutoTable.finalY + 20;
     doc.text('Lowest Selling Items', 20, finalY);
     const lowestItemsTable = lowestSellingItemsData.map((item) => [
       item.name,
-      `₱${item.value.toFixed(2)}`,
+      formatCurrency(item.value),
     ]);
 
     doc.autoTable({
@@ -76,6 +75,15 @@ const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) 
 
     doc.save('menu-analytics-report.pdf');
   };
+
+  const donutData = useMemo(
+    () =>
+      topSellingItemsData.map((item, index) => ({
+        ...item,
+        color: COLORS[index % COLORS.length],
+      })),
+    [topSellingItemsData]
+  );
 
   return (
     <div className="space-y-6">
@@ -96,33 +104,23 @@ const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) 
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={topSellingItemsData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar
-                  dataKey="value"
-                  fill="hsl(var(--primary))"
-                  name="Revenue (₱)"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            <BarCategory
+              data={topSellingItemsData}
+              xKey="name"
+              margin={{ top: 24, right: 24, bottom: 48, left: 48 }}
+              tooltipFormatter={(value) => formatCurrency(value)}
+              tooltipLabelFormatter={(label) => label}
+              series={[
+                {
+                  key: 'value',
+                  label: 'Revenue (₱)',
+                  color: 'hsl(var(--primary))',
+                },
+              ]}
+              yAxisProps={{
+                tickFormatter: (value) => formatCurrency(value),
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -134,27 +132,24 @@ const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) 
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={topSellingItemsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {topSellingItemsData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <Donut
+              data={donutData}
+              valueKey="value"
+              nameKey="name"
+              legend
+              legendProps={{ align: 'center', verticalAlign: 'bottom' }}
+              tooltipFormatter={(value, name, payload) => (
+                <div className="flex w-full items-center justify-between leading-none">
+                  <span className="text-muted-foreground">{name}</span>
+                  <span className="font-mono font-medium text-foreground">
+                    {formatCurrency(value)}
+                    {payload?.percentage
+                      ? ` · ${Math.round(payload.percentage)}%`
+                      : ''}
+                  </span>
+                </div>
+              )}
+            />
           </CardContent>
         </Card>
       </div>
@@ -167,33 +162,23 @@ const MenuReport = ({ topSellingItemsData, lowestSellingItemsData, menuItems }) 
           </CardDescription>
         </CardHeader>
         <CardContent className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={lowestSellingItemsData}
-              margin={{
-                top: 5,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                angle={-45}
-                textAnchor="end"
-                height={100}
-              />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar
-                dataKey="value"
-                fill="hsl(var(--destructive))"
-                name="Revenue (₱)"
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarCategory
+            data={lowestSellingItemsData}
+            xKey="name"
+            margin={{ top: 24, right: 24, bottom: 48, left: 48 }}
+            tooltipFormatter={(value) => formatCurrency(value)}
+            tooltipLabelFormatter={(label) => label}
+            series={[
+              {
+                key: 'value',
+                label: 'Revenue (₱)',
+                color: 'hsl(var(--destructive))',
+              },
+            ]}
+            yAxisProps={{
+              tickFormatter: (value) => formatCurrency(value),
+            }}
+          />
         </CardContent>
       </Card>
     </div>

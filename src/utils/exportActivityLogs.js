@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const formatDetails = (details) => {
   if (details == null) {
@@ -30,7 +30,11 @@ const formatTimestamp = (timestamp) => {
   return date.toISOString();
 };
 
-const exportActivityLogs = (logs = []) => {
+const exportActivityLogs = async (logs = []) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return null;
+  }
+
   const safeLogs = Array.isArray(logs) ? logs : [];
 
   const worksheetData = safeLogs.map((log) => ({
@@ -42,16 +46,42 @@ const exportActivityLogs = (logs = []) => {
     Details: formatDetails(log?.details),
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(worksheetData, {
-    header: ['Action', 'Type', 'User', 'User ID', 'Timestamp', 'Details'],
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Activity Logs', {
+    views: [{ state: 'frozen', ySplit: 1 }],
   });
 
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Activity Logs');
+  worksheet.columns = [
+    { header: 'Action', key: 'Action', width: 32 },
+    { header: 'Type', key: 'Type', width: 18 },
+    { header: 'User', key: 'User', width: 24 },
+    { header: 'User ID', key: 'User ID', width: 18 },
+    { header: 'Timestamp', key: 'Timestamp', width: 28 },
+    { header: 'Details', key: 'Details', width: 40 },
+  ];
 
-  XLSX.writeFile(workbook, 'activity-logs.xlsx');
+  worksheetData.forEach((row) => {
+    worksheet.addRow(row);
+  });
 
-  return workbook;
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'activity-logs.xlsx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+
+  return true;
 };
 
 export default exportActivityLogs;

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthContext';
 import { useEmployees, useSchedule } from '@/hooks/useEmployees';
@@ -56,13 +56,20 @@ const EmployeeSchedule = () => {
 
   const { employees = [], addEmployee } = useEmployees();
 
-  const displayEmployees = useMemo(
-    () =>
-      employees.filter(
-        (emp) => emp && emp.status !== 'inactive' && emp.status !== 'pending'
-      ),
-    [employees]
-  );
+  const displayEmployees = useMemo(() => {
+    return employees.filter(
+      (emp) => emp && emp.status !== 'inactive' && emp.status !== 'pending'
+    );
+  }, [employees]);
+
+  const employeeNameMap = useMemo(() => {
+    const map = new Map();
+    displayEmployees.forEach((employee) => {
+      if (employee?.id == null) return;
+      map.set(employee.id, employee?.name || 'Unknown');
+    });
+    return map;
+  }, [displayEmployees]);
 
   const {
     schedule = [],
@@ -81,17 +88,17 @@ const EmployeeSchedule = () => {
   const [activeTab, setActiveTab] = useState('schedule');
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
 
+  const { pathname, search, state } = location;
+
   useEffect(() => {
     if (!isStaffOnly) return;
 
-    const searchParams = new URLSearchParams(location.search || '');
+    const searchParams = new URLSearchParams(search || '');
     const attendanceParam = (
       searchParams.get('attendance') || ''
     ).toLowerCase();
     const openFromSearch = ['1', 'true', 'yes'].includes(attendanceParam);
-    const openFromState = Boolean(
-      location.state && location.state.openAttendance
-    );
+    const openFromState = Boolean(state && state.openAttendance);
 
     if ((openFromSearch || openFromState) && !attendanceDialogOpen) {
       setAttendanceDialogOpen(true);
@@ -100,57 +107,56 @@ const EmployeeSchedule = () => {
         searchParams.delete('attendance');
         navigate(
           {
-            pathname: location.pathname,
+            pathname,
             search: searchParams.toString()
               ? `?${searchParams.toString()}`
               : '',
           },
           {
             replace: true,
-            state: { ...(location.state || {}), openAttendance: false },
+            state: { ...(state || {}), openAttendance: false },
           }
         );
       } else if (openFromState) {
-        navigate(location.pathname + (location.search || ''), {
+        navigate(pathname + (search || ''), {
           replace: true,
-          state: { ...(location.state || {}), openAttendance: false },
+          state: { ...(state || {}), openAttendance: false },
         });
       }
     }
-  }, [attendanceDialogOpen, isStaffOnly, location, navigate]);
+  }, [attendanceDialogOpen, isStaffOnly, navigate, pathname, search, state]);
 
   useEffect(() => {
-    if (!location.state?.openAttendancePopup) return;
+    if (!state?.openAttendancePopup) return;
 
     if (!attendanceDialogOpen) {
       setAttendanceDialogOpen(true);
     }
 
-    const { openAttendancePopup, attendanceNavTimestamp, ...restState } =
-      location.state || {};
+    const {
+      openAttendancePopup: _openAttendancePopup,
+      attendanceNavTimestamp: _attendanceNavTimestamp,
+      ...restState
+    } = state || {};
 
     const nextState = Object.keys(restState).length > 0 ? restState : undefined;
 
     navigate(
       {
-        pathname: location.pathname,
-        search: location.search || '',
+        pathname,
+        search: search || '',
       },
       {
         replace: true,
         state: nextState,
       }
     );
-  }, [
-    attendanceDialogOpen,
-    location.pathname,
-    location.search,
-    location.state,
-    navigate,
-  ]);
+  }, [attendanceDialogOpen, pathname, search, state, navigate]);
 
-  const lookupEmployeeName = (employeeId) =>
-    displayEmployees.find((e) => e?.id === employeeId)?.name || 'Unknown';
+  const lookupEmployeeName = useCallback(
+    (employeeId) => employeeNameMap.get(employeeId) || 'Unknown',
+    [employeeNameMap]
+  );
 
   const toMinutes = (time) => {
     if (!time) return NaN;

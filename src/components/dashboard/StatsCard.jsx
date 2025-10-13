@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MetricCard } from '@/features/analytics/common';
 
 const StatsCard = ({
   title,
@@ -8,37 +8,46 @@ const StatsCard = ({
   icon: Icon,
   formatter = (v) => v,
   onClick,
+  helper,
+  loading = false,
+  disabled = false,
+  accent = 'neutral',
+  trendDirection: trendDirectionProp,
 }) => {
-  const clickable = typeof onClick === 'function';
-  return (
-    <Card
-      onClick={onClick}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      className={
-        clickable
-          ? 'cursor-pointer hover:bg-muted/50 transition-colors'
-          : undefined
+  const formattedValue = loading ? '--' : formatter(value);
+  let trendDirection = trendDirectionProp;
+
+  if (!trendDirection) {
+    if (typeof change === 'number') {
+      if (change === 0) {
+        trendDirection = 'flat';
+      } else {
+        trendDirection = change > 0 ? 'up' : 'down';
       }
-      onKeyDown={(e) => {
-        if (!clickable) return;
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-    >
-      <CardHeader className="flex flex-row items-center justify-between pb-1 py-2">
-        <CardTitle className="text-xs font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="text-xl font-bold">{formatter(value)}</div>
-        {change ? (
-          <p className="text-[11px] text-muted-foreground">{change}</p>
-        ) : null}
-      </CardContent>
-    </Card>
+    } else if (typeof change === 'string') {
+      const trimmed = change.trim();
+      if (trimmed.startsWith('-')) {
+        trendDirection = 'down';
+      } else if (trimmed.startsWith('+')) {
+        trendDirection = 'up';
+      }
+    }
+  }
+
+  return (
+    <MetricCard
+      label={title}
+      value={formattedValue}
+      trend={change}
+      icon={Icon}
+      onClick={onClick}
+      helper={helper}
+      loading={loading}
+      disabled={disabled}
+      accent={accent}
+      trendDirection={trendDirection}
+      className="min-h-[120px]"
+    />
   );
 };
 

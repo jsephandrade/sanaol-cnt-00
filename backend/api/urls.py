@@ -16,6 +16,7 @@ from . import views_reports as rpt_views
 from . import views_cash as cash_views
 from . import views_diag as diag_views
 from . import views_catering as catering_views
+from . import views_dashboard as dash_views
 
 urlpatterns = [
     path("health/", auth_views.health, name="health"),
@@ -131,6 +132,9 @@ urlpatterns = [
     path("inventory/transfer", inv_views.inventory_transfer, name="inventory_transfer"),
     path("inventory/adjust", inv_views.inventory_adjust, name="inventory_adjust"),
     path("inventory/ledger", inv_views.inventory_ledger, name="inventory_ledger"),
+
+    # Dashboard
+    path("dashboard/overview", dash_views.dashboard_overview, name="dashboard_overview"),
 
     # Catering events
     path("catering/events", catering_views.catering_events, name="catering_events"),

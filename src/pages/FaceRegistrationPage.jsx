@@ -10,7 +10,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { UserPlus, XCircle, ArrowLeft } from 'lucide-react';
-import Header from '@/components/auth/Header';
 import PageTransition from '@/components/PageTransition';
 import { useToast } from '@/hooks/use-toast';
 import authService from '@/api/services/authService';
@@ -135,8 +134,6 @@ const FaceRegistrationPage = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-        <Header />
-
         <div className="flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-md space-y-6">
             {/* Back button */}

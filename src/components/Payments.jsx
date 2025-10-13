@@ -24,7 +24,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
-import PaymentsHeader from '@/components/payments/PaymentsHeader';
 import PaymentsFilters from '@/components/payments/PaymentsFilters';
 import { paymentsService } from '@/api/services/paymentsService';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
@@ -233,7 +232,16 @@ const Payments = () => {
         <FeaturePanelCard
           title="Payment Management"
           description="Track and process payments"
-          headerActions={<PaymentsHeader />}
+          headerActions={
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              <span>Export</span>
+            </Button>
+          }
           contentClassName="space-y-4"
         >
           {error ? (

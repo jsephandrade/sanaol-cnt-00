@@ -1,71 +1,47 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
-
-const TICK_STYLE = {
-  fontSize: 10,
-  fill: "hsl(var(--muted-foreground))"
-};
+import { ChartCard, Donut } from '@/features/analytics/common';
+import { currency } from '@/features/analytics/common/utils';
 
 const CategoryChart = ({ data, title, description }) => {
+  const renderTooltip = (value, name, item) => (
+    <div className="flex w-full items-stretch gap-2">
+      <div
+        className="mt-0.5 h-2.5 w-2.5 rounded-sm"
+        style={{ backgroundColor: item?.payload?.fill || item?.color }}
+      />
+      <div className="flex flex-1 justify-between leading-none">
+        <span className="text-muted-foreground">{name}</span>
+        <span className="font-mono font-medium text-foreground">
+          {currency(value)}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
-    <Card>
-      <CardHeader className="py-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
-        <CardDescription className="text-xs">
-          {description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="h-44 p-3">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 4, right: 8, left: 16, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-            <XAxis
-              dataKey="name"
-              tick={TICK_STYLE}
-              interval="preserveStartEnd"
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={TICK_STYLE}
-              width={44}
-              axisLine={false}
-              tickLine={false}
-              tickCount={4}
-            />
-            <Tooltip
-              wrapperStyle={{ fontSize: 11 }}
-              labelStyle={{ fontSize: 11 }}
-              contentStyle={{ padding: "6px 8px" }}
-            />
-            <Bar
-              dataKey="amount"
-              fill="hsl(var(--secondary))"
-              radius={[3, 3, 0, 0]}
-              maxBarSize={28}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    <ChartCard
+      title={title}
+      description={description}
+      data={data}
+      emptyMessage="No category sales logged yet."
+      heightClass="h-[260px]"
+      className="min-h-[320px]"
+    >
+      <Donut
+        data={data}
+        nameKey="label"
+        valueKey="value"
+        tooltipFormatter={(value) => currency(value)}
+        tooltipLabelFormatter={(label) => label}
+        tooltipProps={{ formatter: renderTooltip }}
+        legend
+        legendProps={{
+          verticalAlign: 'bottom',
+          align: 'center',
+        }}
+        className="max-h-[220px]"
+      />
+    </ChartCard>
   );
 };
 
