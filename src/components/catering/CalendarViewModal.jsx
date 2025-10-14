@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -32,7 +31,9 @@ import {
   isAfter,
   isBefore,
   startOfDay,
+  startOfMonth,
 } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 /**
  * CalendarViewModal (Light Theme, UX Refined)
@@ -63,8 +64,11 @@ const getSafeDate = (iso) => {
   }
 };
 
+const SHORT_DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
 export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()));
 
   // Normalize event dates and keep a sorted unique set for quick navigation
   const normalizedEventDates = useMemo(() => {
@@ -107,14 +111,21 @@ export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
     }
   };
 
-  const jumpToToday = () => setSelectedDate(new Date());
+  const jumpToToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    setViewDate(startOfMonth(today));
+  };
 
   // Next event day after selected
   const jumpToNextEventDay = () => {
     if (!normalizedEventDates.length) return;
     const anchor = startOfDay(selectedDate || new Date());
     const next = normalizedEventDates.find((d) => isAfter(d, anchor));
-    if (next) setSelectedDate(next);
+    if (next) {
+      setSelectedDate(next);
+      setViewDate(startOfMonth(next));
+    }
   };
 
   // Previous event day before selected
@@ -124,12 +135,62 @@ export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
     const prev = [...normalizedEventDates]
       .reverse()
       .find((d) => isBefore(d, anchor));
-    if (prev) setSelectedDate(prev);
+    if (prev) {
+      setSelectedDate(prev);
+      setViewDate(startOfMonth(prev));
+    }
   };
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(
+      viewDate.getFullYear(),
+      viewDate.getMonth() - 1,
+      1
+    );
+    setViewDate(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(
+      viewDate.getFullYear(),
+      viewDate.getMonth() + 1,
+      1
+    );
+    setViewDate(newDate);
+  };
+
+  const currentMonthLabel = format(viewDate, 'MMMM yyyy');
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const calendarDays = useMemo(() => {
+    const monthStart = viewDate;
+    const gridStart = new Date(monthStart);
+    gridStart.setDate(monthStart.getDate() - monthStart.getDay());
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const dateValue = new Date(gridStart);
+      dateValue.setDate(gridStart.getDate() + index);
+      const normalized = startOfDay(dateValue);
+      const isCurrentMonth = normalized.getMonth() === monthStart.getMonth();
+      const isSelected =
+        selectedDate && normalized.getTime() === selectedDate.getTime();
+      const isToday = normalized.getTime() === today.getTime();
+      const hasEvents = hasEventsOnDate(normalized);
+
+      return {
+        date: normalized,
+        key: normalized.toISOString(),
+        isCurrentMonth,
+        isSelected,
+        isToday,
+        hasEvents,
+      };
+    });
+  }, [viewDate, selectedDate, today, events]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto scrollbar-hide p-0">
         {/* Light theme shell */}
         <div className="relative overflow-hidden rounded-3xl border border-border bg-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.35)]">
           <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
@@ -185,28 +246,80 @@ export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="w-full max-w-full rounded-md border p-3"
-                    // DayPicker v9-friendly props:
-                    captionLayout="dropdown"
-                    fromYear={2020}
-                    toYear={2035}
-                    numberOfMonths={1}
-                    hideNavigation
-                    showOutsideDays
-                    modifiers={{
-                      hasEvents: (date) => hasEventsOnDate(date),
-                      today: (date) => isSameDay(date, new Date()),
-                    }}
-                    modifiersClassNames={{
-                      hasEvents:
-                        'relative bg-primary/10 text-primary font-semibold ring-1 ring-primary/20',
-                      today: 'ring-1 ring-secondary/40 text-foreground',
-                    }}
-                  />
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-3 shadow-sm">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span>{currentMonthLabel}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={goToPreviousMonth}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-background transition-colors hover:bg-muted"
+                          aria-label="Previous month"
+                        >
+                          <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={goToNextMonth}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-background transition-colors hover:bg-muted"
+                          aria-label="Next month"
+                        >
+                          <ChevronRight
+                            className="h-3 w-3"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-medium uppercase tracking-tight text-muted-foreground">
+                      {SHORT_DAY_LABELS.map((label) => (
+                        <div key={label} className="py-1">
+                          {label}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-1 grid grid-cols-7 gap-1 text-[11px]">
+                      {calendarDays.map((day) => (
+                        <button
+                          key={day.key}
+                          type="button"
+                          onClick={() => setSelectedDate(day.date)}
+                          className={cn(
+                            'relative flex h-7 items-center justify-center rounded-sm border border-transparent leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                            day.isCurrentMonth
+                              ? 'text-foreground'
+                              : 'text-muted-foreground/60',
+                            day.isSelected
+                              ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                              : 'hover:bg-muted',
+                            day.isToday && !day.isSelected
+                              ? 'border border-primary/50'
+                              : null
+                          )}
+                          aria-pressed={day.isSelected}
+                          aria-label={format(day.date, 'EEEE, MMMM d, yyyy')}
+                        >
+                          {day.date.getDate()}
+                          {day.hasEvents ? (
+                            <span
+                              className={cn(
+                                'absolute bottom-0.5 h-1 w-1 rounded-full',
+                                day.isSelected
+                                  ? 'bg-primary-foreground'
+                                  : 'bg-primary'
+                              )}
+                            />
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+
+                    <p className="mt-2 text-[10px] text-muted-foreground text-center">
+                      Dates with a dot indicate at least one scheduled event.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 

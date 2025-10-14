@@ -17,8 +17,6 @@ import { useMenuItems } from '@/hooks/useMenuItems';
 import cateringService from '@/api/services/cateringService';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
-const FALLBACK_DEPOSIT_RATIO = 0.5;
-
 const parseTimeValue = (value) => {
   if (!value) return null;
   const normalized = String(value);
@@ -85,6 +83,7 @@ const mapEventRecord = (record) => {
   const total = Number(
     record.total ?? record.estimatedTotal ?? record.totalAmount ?? 0
   );
+  const deposit = Number(record.deposit ?? record.depositAmount ?? 0);
   const items = (record.items || []).map((item) => {
     const unitPrice = Number(
       item.unitPrice ?? item.unit_price ?? item.price ?? 0
@@ -129,8 +128,9 @@ const mapEventRecord = (record) => {
         record.client_email ||
         '',
     },
-    deposit: Number(record.deposit ?? total * FALLBACK_DEPOSIT_RATIO),
-    depositPaid: Boolean(record.depositPaid),
+    deposit,
+    depositPaid: Boolean(record.depositPaid ?? record.deposit_paid),
+    paymentStatus: record.paymentStatus ?? record.payment_status ?? 'unpaid',
     raw: record,
   };
 };
@@ -270,7 +270,6 @@ const Catering = () => {
 
   const handleCreateEvent = useCallback(async (formValues) => {
     try {
-      const estimatedTotal = Number(formValues.attendees || 0) * 25;
       const payload = {
         name: formValues.name,
         client: formValues.client,
@@ -282,7 +281,7 @@ const Catering = () => {
         contactName: formValues.contactName,
         contactPhone: formValues.contactPhone,
         notes: formValues.notes,
-        estimatedTotal,
+        estimatedTotal: 0, // Will be calculated from menu items
       };
       const res = await cateringService.createEvent(payload);
       if (!res?.success) {
@@ -360,6 +359,27 @@ const Catering = () => {
       } catch (error) {
         const message =
           error?.message || error?.details?.message || 'Failed to cancel event';
+        toast.error(message);
+      }
+    },
+    [selectedEvent]
+  );
+
+  const handleRemoveEvent = useCallback(
+    async (event) => {
+      try {
+        const res = await cateringService.cancelEvent(event.id);
+        if (!res?.success) throw new Error(res?.message);
+        // Remove from local state (soft deleted in backend)
+        setEvents((prev) => prev.filter((item) => item.id !== event.id));
+        if (selectedEvent?.id === event.id) {
+          setSelectedEvent(null);
+          setShowEventDetailsModal(false);
+        }
+        toast.success(`Event "${event.name}" has been removed.`);
+      } catch (error) {
+        const message =
+          error?.message || error?.details?.message || 'Failed to remove event';
         toast.error(message);
       }
     },
@@ -462,6 +482,7 @@ const Catering = () => {
         onViewDetails={handleViewDetails}
         onMenuItems={handleMenuItems}
         onCancelEvent={handleCancelEvent}
+        onRemoveEvent={handleRemoveEvent}
       />
     );
   };

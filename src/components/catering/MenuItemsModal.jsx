@@ -7,7 +7,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { X, Calendar, Users, ShoppingBag, Sparkles } from 'lucide-react';
 import CateringMenuSelection from './CateringMenuSelection';
 import CurrentCateringOrder from './CurrentCateringOrder';
 
@@ -209,24 +211,86 @@ export const MenuItemsModal = ({
 
   if (!event) return null;
 
+  const totalItems = selectedItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+  const subtotal = calculateSubtotal();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Menu Items Selection</span>
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden p-0 gap-0">
+        {/* Enhanced Header with Event Details */}
+        <DialogHeader className="px-6 pt-6 pb-4 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className="gap-1.5 px-3 py-1">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="font-medium">Catering Event</span>
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <Calendar className="h-3 w-3" />
+                  <span className="text-xs">
+                    {new Date(event.eventDate || Date.now()).toLocaleDateString(
+                      'en-US',
+                      {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      }
+                    )}
+                  </span>
+                </Badge>
+                <Badge variant="outline" className="gap-1.5">
+                  <Users className="h-3 w-3" />
+                  <span className="text-xs">{event.attendees} guests</span>
+                </Badge>
+              </div>
+              <DialogTitle className="text-2xl font-bold tracking-tight">
+                {event.name}
+              </DialogTitle>
+              {event.venue && (
+                <p className="text-sm text-muted-foreground">
+                  📍 {event.venue}
+                </p>
+              )}
+            </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => onOpenChange(false)}
+              className="shrink-0 rounded-full h-9 w-9 hover:bg-muted"
             >
               <X className="h-4 w-4" />
             </Button>
-          </DialogTitle>
+          </div>
+
+          {/* Order Summary Bar */}
+          {selectedItems.length > 0 && (
+            <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-foreground">
+                    {totalItems} {totalItems === 1 ? 'item' : 'items'} selected
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Total: PHP {subtotal.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogHeader>
 
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-3 h-[calc(90vh-200px)]">
-          <div className="lg:col-span-2">
+        <Separator />
+
+        {/* Main Content Area */}
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 h-[calc(95vh-280px)] px-6 py-4">
+          <div className="lg:col-span-2 overflow-y-auto scrollbar-hide">
             {categories.length ? (
               <CateringMenuSelection
                 categories={categories}
@@ -239,13 +303,22 @@ export const MenuItemsModal = ({
                 attendees={event.attendees}
               />
             ) : (
-              <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-                No menu items available. Please add items to the menu first.
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <ShoppingBag className="h-10 w-10 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  No menu items available
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Please add items to your menu in Menu Management before
+                  creating catering orders.
+                </p>
               </div>
             )}
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 overflow-y-auto scrollbar-hide">
             <CurrentCateringOrder
               selectedItems={selectedItems}
               paymentType={paymentType}
@@ -262,20 +335,50 @@ export const MenuItemsModal = ({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={selectedItems.length === 0 || isSaving}
-          >
-            {isSaving ? 'Saving...' : 'Save Menu Items & Payment'}
-          </Button>
+        <Separator />
+
+        {/* Enhanced Footer with Floating Actions */}
+        <DialogFooter className="px-6 py-4 bg-muted/30">
+          <div className="flex items-center justify-between w-full gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {selectedItems.length === 0 ? (
+                <span>Select items to continue</span>
+              ) : (
+                <span className="font-medium text-foreground">
+                  Ready to save {totalItems}{' '}
+                  {totalItems === 1 ? 'item' : 'items'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                disabled={isSaving}
+                className="min-w-[100px]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={selectedItems.length === 0 || isSaving}
+                className="min-w-[140px] shadow-md"
+                size="lg"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="animate-spin mr-2">⏳</span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4 mr-2" />
+                    Save Order
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

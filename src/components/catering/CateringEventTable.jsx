@@ -6,6 +6,8 @@ import {
   MoreVertical,
   ClipboardCheck,
   Utensils,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +24,7 @@ export const CateringEventTable = ({
   onViewDetails,
   onMenuItems,
   onCancelEvent,
+  onRemoveEvent,
 }) => {
   return (
     <div className="rounded-md border">
@@ -85,12 +88,21 @@ export const CateringEventTable = ({
                         <Utensils className="mr-2 h-4 w-4" /> Menu Items
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => onCancelEvent(event)}
-                      >
-                        <MoreVertical className="mr-2 h-4 w-4" /> Cancel Event
-                      </DropdownMenuItem>
+                      {event.status === 'cancelled' ? (
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => onRemoveEvent && onRemoveEvent(event)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Remove Event
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => onCancelEvent(event)}
+                        >
+                          <X className="mr-2 h-4 w-4" /> Cancel Event
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>

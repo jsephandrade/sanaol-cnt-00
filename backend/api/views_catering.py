@@ -86,6 +86,10 @@ def _serialize_event(event, include_items=False):
         "notes": event.notes or "",
         "total": float(event.estimated_total or 0),
         "estimatedTotal": float(event.estimated_total or 0),
+        "deposit": float(event.deposit_amount or 0),
+        "depositAmount": float(event.deposit_amount or 0),
+        "depositPaid": event.deposit_paid,
+        "paymentStatus": event.payment_status,
         "contactPerson": {
             "name": event.contact_name or "",
             "phone": event.contact_phone or "",
@@ -143,7 +147,7 @@ def catering_events(request):
             limit = 100
         limit = max(1, min(500, limit))
 
-        qs = CateringEvent.objects.all()
+        qs = CateringEvent.objects.filter(deleted_at__isnull=True)
         if search:
             qs = qs.filter(Q(name__icontains=search) | Q(client_name__icontains=search))
         if status:
@@ -219,6 +223,14 @@ def catering_events(request):
         or 0
     )
 
+    deposit_amount = _decimal(
+        payload.get("depositAmount")
+        or payload.get("deposit")
+        or 0
+    )
+    deposit_paid = payload.get("depositPaid", False)
+    payment_status = (payload.get("paymentStatus") or "unpaid").strip()
+
     actor_id = _actor_uuid(actor)
 
     with transaction.atomic():
@@ -237,6 +249,9 @@ def catering_events(request):
             status=(payload.get("status") or CateringEvent.STATUS_SCHEDULED),
             notes=(payload.get("notes") or "").strip(),
             estimated_total=estimated_total,
+            deposit_amount=deposit_amount,
+            deposit_paid=deposit_paid,
+            payment_status=payment_status,
             created_by_id=actor_id if actor_id else None,
             updated_by_id=actor_id if actor_id else None,
         )
@@ -251,7 +266,7 @@ def catering_event_detail(request, event_id):
         return err
 
     try:
-        event = CateringEvent.objects.prefetch_related("items", "items__menu_item").get(pk=event_id)
+        event = CateringEvent.objects.prefetch_related("items", "items__menu_item").filter(deleted_at__isnull=True).get(pk=event_id)
     except CateringEvent.DoesNotExist:
         return JsonResponse({"success": False, "message": "Event not found"}, status=404)
 
@@ -264,10 +279,19 @@ def catering_event_detail(request, event_id):
         return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
     if request.method == "DELETE":
-        event.status = CateringEvent.STATUS_CANCELLED
-        event.updated_by_id = _actor_uuid(actor)
-        event.save(update_fields=["status", "updated_by", "updated_at"])
-        return JsonResponse({"success": True, "data": _serialize_event(event, include_items=True)})
+        # Soft delete: mark as deleted but keep in database
+        if event.status == CateringEvent.STATUS_CANCELLED:
+            # Already cancelled - perform soft delete
+            event.deleted_at = timezone.now()
+            event.deleted_by_id = _actor_uuid(actor)
+            event.save(update_fields=["deleted_at", "deleted_by"])
+            return JsonResponse({"success": True, "message": "Event removed successfully"})
+        else:
+            # Not cancelled - just cancel it
+            event.status = CateringEvent.STATUS_CANCELLED
+            event.updated_by_id = _actor_uuid(actor)
+            event.save(update_fields=["status", "updated_by", "updated_at"])
+            return JsonResponse({"success": True, "data": _serialize_event(event, include_items=True)})
 
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -338,6 +362,20 @@ def catering_event_detail(request, event_id):
             default=event.estimated_total,
         )
         updated_fields.append("estimated_total")
+    if "depositAmount" in payload or "deposit" in payload:
+        event.deposit_amount = _decimal(
+            payload.get("depositAmount") or payload.get("deposit"),
+            default=event.deposit_amount,
+        )
+        updated_fields.append("deposit_amount")
+    if "depositPaid" in payload:
+        event.deposit_paid = bool(payload.get("depositPaid", False))
+        updated_fields.append("deposit_paid")
+    if "paymentStatus" in payload:
+        payment_status = (payload.get("paymentStatus") or "").strip()
+        if payment_status:
+            event.payment_status = payment_status
+            updated_fields.append("payment_status")
 
     if updated_fields:
         actor_id = _actor_uuid(actor)
@@ -360,7 +398,7 @@ def catering_event_menu_items(request, event_id):
         return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
     try:
-        event = CateringEvent.objects.get(pk=event_id)
+        event = CateringEvent.objects.filter(deleted_at__isnull=True).get(pk=event_id)
     except CateringEvent.DoesNotExist:
         return JsonResponse({"success": False, "message": "Event not found"}, status=404)
 

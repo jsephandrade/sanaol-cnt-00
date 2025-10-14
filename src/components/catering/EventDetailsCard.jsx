@@ -78,38 +78,61 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <h4 className="font-medium">Financial Summary</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Total:{' '}
-                    <span className="font-medium">
-                      ${event.total.toFixed(2)}
+            {event.items && event.items.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium">Financial Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      Total:{' '}
+                      <span className="font-medium">
+                        ₱{event.total.toFixed(2)}
+                      </span>
                     </span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Banknote className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    Deposit:{' '}
-                    <span className="font-medium">
-                      ${(event.deposit || event.total * 0.5).toFixed(2)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      Deposit:{' '}
+                      <span className="font-medium">
+                        ₱{event.deposit.toFixed(2)}
+                      </span>
+                      <span
+                        className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                          event.depositPaid
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {event.depositPaid ? 'Paid' : 'Unpaid'}
+                      </span>
                     </span>
-                    <span
-                      className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                        event.depositPaid
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {event.depositPaid ? 'Paid' : 'Unpaid'}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      Payment Status:{' '}
+                      <span
+                        className={`ml-1 px-2 py-1 text-xs font-medium rounded-full ${
+                          event.paymentStatus === 'paid'
+                            ? 'bg-green-100 text-green-800'
+                            : event.paymentStatus === 'partial'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {event.paymentStatus === 'paid'
+                          ? 'Paid'
+                          : event.paymentStatus === 'partial'
+                            ? 'Partially Paid'
+                            : 'Unpaid'}
+                      </span>
                     </span>
-                  </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </CardContent>
