@@ -448,14 +448,14 @@ export const EventDetailsModal = ({
               <CardContent className="space-y-1">
                 <div className="flex justify-between">
                   <span className="text-sm">Total:</span>
-                  <span className="font-medium">${totalValue.toFixed(2)}</span>
+                  <span className="font-medium">₱{totalValue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Per person:</span>
                   <span className="font-medium">
                     {attendeesCount > 0
-                      ? `$${(totalValue / attendeesCount).toFixed(2)}`
-                      : '$0.00'}
+                      ? `₱${(totalValue / attendeesCount).toFixed(2)}`
+                      : '₱0.00'}
                   </span>
                 </div>
               </CardContent>
