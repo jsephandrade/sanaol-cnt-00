@@ -47,7 +47,16 @@ export const CateringEventTable = ({
             {events.map((event) => (
               <tr
                 key={event.id}
-                className="border-b transition-colors hover:bg-muted/50"
+                className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                role="button"
+                tabIndex={0}
+                onClick={() => onViewDetails?.(event)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onViewDetails?.(event);
+                  }
+                }}
               >
                 <td className="p-4 align-middle font-medium">{event.name}</td>
                 <td className="p-4 align-middle hidden md:table-cell">
@@ -71,7 +80,11 @@ export const CateringEventTable = ({
                     <span>{event.attendees}</span>
                   </div>
                 </td>
-                <td className="p-4 align-middle text-right">
+                <td
+                  className="p-4 align-middle text-right"
+                  onClick={(cellEvent) => cellEvent.stopPropagation()}
+                  onKeyDown={(cellEvent) => cellEvent.stopPropagation()}
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">

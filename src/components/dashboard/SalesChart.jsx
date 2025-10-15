@@ -37,7 +37,7 @@ const SalesChart = ({
   const showComparison = timeRange === 'today';
 
   return (
-    <Card className="border-0 bg-gradient-to-br from-background to-muted/20 hover:shadow-lg transition-all duration-300">
+    <Card className="border-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10 hover:shadow-lg transition-all duration-300">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div>
@@ -58,7 +58,27 @@ const SalesChart = ({
             margin={CHART_MARGINS.default}
             {...ANIMATION_CONFIG.entrance}
           >
-            <defs>{gradient.definition}</defs>
+            <defs>
+              {gradient.definition}
+              <linearGradient
+                id="comparisonGradient"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stopColor="hsl(142 71% 45%)"
+                  stopOpacity={0.4}
+                />
+                <stop
+                  offset="95%"
+                  stopColor="hsl(142 71% 45%)"
+                  stopOpacity={0.05}
+                />
+              </linearGradient>
+            </defs>
             <CartesianGrid
               strokeDasharray={CHART_STYLES.grid.strokeDasharray}
               opacity={CHART_STYLES.grid.opacity}
@@ -108,21 +128,22 @@ const SalesChart = ({
               animationDuration={800}
               animationEasing="ease-out"
             />
-            {/* Yesterday's sales - Gray dashed line (only for "today" view) */}
+            {/* Yesterday's sales - Green area chart with dashed line (only for "today" view) */}
             {showComparison && (
-              <Line
+              <Area
                 type="monotone"
                 dataKey="yesterday"
                 name="Yesterday"
-                stroke="hsl(var(--muted-foreground))"
+                stroke="hsl(142 71% 45%)"
                 strokeWidth={1.5}
                 strokeDasharray="5 5"
+                fill="url(#comparisonGradient)"
                 dot={false}
                 activeDot={{
                   r: 3,
                   strokeWidth: 2,
                   stroke: 'hsl(var(--background))',
-                  fill: 'hsl(var(--muted-foreground))',
+                  fill: 'hsl(142 71% 45%)',
                 }}
                 isAnimationActive={true}
                 animationDuration={800}

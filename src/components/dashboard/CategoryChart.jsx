@@ -40,7 +40,7 @@ const CategoryChart = ({
   // Show empty state if no data
   if (!data || data.length === 0) {
     return (
-      <Card className="border-0 bg-gradient-to-br from-background to-muted/20 hover:shadow-lg transition-all duration-300">
+      <Card className="border-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10 hover:shadow-lg transition-all duration-300">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div>
@@ -68,7 +68,7 @@ const CategoryChart = ({
   }
 
   return (
-    <Card className="border-0 bg-gradient-to-br from-background to-muted/20 hover:shadow-lg transition-all duration-300">
+    <Card className="border-0 bg-gradient-to-br from-blue-50/50 to-blue-100/30 dark:from-blue-950/20 dark:to-blue-900/10 hover:shadow-lg transition-all duration-300">
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div>
@@ -151,15 +151,15 @@ const CategoryChart = ({
                 }}
               />
             </Bar>
-            {/* Yesterday's sales - Gray bars (only for "today" view) */}
+            {/* Yesterday's sales - Green bars (only for "today" view) */}
             {showComparison && (
               <Bar
                 dataKey="yesterday"
                 name="Yesterday"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={24}
-                fill="hsl(var(--muted-foreground))"
-                fillOpacity={0.4}
+                fill="hsl(142 76% 36%)"
+                fillOpacity={0.6}
                 isAnimationActive={true}
                 animationDuration={800}
                 animationEasing="ease-out"
@@ -171,7 +171,7 @@ const CategoryChart = ({
                   style={{
                     fontSize: 10,
                     fontWeight: 600,
-                    fill: 'hsl(var(--muted-foreground))',
+                    fill: 'hsl(142 76% 36%)',
                   }}
                 />
               </Bar>

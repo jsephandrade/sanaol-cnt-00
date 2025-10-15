@@ -365,6 +365,32 @@ const Catering = () => {
     [selectedEvent]
   );
 
+  const handleUpdateEventSchedule = useCallback(
+    async (eventId, updates) => {
+      try {
+        const res = await cateringService.updateEvent(eventId, updates);
+        if (!res?.success) throw new Error(res?.message);
+        const mapped = mapEventRecord(res.data);
+        setEvents((prev) =>
+          prev.map((item) => (item.id === mapped.id ? mapped : item))
+        );
+        if (selectedEvent?.id === mapped.id) {
+          setSelectedEvent(mapped);
+        }
+        toast.success('Event schedule updated.');
+        return mapped;
+      } catch (error) {
+        const message =
+          error?.message ||
+          error?.details?.message ||
+          'Failed to update event schedule';
+        toast.error(message);
+        throw error;
+      }
+    },
+    [selectedEvent]
+  );
+
   const handleRemoveEvent = useCallback(
     async (event) => {
       try {
@@ -563,6 +589,7 @@ const Catering = () => {
         open={showEventDetailsModal}
         onOpenChange={setShowEventDetailsModal}
         event={selectedEvent}
+        onUpdateEvent={handleUpdateEventSchedule}
       />
 
       <MenuItemsModal
