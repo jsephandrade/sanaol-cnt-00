@@ -8,15 +8,58 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { CustomBadge } from '@/components/ui/custom-badge';
+import { Badge } from '@/components/ui/badge';
 
 export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
   if (!event) return null;
+
+  const hasMenuItems = Array.isArray(event.items) && event.items.length > 0;
+  const numericTotal = Number(event.total);
+  const totalAmount = Number.isFinite(numericTotal) ? numericTotal : 0;
+  const showNoMenuBadge = !hasMenuItems || totalAmount <= 0;
+
+  const paymentLabel = (() => {
+    const status = event.paymentStatus?.toLowerCase();
+
+    if (status === 'paid') return 'Paid';
+    if (status === 'partial' || status === 'partially paid')
+      return 'Partially Paid';
+    if (status === 'unpaid') return 'Unpaid';
+
+    if (typeof event.depositPaid === 'boolean') {
+      return event.depositPaid ? 'Paid' : 'Unpaid';
+    }
+
+    return 'Unpaid';
+  })();
+
+  const paymentTone =
+    paymentLabel === 'Paid'
+      ? 'text-green-600'
+      : paymentLabel === 'Partially Paid'
+        ? 'text-yellow-600'
+        : 'text-red-600';
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Event Details</CardTitle>
         <CardDescription>Next scheduled catering event</CardDescription>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 font-medium text-foreground">
+            <Banknote className="h-4 w-4 text-primary" />
+            Financial
+          </div>
+          <span className="text-sm">
+            Total:{' '}
+            <span className="font-medium">₱{totalAmount.toFixed(2)}</span>
+          </span>
+          <span className="text-sm">
+            Paid:{' '}
+            <span className={`font-medium ${paymentTone}`}>{paymentLabel}</span>
+          </span>
+          {showNoMenuBadge && <Badge variant="outline">No menu items</Badge>}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
