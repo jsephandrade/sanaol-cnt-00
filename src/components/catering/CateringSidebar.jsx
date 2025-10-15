@@ -58,6 +58,68 @@ export const CateringSidebar = ({
   return (
     <div className="space-y-6">
       <Card className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
+        {/* light theme decorative blobs */}
+        <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
+
+        <CardHeader className="relative pb-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
+                <UtensilsCrossed className="h-3.5 w-3.5" /> Upcoming Events
+              </div>
+            </div>
+            {hasEvents && (
+              <span className="inline-flex self-start rounded-full bg-secondary/20 px-3 py-1 text-xs font-medium text-secondary-foreground md:self-auto">
+                {eventItems.length} scheduled
+              </span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="relative">
+          {hasEvents ? (
+            <div className="relative space-y-4">
+              <div
+                className="absolute inset-y-2 left-3 w-px bg-muted"
+                aria-hidden="true"
+              />
+              {eventItems.map((event, index) => (
+                <div
+                  key={event.id ?? index}
+                  className="relative ml-7 rounded-2xl border border-transparent bg-muted/20 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-background"
+                >
+                  <span className="absolute left-[-28px] top-5 flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
+                    <CalendarClock className="h-3 w-3" />
+                  </span>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1 font-semibold text-foreground">
+                      {event.dateLabel || event.date || 'Date TBD'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {event.time || 'Time TBD'}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <h4 className="text-base font-semibold text-foreground">
+                      {event.name}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {event.client || 'Client details not provided'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-muted bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+              No upcoming events scheduled.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
         <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
         <CardHeader className="relative pb-5">
@@ -151,71 +213,6 @@ export const CateringSidebar = ({
           >
             View Full Menu <ChevronRight className="h-3.5 w-3.5" />
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
-        {/* light theme decorative blobs */}
-        <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
-
-        <CardHeader className="relative pb-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
-                <UtensilsCrossed className="h-3.5 w-3.5" /> Upcoming Events
-              </div>
-              <CardDescription className="text-sm">
-                Stay aligned with every celebration on the horizon.
-              </CardDescription>
-            </div>
-            {hasEvents && (
-              <span className="rounded-full bg-secondary/20 px-3 py-1 text-xs font-medium text-secondary-foreground">
-                {eventItems.length} scheduled
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="relative">
-          {hasEvents ? (
-            <div className="relative space-y-4">
-              <div
-                className="absolute inset-y-2 left-3 w-px bg-muted"
-                aria-hidden="true"
-              />
-              {eventItems.map((event, index) => (
-                <div
-                  key={event.id ?? index}
-                  className="relative ml-7 rounded-2xl border border-transparent bg-muted/20 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:bg-background"
-                >
-                  <span className="absolute left-[-28px] top-5 flex h-5 w-5 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary">
-                    <CalendarClock className="h-3 w-3" />
-                  </span>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1 font-semibold text-foreground">
-                      {event.dateLabel || event.date || 'Date TBD'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {event.time || 'Time TBD'}
-                    </span>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    <h4 className="text-base font-semibold text-foreground">
-                      {event.name}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {event.client || 'Client details not provided'}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-muted bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-              No upcoming events scheduled.
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

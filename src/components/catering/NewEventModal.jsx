@@ -15,7 +15,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon, Users, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  CalendarIcon,
+  Users,
+  MapPin,
+  Phone,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +38,7 @@ const MODAL_SCROLLBAR_STYLES = `
 `;
 
 const SHORT_DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const MIN_EVENT_LEAD_DAYS = 5;
 
 const startOfDay = (date) => {
   const next = new Date(date);
@@ -72,6 +80,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()));
+  const [dateError, setDateError] = useState('');
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -91,7 +100,9 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
     []
   );
 
-  const currentMonthStart = viewDate ? startOfMonth(viewDate) : startOfMonth(new Date());
+  const currentMonthStart = viewDate
+    ? startOfMonth(viewDate)
+    : startOfMonth(new Date());
   const currentMonthLabel = monthFormatter.format(currentMonthStart);
 
   const calendarDays = useMemo(() => {
@@ -105,7 +116,8 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
       const normalized = startOfDay(dateValue);
       const isCurrentMonth = normalized.getMonth() === monthStart.getMonth();
       const selectedDate = formData.date ? startOfDay(formData.date) : null;
-      const isSelected = selectedDate && normalized.getTime() === selectedDate.getTime();
+      const isSelected =
+        selectedDate && normalized.getTime() === selectedDate.getTime();
       const isToday = normalized.getTime() === today.getTime();
 
       return {
@@ -147,6 +159,30 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
       contactPhone: '',
       notes: '',
     });
+    setDateError('');
+  };
+
+  const getDaysUntilEvent = (date) => {
+    if (!date) return null;
+    const eventDate = startOfDay(date);
+    const diffMs = eventDate.getTime() - today.getTime();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  };
+
+  const handleDateSelect = (date) => {
+    updateFormData('date', date);
+    setViewDate(startOfMonth(date));
+    const daysUntilEvent = getDaysUntilEvent(date);
+    if (
+      typeof daysUntilEvent === 'number' &&
+      daysUntilEvent <= MIN_EVENT_LEAD_DAYS - 1
+    ) {
+      setDateError(
+        `Events must be scheduled at least ${MIN_EVENT_LEAD_DAYS} days in advance.`
+      );
+    } else {
+      setDateError('');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -163,6 +199,18 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
       return;
     }
 
+    const daysUntilEvent = getDaysUntilEvent(formData.date);
+    if (
+      typeof daysUntilEvent === 'number' &&
+      daysUntilEvent <= MIN_EVENT_LEAD_DAYS - 1
+    ) {
+      setDateError(
+        `Events must be scheduled at least ${MIN_EVENT_LEAD_DAYS} days in advance.`
+      );
+      return;
+    }
+
+    setDateError('');
     setIsSubmitting(true);
     try {
       const payload = {
@@ -254,7 +302,10 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                           className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 bg-background transition-colors hover:bg-muted"
                           aria-label="Next month"
                         >
-                          <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                          <ChevronRight
+                            className="h-3 w-3"
+                            aria-hidden="true"
+                          />
                         </button>
                       </div>
                     </div>
@@ -272,10 +323,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                         <button
                           key={day.key}
                           type="button"
-                          onClick={() => {
-                            updateFormData('date', day.date);
-                            setViewDate(startOfMonth(day.date));
-                          }}
+                          onClick={() => handleDateSelect(day.date)}
                           className={cn(
                             'relative flex h-7 items-center justify-center rounded-sm border border-transparent leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                             day.isCurrentMonth
@@ -298,6 +346,11 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
                   </div>
                 </PopoverContent>
               </Popover>
+              {dateError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {dateError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -410,7 +463,7 @@ export const NewEventModal = ({ open, onOpenChange, onCreateEvent }) => {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || Boolean(dateError)}>
               {isSubmitting ? 'Creating...' : 'Create Event'}
             </Button>
           </DialogFooter>
