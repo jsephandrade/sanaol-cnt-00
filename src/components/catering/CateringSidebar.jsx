@@ -89,9 +89,28 @@ export const CateringSidebar = ({
               )}
             </div>
             <div className="flex flex-col items-start gap-2 md:items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={toggleView}
+                className="mt-1 inline-flex items-center justify-center"
+                aria-pressed={showMenuView}
+                aria-label={
+                  isShowingEvents
+                    ? 'Switch to catering menu'
+                    : 'Switch to upcoming events'
+                }
+              >
+                {isShowingEvents ? (
+                  <UtensilsCrossed className="h-3.5 w-3.5" />
+                ) : (
+                  <CalendarClock className="h-3.5 w-3.5" />
+                )}
+              </Button>
               {isShowingEvents && hasEvents && (
                 <span className="inline-flex rounded-full bg-secondary/20 px-3 py-1 text-xs font-medium text-secondary-foreground">
-                  {eventItems.length} scheduled
+                  {eventItems.length}
                 </span>
               )}
               {!isShowingEvents && hasMenuItems && (
@@ -100,26 +119,6 @@ export const CateringSidebar = ({
                   Featured picks
                 </span>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={toggleView}
-                className="mt-1 inline-flex items-center gap-1.5"
-                aria-pressed={showMenuView}
-              >
-                {isShowingEvents ? (
-                  <>
-                    <UtensilsCrossed className="h-3.5 w-3.5" />
-                    View Catering Menu
-                  </>
-                ) : (
-                  <>
-                    <CalendarClock className="h-3.5 w-3.5" />
-                    View Upcoming Events
-                  </>
-                )}
-              </Button>
             </div>
           </div>
         </CardHeader>
