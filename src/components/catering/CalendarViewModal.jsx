@@ -66,7 +66,12 @@ const getSafeDate = (iso) => {
 
 const SHORT_DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
+export const CalendarViewModal = ({
+  open,
+  onOpenChange,
+  events = [],
+  onViewDetails,
+}) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewDate, setViewDate] = useState(() => startOfMonth(new Date()));
 
@@ -187,6 +192,15 @@ export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
       };
     });
   }, [viewDate, selectedDate, today, events]);
+
+  const handleViewDetailsClick = (event) => {
+    if (typeof onViewDetails === 'function') {
+      onViewDetails(event);
+    }
+    if (typeof onOpenChange === 'function') {
+      onOpenChange(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -412,6 +426,8 @@ export const CalendarViewModal = ({ open, onOpenChange, events = [] }) => {
                                 variant="outline"
                                 size="sm"
                                 className="gap-1"
+                                onClick={() => handleViewDetailsClick(event)}
+                                disabled={!onViewDetails}
                               >
                                 View details
                                 <ChevronRight className="h-3.5 w-3.5" />

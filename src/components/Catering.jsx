@@ -583,6 +583,7 @@ const Catering = () => {
         open={showCalendarModal}
         onOpenChange={setShowCalendarModal}
         events={events}
+        onViewDetails={handleViewDetails}
       />
 
       <EventDetailsModal
