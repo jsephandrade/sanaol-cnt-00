@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +12,8 @@ import {
   UserPlus,
   Users,
   Briefcase,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -54,6 +56,16 @@ const WeeklyScheduleCard = ({
   onOpenAddSchedule,
   canManage = false,
 }) => {
+  // Track which days are expanded (show shifts)
+  const [expandedDays, setExpandedDays] = useState(() => {
+    const days = daysOfWeek.filter((day) => day !== 'Sunday');
+    return days.reduce((acc, day) => ({ ...acc, [day]: true }), {});
+  });
+
+  const toggleDay = (day) => {
+    setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  };
+
   const scheduleMap = useMemo(() => {
     const map = new Map();
     schedule.forEach((entry) => {
@@ -147,6 +159,21 @@ const WeeklyScheduleCard = ({
                   {/* Day Header */}
                   <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3 border">
                     <div className="flex items-center gap-3">
+                      {/* Toggle Button */}
+                      {daySchedules.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => toggleDay(day)}
+                        >
+                          {expandedDays[day] ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                       <CalendarIcon className="h-5 w-5 text-primary" />
                       <h3 className="font-semibold text-base">{day}</h3>
                       <Badge variant="secondary" className="text-xs">
@@ -168,7 +195,7 @@ const WeeklyScheduleCard = ({
                   </div>
 
                   {/* Shifts List */}
-                  {daySchedules.length > 0 ? (
+                  {daySchedules.length > 0 && expandedDays[day] ? (
                     <div className="space-y-1 pl-2">
                       {daySchedules.map((shift) => (
                         <div

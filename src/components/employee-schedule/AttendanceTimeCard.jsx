@@ -211,7 +211,7 @@ const AttendanceTimeCard = ({ user, className }) => {
         <Button
           size="lg"
           className={cn(
-            'flex-1 min-w-[140px] border-2 border-emerald-600 bg-emerald-500 text-white transition-colors hover:bg-emerald-500/90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-60'
+            'flex-1 min-w-[140px] border-2 border-emerald-600 bg-emerald-600 text-white transition-colors hover:bg-emerald-600/90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:opacity-60'
           )}
           onClick={handleTimeIn}
           disabled={hasTimedInToday}
