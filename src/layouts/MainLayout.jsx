@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/sidebar';
 import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -61,8 +62,8 @@ const MainLayout = ({ children }) => {
   const location = useLocation();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
-  // Mock notification count (replace with actual count from your API)
-  const notificationCount = 3;
+  // Real-time notification count from API
+  const { unreadCount } = useNotifications();
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
@@ -140,15 +141,18 @@ const MainLayout = ({ children }) => {
                   >
                     <Link to="/notifications">
                       <Bell className="h-4 w-4" />
-                      {notificationCount > 0 && (
+                      {unreadCount > 0 && (
                         <Badge
                           variant="destructive"
-                          className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                          className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs animate-in zoom-in-50 duration-200"
                         >
-                          {notificationCount}
+                          {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                       )}
-                      <span className="sr-only">Notifications</span>
+                      <span className="sr-only">
+                        Notifications{' '}
+                        {unreadCount > 0 ? `(${unreadCount} unread)` : ''}
+                      </span>
                     </Link>
                   </Button>
                 </div>
