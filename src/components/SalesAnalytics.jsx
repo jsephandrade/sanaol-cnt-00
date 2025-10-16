@@ -6,7 +6,7 @@ import SalesPanel from '@/components/analytics/panels/SalesPanel';
 import InventoryPanel from '@/components/analytics/panels/InventoryPanel';
 import OrdersPanel from '@/components/analytics/panels/OrdersPanel';
 import AttendancePanel from '@/components/analytics/panels/AttendancePanel';
-import CustomersPanel from '@/components/analytics/panels/CustomersPanel';
+import CateringPanel from '@/components/analytics/panels/CateringPanel';
 
 export default function SalesAnalytics() {
   return (
@@ -17,7 +17,7 @@ export default function SalesAnalytics() {
           <TabsTrigger value="inventory">Inventory Reports</TabsTrigger>
           <TabsTrigger value="orders">Orders & Transactions</TabsTrigger>
           <TabsTrigger value="attendance">Staff Attendance</TabsTrigger>
-          <TabsTrigger value="customers">Customer Purchases</TabsTrigger>
+          <TabsTrigger value="catering">Catering Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="mt-6">
@@ -36,8 +36,8 @@ export default function SalesAnalytics() {
           <AttendancePanel />
         </TabsContent>
 
-        <TabsContent value="customers" className="mt-6">
-          <CustomersPanel />
+        <TabsContent value="catering" className="mt-6">
+          <CateringPanel />
         </TabsContent>
       </Tabs>
     </div>
