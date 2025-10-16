@@ -1,7 +1,23 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Clock,
+  Calendar,
+  UserPlus,
+  Users,
+} from 'lucide-react';
 
 const formatTimeLabel = (time) => {
   if (!time) return '--:--';
@@ -45,16 +61,14 @@ const WeeklyScheduleCard = ({
       <Button
         variant="outline"
         size="sm"
-        className="h-8 px-3 text-xs font-medium"
+        className="h-9 gap-2"
         onClick={onOpenManageEmployees}
       >
+        <Users className="h-4 w-4" />
         Manage Employees
       </Button>
-      <Button
-        size="sm"
-        className="h-8 px-3 text-xs font-semibold"
-        onClick={onOpenAddSchedule}
-      >
+      <Button size="sm" className="h-9 gap-2" onClick={onOpenAddSchedule}>
+        <Calendar className="h-4 w-4" />
         Add Schedule
       </Button>
     </div>
@@ -68,145 +82,191 @@ const WeeklyScheduleCard = ({
       contentClassName="space-y-4"
     >
       {employeeList.length === 0 ? (
-        <div className="flex min-h-[160px] items-center justify-center rounded-md border border-dashed border-muted-foreground/30 bg-muted/20 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            No employees added yet.{' '}
+        <div className="flex flex-col items-center justify-center min-h-[200px] rounded-lg border-2 border-dashed p-8 text-center">
+          <div className="rounded-full bg-muted p-3 mb-4">
+            <UserPlus className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="font-semibold text-lg mb-2">No employees added yet</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-sm">
             {canManage
-              ? 'Use "Manage Employees" or "Add Schedule" to get started.'
+              ? 'Get started by adding employees to your team and creating their schedules.'
               : 'Please check back once the team list is ready.'}
           </p>
+          {canManage && (
+            <Button onClick={onOpenManageEmployees} className="gap-2">
+              <Users className="h-4 w-4" />
+              Manage Employees
+            </Button>
+          )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <div className="w-full min-w-[960px]">
-            <div className="mb-4 grid grid-cols-[minmax(220px,1.4fr)_repeat(6,minmax(100px,1fr))] gap-2 border-b pb-2">
-              <div className="text-left text-sm font-semibold">Employee</div>
-              {daysOfWeek
-                .filter((day) => day !== 'Sunday')
-                .map((day) => (
+        <TooltipProvider>
+          <div className="overflow-x-auto">
+            <div className="w-full min-w-[960px]">
+              {/* Header Row */}
+              <div className="mb-3 grid grid-cols-[minmax(240px,1.5fr)_repeat(6,minmax(120px,1fr))] gap-3 pb-3 border-b">
+                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                  <Users className="h-4 w-4" />
+                  <span>Employee</span>
+                </div>
+                {daysOfWeek
+                  .filter((day) => day !== 'Sunday')
+                  .map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-sm font-semibold"
+                    >
+                      {day}
+                    </div>
+                  ))}
+              </div>
+
+              {/* Employee Rows */}
+              <div className="space-y-3">
+                {employeeList.map((employee) => (
                   <div
-                    key={day}
-                    className="text-center text-[13px] font-semibold tracking-tight"
+                    key={employee.id}
+                    className="grid grid-cols-[minmax(240px,1.5fr)_repeat(6,minmax(120px,1fr))] items-center gap-3"
                   >
-                    {day.slice(0, 3)}
-                  </div>
-                ))}
-            </div>
-
-            <div className="space-y-4">
-              {employeeList.map((employee) => (
-                <div
-                  key={employee.id}
-                  className="grid grid-cols-[minmax(220px,1.4fr)_repeat(6,minmax(100px,1fr))] items-start gap-2"
-                >
-                  <div className="flex h-[3.5rem] items-center gap-3 rounded-2xl bg-sky-50/60 p-3 shadow-sm">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-200 text-sm font-semibold text-sky-700">
-                      {employee.name?.charAt(0) || '?'}
+                    {/* Employee Info Card */}
+                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:shadow transition-shadow">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                          {employee.name?.charAt(0)?.toUpperCase() || '?'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {employee.name || 'Unnamed'}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {employee.position || 'Role not set'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">
-                        {employee.name || 'Unnamed'}
-                      </p>
-                      <p className="truncate text-xs text-slate-500">
-                        {employee.position || 'Role not set'}
-                      </p>
-                    </div>
-                  </div>
 
-                  {daysOfWeek
-                    .filter((day) => day !== 'Sunday')
-                    .map((day) => {
-                      const entry = scheduleMap.get(`${employee.id}-${day}`);
+                    {/* Day Schedule Cells */}
+                    {daysOfWeek
+                      .filter((day) => day !== 'Sunday')
+                      .map((day) => {
+                        const entry = scheduleMap.get(`${employee.id}-${day}`);
 
-                      return (
-                        <div
-                          key={day}
-                          className="flex items-center justify-center px-1"
-                        >
-                          {entry ? (
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => onEditSchedule(entry)}
-                              onKeyDown={(event) => {
-                                if (
-                                  event.key === 'Enter' ||
-                                  event.key === ' '
-                                ) {
-                                  event.preventDefault();
-                                  onEditSchedule(entry);
-                                }
-                              }}
-                              className="flex h-[3.5rem] w-[6rem] cursor-pointer items-center justify-between rounded-[10px] border border-sky-200 bg-gradient-to-br from-white via-sky-50 to-sky-100 px-2 text-left text-[12px] shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1"
-                              title="Edit schedule"
-                            >
-                              <div className="flex flex-col leading-tight">
-                                <span className="font-semibold text-emerald-600">
-                                  {formatTimeLabel(entry.startTime)}
-                                </span>
-                                <span className="font-semibold text-red-500">
-                                  {formatTimeLabel(entry.endTime)}
-                                </span>
-                              </div>
-                              {canManage ? (
-                                <div className="flex flex-col items-center gap-1 text-[10px]">
-                                  <span className="rounded-full bg-white/80 p-1 text-slate-900 shadow-sm">
-                                    <Edit size={11} />
-                                  </span>
-                                  <span
+                        return (
+                          <div
+                            key={day}
+                            className="flex items-center justify-center"
+                          >
+                            {entry ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
                                     role="button"
                                     tabIndex={0}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      onDeleteSchedule(entry.id);
-                                    }}
+                                    onClick={() => onEditSchedule(entry)}
                                     onKeyDown={(event) => {
                                       if (
                                         event.key === 'Enter' ||
                                         event.key === ' '
                                       ) {
                                         event.preventDefault();
-                                        event.stopPropagation();
-                                        onDeleteSchedule(entry.id);
+                                        onEditSchedule(entry);
                                       }
                                     }}
-                                    className="rounded-full bg-white/80 p-1 text-red-500 shadow-sm transition hover:bg-white hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
-                                    title="Delete schedule"
+                                    className="group relative w-full rounded-lg border bg-primary/5 hover:bg-primary/10 p-3 cursor-pointer transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                   >
-                                    <Trash2 size={11} />
+                                    {/* Time Display */}
+                                    <div className="flex flex-col gap-1 text-center">
+                                      <div className="flex items-center justify-center gap-1 text-xs font-medium text-green-600">
+                                        <Clock className="h-3 w-3" />
+                                        <span>
+                                          {formatTimeLabel(entry.startTime)}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        to
+                                      </div>
+                                      <div className="flex items-center justify-center gap-1 text-xs font-medium text-orange-600">
+                                        <Clock className="h-3 w-3" />
+                                        <span>
+                                          {formatTimeLabel(entry.endTime)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Action Buttons (appears on hover) */}
+                                    {canManage && (
+                                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                        <Button
+                                          size="icon"
+                                          variant="secondary"
+                                          className="h-6 w-6 rounded-full shadow-lg"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            onEditSchedule(entry);
+                                          }}
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="destructive"
+                                          className="h-6 w-6 rounded-full shadow-lg"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            onDeleteSchedule(entry.id);
+                                          }}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">
+                                    {formatTimeLabel(entry.startTime)} -{' '}
+                                    {formatTimeLabel(entry.endTime)}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <div className="w-full rounded-lg border-2 border-dashed bg-muted/30 p-3 flex items-center justify-center min-h-[80px]">
+                                {canManage ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full hover:bg-primary/10"
+                                        onClick={() =>
+                                          onAddScheduleForDay(employee.id, day)
+                                        }
+                                      >
+                                        <Plus className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p className="text-xs">
+                                        Add schedule for {day}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    Off
                                   </span>
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <div className="flex aspect-square h-[3.5rem] items-center justify-center rounded-[10px] border border-dashed border-sky-200 bg-sky-50/40">
-                              {canManage ? (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full border border-sky-200 bg-white text-sky-600 transition hover:bg-sky-50"
-                                  onClick={() =>
-                                    onAddScheduleForDay(employee.id, day)
-                                  }
-                                  title={`Add schedule for ${day}`}
-                                >
-                                  <Plus size={12} />
-                                </Button>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">
-                                  --
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
-              ))}
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </TooltipProvider>
       )}
     </FeaturePanelCard>
   );
