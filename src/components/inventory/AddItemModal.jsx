@@ -111,7 +111,7 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="flex items-center gap-1">
+                <Label htmlFor="name" className="flex items-center gap-1 h-5">
                   Item Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -134,7 +134,9 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="flex items-center h-5">
+                  Category
+                </Label>
                 <Controller
                   name="category"
                   control={control}
@@ -172,7 +174,7 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
               <div className="space-y-2">
                 <Label
                   htmlFor="currentStock"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 h-5"
                 >
                   Current Stock <span className="text-destructive">*</span>
                 </Label>
@@ -202,7 +204,7 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
               <div className="space-y-2">
                 <Label
                   htmlFor="minThreshold"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 h-5"
                 >
                   Min Threshold <span className="text-destructive">*</span>
                 </Label>
@@ -245,7 +247,9 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="unit">Unit</Label>
+                <Label htmlFor="unit" className="flex items-center h-5">
+                  Unit
+                </Label>
                 <Controller
                   name="unit"
                   control={control}
@@ -269,7 +273,10 @@ const AddItemModal = ({ open, onOpenChange, onAddItem }) => {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supplier" className="flex items-center gap-2">
+                <Label
+                  htmlFor="supplier"
+                  className="flex items-center gap-2 h-5"
+                >
                   Supplier
                   <Badge variant="secondary" className="text-xs">
                     Optional
