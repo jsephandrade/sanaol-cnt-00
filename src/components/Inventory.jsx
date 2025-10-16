@@ -178,7 +178,7 @@ const Inventory = () => {
       const next = { ...prev, [itemId]: !prev[itemId] };
       const disabled = !!next[itemId];
       toast.success(
-        `${itemName} has been ${disabled ? 'disabled' : 'enabled'}`
+        `${itemName} has been ${disabled ? 'archived' : 'unarchived'}`
       );
       return next;
     });

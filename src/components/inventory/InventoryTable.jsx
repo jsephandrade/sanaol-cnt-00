@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  ArrowUpDown,
-  MoreVertical,
-  PenSquare,
-  Ban,
-  Trash2,
-} from 'lucide-react';
+import { ArrowUpDown, MoreVertical, PenSquare, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CustomBadge } from '@/components/ui/custom-badge';
@@ -70,7 +64,7 @@ export const InventoryTable = ({
                       {item.name}
                       {item.disabled && (
                         <Badge variant="secondary" className="text-xs">
-                          Disabled
+                          Archived
                         </Badge>
                       )}
                     </div>
@@ -143,29 +137,12 @@ export const InventoryTable = ({
                             onDisableItem(item.id, item.name);
                           }}
                           className={
-                            item.disabled
-                              ? 'text-green-600'
-                              : 'text-destructive'
+                            item.disabled ? 'text-green-600' : 'text-orange-600'
                           }
                         >
-                          <Ban className="mr-2 h-4 w-4" />
-                          {item.disabled ? 'Enable' : 'Disable'}
+                          <Archive className="mr-2 h-4 w-4" />
+                          {item.disabled ? 'Unarchive' : 'Archive'}
                         </DropdownMenuItem>
-                        {onDeleteItem ? (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                onDeleteItem(item);
-                              }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
