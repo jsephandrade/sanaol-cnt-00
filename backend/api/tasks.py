@@ -250,8 +250,7 @@ def cleanup_old_notifications():
     return deleted_count
 
 
-@shared_task
-def create_notification(
+def create_notification_sync(
     user_id: int,
     title: str,
     message: str,
@@ -260,7 +259,7 @@ def create_notification(
     send_immediately: bool = True
 ):
     """
-    Create a notification and optionally send it immediately.
+    Create a notification synchronously (without Celery).
 
     Args:
         user_id: User ID to send notification to
@@ -295,11 +294,38 @@ def create_notification(
                 status='pending',
             )
 
-            # Trigger immediate processing
-            process_notification_outbox.delay()
-
         return str(notification.id)
 
     except Exception as e:
         logger.error(f"Failed to create notification for user {user_id}: {e}")
         raise
+
+
+@shared_task
+def create_notification(
+    user_id: int,
+    title: str,
+    message: str,
+    notification_type: str = 'info',
+    meta: Optional[Dict[str, Any]] = None,
+    send_immediately: bool = True
+):
+    """
+    Create a notification and optionally send it immediately.
+
+    Args:
+        user_id: User ID to send notification to
+        title: Notification title
+        message: Notification message
+        notification_type: Type of notification (info, warning, success, error)
+        meta: Additional metadata (optional)
+        send_immediately: If True, send via email/push immediately. If False, add to outbox.
+    """
+    return create_notification_sync(
+        user_id=user_id,
+        title=title,
+        message=message,
+        notification_type=notification_type,
+        meta=meta,
+        send_immediately=send_immediately
+    )

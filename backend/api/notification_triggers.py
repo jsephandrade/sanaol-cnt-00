@@ -12,11 +12,32 @@ from django.db.models import F, Q
 from django.utils import timezone
 
 from .notification_templates import format_notification
-from .tasks import create_notification
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
+
+
+# Try to import Celery task, fallback to sync if not available
+try:
+    from .tasks import create_notification
+    USE_CELERY = True
+except ImportError:
+    from .tasks import create_notification_sync
+    create_notification = None
+    USE_CELERY = False
+    logger.warning("Celery not available, using synchronous notification creation")
+
+
+def _create_notification(**kwargs):
+    """Helper to call create_notification with or without Celery"""
+    if USE_CELERY and create_notification:
+        # Use Celery async
+        return create_notification.delay(**kwargs)
+    else:
+        # Use synchronous version
+        from .tasks import create_notification_sync
+        return create_notification_sync(**kwargs)
 
 
 def get_admin_users() -> List[int]:
@@ -52,7 +73,7 @@ def trigger_low_stock_alert(item):
 
             # Notify all admins and managers
             for user_id in get_admin_users():
-                create_notification.delay(
+                _create_notification(
                     user_id=user_id,
                     title=notification_data['title'],
                     message=notification_data['message'],
@@ -82,7 +103,7 @@ def trigger_out_of_stock(item):
 
             # Notify all admins and managers
             for user_id in get_admin_users():
-                create_notification.delay(
+                _create_notification(
                     user_id=user_id,
                     title=notification_data['title'],
                     message=notification_data['message'],
@@ -122,7 +143,7 @@ def check_expiring_items():
 
             # Notify all admins and managers
             for user_id in get_admin_users():
-                create_notification.delay(
+                _create_notification(
                     user_id=user_id,
                     title=notification_data['title'],
                     message=notification_data['message'],
@@ -155,7 +176,7 @@ def trigger_new_order(order):
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -185,7 +206,7 @@ def trigger_order_completed(order):
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -220,7 +241,7 @@ def trigger_payment_received(order, amount, payment_method):
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -255,7 +276,7 @@ def trigger_catering_booking(event):
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -296,7 +317,7 @@ def trigger_catering_status_change(event, old_status):
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -330,7 +351,7 @@ def trigger_shift_assigned(employee, schedule):
 
         # Notify the employee (if they have a user account)
         if hasattr(employee, 'user_id') and employee.user_id:
-            create_notification.delay(
+            _create_notification(
                 user_id=employee.user_id,
                 title=notification_data['title'],
                 message=notification_data['message'],
@@ -369,7 +390,7 @@ def trigger_leave_status_change(leave_request):
         # Notify the employee (if they have a user account)
         if hasattr(leave_request, 'employee') and hasattr(leave_request.employee, 'user_id'):
             if leave_request.employee.user_id:
-                create_notification.delay(
+                _create_notification(
                     user_id=leave_request.employee.user_id,
                     title=notification_data['title'],
                     message=notification_data['message'],
@@ -395,7 +416,7 @@ def trigger_menu_item_added(menu_item):
     try:
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title="New Menu Item Added",
                 message=f"New menu item '{menu_item.name}' has been added to the menu at ₱{menu_item.price:,.2f}.",
@@ -421,7 +442,7 @@ def trigger_large_order(order, threshold=5000):
         if order.total_amount and order.total_amount >= threshold:
             # Notify all admins and managers
             for user_id in get_admin_users():
-                create_notification.delay(
+                _create_notification(
                     user_id=user_id,
                     title="Large Order Alert",
                     message=f"Large order #{order.id} placed for ₱{order.total_amount:,.2f}. Please review and prioritize.",
@@ -447,7 +468,7 @@ def trigger_new_user_registration(user):
     try:
         # Notify all admins
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title="New User Registration",
                 message=f"New user {user.email} has registered and is pending approval.",
@@ -472,7 +493,7 @@ def trigger_user_role_changed(user, old_role, new_role):
     """
     try:
         # Notify the user
-        create_notification.delay(
+        _create_notification(
             user_id=user.id,
             title="Role Updated",
             message=f"Your role has been changed from {old_role} to {new_role}.",
@@ -483,7 +504,7 @@ def trigger_user_role_changed(user, old_role, new_role):
         # Notify admins
         for admin_id in get_admin_users():
             if admin_id != user.id:
-                create_notification.delay(
+                _create_notification(
                     user_id=admin_id,
                     title="User Role Changed",
                     message=f"User {user.email}'s role changed from {old_role} to {new_role}.",
@@ -526,7 +547,7 @@ def trigger_daily_sales_summary():
 
         # Notify all admins and managers
         for user_id in get_admin_users():
-            create_notification.delay(
+            _create_notification(
                 user_id=user_id,
                 title="Daily Sales Summary",
                 message=f"Today's sales: ₱{total_sales:,.2f} from {order_count} completed orders.",
@@ -558,7 +579,7 @@ def trigger_low_inventory_report():
 
             # Notify all admins and managers
             for user_id in get_admin_users():
-                create_notification.delay(
+                _create_notification(
                     user_id=user_id,
                     title="Low Inventory Report",
                     message=f"{count} item(s) are currently low on stock. Please review and reorder.",
@@ -592,7 +613,7 @@ def trigger_test_notification(user_id, notification_type='info'):
 
         title, message = messages.get(notification_type, messages['info'])
 
-        create_notification.delay(
+        _create_notification(
             user_id=user_id,
             title=title,
             message=message,
