@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Utensils, UtensilsCrossed } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,8 +9,6 @@ import { EventDetailsModal } from './catering/EventDetailsModal';
 import { MenuItemsModal } from './catering/MenuItemsModal';
 import { CateringEventTable } from './catering/CateringEventTable';
 import { EventSearchAndFilters } from './catering/EventSearchAndFilters';
-import { EventDetailsCard } from './catering/EventDetailsCard';
-import { CateringSidebar } from './catering/CateringSidebar';
 import { toast } from 'sonner';
 import { useMenuItems } from '@/hooks/useMenuItems';
 import cateringService from '@/api/services/cateringService';
@@ -148,7 +145,6 @@ const isEventPast = (event) => {
 };
 
 const Catering = () => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('upcoming');
   const [showNewEventModal, setShowNewEventModal] = useState(false);
@@ -160,7 +156,7 @@ const Catering = () => {
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState(null);
 
-  const { items: rawMenuItems, loading: isMenuLoading } = useMenuItems();
+  const { items: rawMenuItems } = useMenuItems();
 
   const cateringMenu = useMemo(() => {
     const getCategoryName = (category) => {
@@ -264,9 +260,6 @@ const Catering = () => {
         }),
     [filteredBySearch]
   );
-
-  const nextUpcomingEvent =
-    upcomingEvents.length > 0 ? upcomingEvents[0] : null;
 
   const handleCreateEvent = useCallback(async (formValues) => {
     try {
@@ -439,25 +432,6 @@ const Catering = () => {
     []
   );
 
-  const handleViewFullMenu = useCallback(() => {
-    navigate('/pos');
-  }, [navigate]);
-
-  const getStatusBadgeVariant = useCallback((status) => {
-    switch (status) {
-      case 'scheduled':
-        return 'outline';
-      case 'in-progress':
-        return 'default';
-      case 'completed':
-        return 'success';
-      case 'cancelled':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  }, []);
-
   const renderTable = (data, emptyMessage) => {
     if (isLoadingEvents) {
       return (
@@ -515,62 +489,43 @@ const Catering = () => {
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="md:col-span-2 space-y-4">
-          <FeaturePanelCard
-            badgeIcon={UtensilsCrossed}
-            badgeText="Catering Management"
-            description="Handle catering orders and events"
-            headerActions={
-              <Button onClick={() => setShowNewEventModal(true)}>
-                <PlusCircle className="h-4 w-4 mr-1" /> New Event
-              </Button>
-            }
-          >
-            <EventSearchAndFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              onCalendarView={() => setShowCalendarModal(true)}
-            />
+      <div className="grid gap-4">
+        <FeaturePanelCard
+          badgeIcon={UtensilsCrossed}
+          badgeText="Catering Management"
+          description="Handle catering orders and events"
+          headerActions={
+            <Button onClick={() => setShowNewEventModal(true)}>
+              <PlusCircle className="h-4 w-4 mr-1" /> New Event
+            </Button>
+          }
+        >
+          <EventSearchAndFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onCalendarView={() => setShowCalendarModal(true)}
+          />
 
-            <Tabs value={currentTab} onValueChange={setCurrentTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="past">Past Events</TabsTrigger>
-                <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
-              </TabsList>
-              <TabsContent value="upcoming" className="pt-2">
-                {renderTable(
-                  upcomingEvents,
-                  'No upcoming catering events found'
-                )}
-              </TabsContent>
-              <TabsContent value="past" className="pt-2">
-                {renderTable(pastEvents, 'No past catering events to display')}
-              </TabsContent>
-              <TabsContent value="cancelled" className="pt-2">
-                {renderTable(
-                  cancelledEvents,
-                  'No cancelled catering events to display'
-                )}
-              </TabsContent>
-            </Tabs>
-          </FeaturePanelCard>
-
-          {nextUpcomingEvent && (
-            <EventDetailsCard
-              event={nextUpcomingEvent}
-              getStatusBadgeVariant={getStatusBadgeVariant}
-            />
-          )}
-        </div>
-
-        <CateringSidebar
-          cateringMenu={cateringMenu}
-          isMenuLoading={isMenuLoading}
-          upcomingEvents={upcomingEvents}
-          onViewFullMenu={handleViewFullMenu}
-        />
+          <Tabs value={currentTab} onValueChange={setCurrentTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="past">Past Events</TabsTrigger>
+              <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="pt-2">
+              {renderTable(upcomingEvents, 'No upcoming catering events found')}
+            </TabsContent>
+            <TabsContent value="past" className="pt-2">
+              {renderTable(pastEvents, 'No past catering events to display')}
+            </TabsContent>
+            <TabsContent value="cancelled" className="pt-2">
+              {renderTable(
+                cancelledEvents,
+                'No cancelled catering events to display'
+              )}
+            </TabsContent>
+          </Tabs>
+        </FeaturePanelCard>
       </div>
 
       <NewEventModal
