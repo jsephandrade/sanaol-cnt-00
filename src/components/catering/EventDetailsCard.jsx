@@ -1,12 +1,5 @@
 import React from 'react';
 import { CalendarDays, Map, Users, Phone, User, Banknote } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,10 +34,12 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
         : 'text-red-600';
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Event Details</CardTitle>
-        <CardDescription>Next scheduled catering event</CardDescription>
+    <div>
+      <div>
+        <h2 className="text-2xl font-bold">Event Details</h2>
+        <p className="text-sm text-muted-foreground">
+          Next scheduled catering event
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
           <div className="flex items-center gap-2 font-medium text-foreground">
             <Banknote className="h-4 w-4 text-primary" />
@@ -60,8 +55,8 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
           </span>
           {showNoMenuBadge && <Badge variant="outline">No menu items</Badge>}
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="mt-6">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div>
@@ -178,7 +173,7 @@ export const EventDetailsCard = ({ event, getStatusBadgeVariant }) => {
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

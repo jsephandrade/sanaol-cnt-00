@@ -6,12 +6,6 @@ import {
   Sparkles,
   UtensilsCrossed,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -61,12 +55,12 @@ export const CateringSidebar = ({
 
   return (
     <div className="space-y-6">
-      <Card className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
+      <div className="relative overflow-hidden rounded-md border border-border bg-white shadow-none ring-1 ring-border/60">
         {/* light theme decorative blobs */}
         <div className="pointer-events-none absolute -right-16 -top-10 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-12 h-48 w-48 rounded-full bg-muted/40 blur-3xl" />
 
-        <CardHeader className="relative pb-4">
+        <div className="relative pb-4 p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-md border border-primary/20 bg-primary/10 px-3 py-1 text-xl font-semibold uppercase tracking-[0.2em] text-primary">
@@ -121,10 +115,10 @@ export const CateringSidebar = ({
               )}
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent
-          className={`relative transition-opacity duration-300 ${showMenuView ? 'space-y-6' : ''}`}
+        <div
+          className={`relative transition-opacity duration-300 p-6 pt-0 ${showMenuView ? 'space-y-6' : ''}`}
         >
           {isShowingEvents ? (
             hasEvents ? (
@@ -241,8 +235,8 @@ export const CateringSidebar = ({
               No catering menu items available.
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
