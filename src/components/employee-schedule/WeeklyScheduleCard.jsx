@@ -1,23 +1,26 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 import {
-  Edit,
-  Trash2,
+  MoreHorizontal,
   Plus,
   Clock,
-  Calendar,
+  Calendar as CalendarIcon,
   UserPlus,
   Users,
+  Briefcase,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const formatTimeLabel = (time) => {
   if (!time) return '--:--';
@@ -56,20 +59,41 @@ const WeeklyScheduleCard = ({
     return map;
   }, [schedule]);
 
+  // Group schedules by day (column-based view)
+  const schedulesByDay = useMemo(() => {
+    const days = daysOfWeek.filter((day) => day !== 'Sunday');
+    const grouped = {};
+
+    days.forEach((day) => {
+      grouped[day] = [];
+      employeeList.forEach((employee) => {
+        const entry = scheduleMap.get(`${employee.id}-${day}`);
+        if (entry) {
+          grouped[day].push({
+            ...entry,
+            employee,
+          });
+        }
+      });
+    });
+
+    return grouped;
+  }, [daysOfWeek, employeeList, scheduleMap]);
+
   const headerActions = canManage ? (
-    <div className="flex flex-col gap-2 sm:flex-row">
+    <div className="flex flex-wrap gap-2">
       <Button
         variant="outline"
         size="sm"
-        className="h-9 gap-2"
+        className="gap-2"
         onClick={onOpenManageEmployees}
       >
         <Users className="h-4 w-4" />
-        Manage Employees
+        Team
       </Button>
-      <Button size="sm" className="h-9 gap-2" onClick={onOpenAddSchedule}>
-        <Calendar className="h-4 w-4" />
-        Add Schedule
+      <Button size="sm" className="gap-2" onClick={onOpenAddSchedule}>
+        <Plus className="h-4 w-4" />
+        New Shift
       </Button>
     </div>
   ) : null;
@@ -77,196 +101,205 @@ const WeeklyScheduleCard = ({
   return (
     <FeaturePanelCard
       badgeText="Weekly Schedule"
-      description="Employee shifts for the current week"
+      description="Manage employee shifts across the week"
       headerActions={headerActions}
-      contentClassName="space-y-4"
+      contentClassName="space-y-6"
     >
       {employeeList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[200px] rounded-lg border-2 border-dashed p-8 text-center">
-          <div className="rounded-full bg-muted p-3 mb-4">
-            <UserPlus className="h-8 w-8 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center min-h-[300px] rounded-xl bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-12 text-center">
+          <div className="rounded-full bg-background shadow-lg p-4 mb-6">
+            <UserPlus className="h-12 w-12 text-primary" />
           </div>
-          <h3 className="font-semibold text-lg mb-2">No employees added yet</h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+          <h3 className="font-bold text-2xl mb-2">Build Your Team</h3>
+          <p className="text-muted-foreground mb-6 max-w-md text-sm">
             {canManage
-              ? 'Get started by adding employees to your team and creating their schedules.'
-              : 'Please check back once the team list is ready.'}
+              ? 'Start by adding team members and assigning their work schedules.'
+              : "Your team schedule will appear here once it's set up."}
           </p>
           {canManage && (
-            <Button onClick={onOpenManageEmployees} className="gap-2">
-              <Users className="h-4 w-4" />
-              Manage Employees
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={onOpenManageEmployees}
+                size="lg"
+                className="gap-2"
+              >
+                <Users className="h-5 w-5" />
+                Add Team Members
+              </Button>
+            </div>
           )}
         </div>
       ) : (
-        <TooltipProvider>
-          <div className="overflow-x-auto">
-            <div className="w-full min-w-[960px]">
-              {/* Header Row */}
-              <div className="mb-3 grid grid-cols-[minmax(240px,1.5fr)_repeat(6,minmax(120px,1fr))] gap-3 pb-3 border-b">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                  <Users className="h-4 w-4" />
-                  <span>Employee</span>
-                </div>
-                {daysOfWeek
-                  .filter((day) => day !== 'Sunday')
-                  .map((day) => (
-                    <div
+        <div className="space-y-6">
+          {/* Column-based Day View */}
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4 min-w-max">
+              {daysOfWeek
+                .filter((day) => day !== 'Sunday')
+                .map((day) => {
+                  const daySchedules = schedulesByDay[day] || [];
+
+                  return (
+                    <Card
                       key={day}
-                      className="text-center text-sm font-semibold"
+                      className="flex-shrink-0 w-[280px] bg-muted/30"
                     >
-                      {day}
-                    </div>
-                  ))}
-              </div>
-
-              {/* Employee Rows */}
-              <div className="space-y-3">
-                {employeeList.map((employee) => (
-                  <div
-                    key={employee.id}
-                    className="grid grid-cols-[minmax(240px,1.5fr)_repeat(6,minmax(120px,1fr))] items-center gap-3"
-                  >
-                    {/* Employee Info Card */}
-                    <div className="flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm hover:shadow transition-shadow">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                          {employee.name?.charAt(0)?.toUpperCase() || '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {employee.name || 'Unnamed'}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {employee.position || 'Role not set'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Day Schedule Cells */}
-                    {daysOfWeek
-                      .filter((day) => day !== 'Sunday')
-                      .map((day) => {
-                        const entry = scheduleMap.get(`${employee.id}-${day}`);
-
-                        return (
-                          <div
-                            key={day}
-                            className="flex items-center justify-center"
-                          >
-                            {entry ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => onEditSchedule(entry)}
-                                    onKeyDown={(event) => {
-                                      if (
-                                        event.key === 'Enter' ||
-                                        event.key === ' '
-                                      ) {
-                                        event.preventDefault();
-                                        onEditSchedule(entry);
-                                      }
-                                    }}
-                                    className="group relative w-full rounded-lg border bg-primary/5 hover:bg-primary/10 p-3 cursor-pointer transition-all hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                                  >
-                                    {/* Time Display */}
-                                    <div className="flex flex-col gap-1 text-center">
-                                      <div className="flex items-center justify-center gap-1 text-xs font-medium text-green-600">
-                                        <Clock className="h-3 w-3" />
-                                        <span>
-                                          {formatTimeLabel(entry.startTime)}
-                                        </span>
-                                      </div>
-                                      <div className="text-xs text-muted-foreground">
-                                        to
-                                      </div>
-                                      <div className="flex items-center justify-center gap-1 text-xs font-medium text-orange-600">
-                                        <Clock className="h-3 w-3" />
-                                        <span>
-                                          {formatTimeLabel(entry.endTime)}
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-primary" />
+                            <CardTitle className="text-base font-semibold">
+                              {day}
+                            </CardTitle>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {daySchedules.length}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Shift Cards */}
+                        {daySchedules.length > 0 ? (
+                          daySchedules.map((shift) => (
+                            <Card
+                              key={shift.id}
+                              className="group hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+                              onClick={() => onEditSchedule(shift)}
+                            >
+                              <CardContent className="p-4">
+                                {/* Employee Info */}
+                                <div className="flex items-start justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8 ring-2 ring-background">
+                                      <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                                        {shift.employee.name
+                                          ?.charAt(0)
+                                          ?.toUpperCase() || '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-sm truncate">
+                                        {shift.employee.name}
+                                      </p>
+                                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Briefcase className="h-3 w-3" />
+                                        <span className="truncate">
+                                          {shift.employee.position || 'Staff'}
                                         </span>
                                       </div>
                                     </div>
-
-                                    {/* Action Buttons (appears on hover) */}
-                                    {canManage && (
-                                      <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                        <Button
-                                          size="icon"
-                                          variant="secondary"
-                                          className="h-6 w-6 rounded-full shadow-lg"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            onEditSchedule(entry);
-                                          }}
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="destructive"
-                                          className="h-6 w-6 rounded-full shadow-lg"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            onDeleteSchedule(entry.id);
-                                          }}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    )}
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">
-                                    {formatTimeLabel(entry.startTime)} -{' '}
-                                    {formatTimeLabel(entry.endTime)}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <div className="w-full rounded-lg border-2 border-dashed bg-muted/30 p-3 flex items-center justify-center min-h-[80px]">
-                                {canManage ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-full hover:bg-primary/10"
-                                        onClick={() =>
-                                          onAddScheduleForDay(employee.id, day)
-                                        }
+
+                                  {canManage && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger
+                                        asChild
+                                        onClick={(e) => e.stopPropagation()}
                                       >
-                                        <Plus className="h-4 w-4" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="text-xs">
-                                        Add schedule for {day}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">
-                                    Off
-                                  </span>
-                                )}
-                              </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onEditSchedule(shift);
+                                          }}
+                                        >
+                                          Edit Shift
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteSchedule(shift.id);
+                                          }}
+                                        >
+                                          Delete Shift
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
+                                </div>
+
+                                {/* Time Range */}
+                                <div className="bg-background/60 rounded-lg p-2.5 space-y-1">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground font-medium">
+                                      Start
+                                    </span>
+                                    <span className="font-bold text-green-600">
+                                      {formatTimeLabel(shift.startTime)}
+                                    </span>
+                                  </div>
+                                  <Separator />
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground font-medium">
+                                      End
+                                    </span>
+                                    <span className="font-bold text-orange-600">
+                                      {formatTimeLabel(shift.endTime)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Duration Badge */}
+                                <div className="mt-2 flex justify-center">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs gap-1"
+                                  >
+                                    <Clock className="h-3 w-3" />
+                                    {(() => {
+                                      const start = new Date(
+                                        `2000-01-01T${shift.startTime}`
+                                      );
+                                      const end = new Date(
+                                        `2000-01-01T${shift.endTime}`
+                                      );
+                                      const hours =
+                                        (end - start) / (1000 * 60 * 60);
+                                      return `${hours.toFixed(1)}h`;
+                                    })()}
+                                  </Badge>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <div className="rounded-full bg-background p-3 mb-3">
+                              <Clock className="h-6 w-6 text-muted-foreground/50" />
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-3">
+                              No shifts scheduled
+                            </p>
+                            {canManage && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-2"
+                                onClick={() => onOpenAddSchedule()}
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add Shift
+                              </Button>
                             )}
                           </div>
-                        );
-                      })}
-                  </div>
-                ))}
-              </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
             </div>
           </div>
-        </TooltipProvider>
+        </div>
       )}
     </FeaturePanelCard>
   );
