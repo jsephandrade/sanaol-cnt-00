@@ -186,7 +186,7 @@ const WeeklyScheduleCard = ({
                         variant="ghost"
                         size="sm"
                         className="gap-2"
-                        onClick={() => onOpenAddSchedule()}
+                        onClick={() => onAddScheduleForDay(null, day)}
                       >
                         <Plus className="h-4 w-4" />
                         Add Shift
