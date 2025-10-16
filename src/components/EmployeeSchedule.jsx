@@ -8,7 +8,6 @@ import ManageEmployeesDialog from '@/components/employee-schedule/ManageEmployee
 import AddScheduleDialog from '@/components/employee-schedule/AddScheduleDialog';
 import WeeklyScheduleCard from '@/components/employee-schedule/WeeklyScheduleCard';
 import EditScheduleDialog from '@/components/employee-schedule/EditScheduleDialog';
-import StaffOverviewCard from '@/components/employee-schedule/StaffOverviewCard';
 import ScheduleCalendar from '@/components/schedule/ScheduleCalendar';
 import AttendanceAdmin from '@/components/AttendanceAdmin';
 import LeaveManagement from '@/components/LeaveManagement';
@@ -301,13 +300,6 @@ const EmployeeSchedule = () => {
             ) : null}
           </div>
         </div>
-
-        {displayEmployees.length > 0 && (
-          <StaffOverviewCard
-            employeeList={displayEmployees}
-            schedule={schedule}
-          />
-        )}
       </div>
     </>
   );
