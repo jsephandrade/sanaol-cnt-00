@@ -7,7 +7,19 @@ import logging
 from datetime import timedelta
 from typing import Optional, List, Dict, Any
 
-from celery import shared_task
+try:
+    from celery import shared_task
+    CELERY_AVAILABLE = True
+except ImportError:
+    # Celery not installed, create a dummy decorator
+    def shared_task(*args, **kwargs):
+        def decorator(func):
+            return func
+        if len(args) == 1 and callable(args[0]):
+            return args[0]
+        return decorator
+    CELERY_AVAILABLE = False
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
