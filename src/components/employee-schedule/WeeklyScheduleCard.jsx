@@ -158,6 +158,19 @@ const WeeklyScheduleCard = ({
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-3">
+                        {/* Add Shift Button */}
+                        {canManage && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2 border-dashed"
+                            onClick={() => onOpenAddSchedule()}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Shift
+                          </Button>
+                        )}
+
                         {/* Shift Cards */}
                         {daySchedules.length > 0 ? (
                           daySchedules.map((shift) => (
@@ -277,20 +290,9 @@ const WeeklyScheduleCard = ({
                             <div className="rounded-full bg-background p-3 mb-3">
                               <Clock className="h-6 w-6 text-muted-foreground/50" />
                             </div>
-                            <p className="text-sm text-muted-foreground mb-3">
+                            <p className="text-sm text-muted-foreground">
                               No shifts scheduled
                             </p>
-                            {canManage && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-2"
-                                onClick={() => onOpenAddSchedule()}
-                              >
-                                <Plus className="h-3 w-3" />
-                                Add Shift
-                              </Button>
-                            )}
                           </div>
                         )}
                       </CardContent>
