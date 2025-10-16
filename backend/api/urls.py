@@ -81,6 +81,7 @@ urlpatterns = [
     path("notifications", notif_views.notifications, name="notifications"),
     path("notifications/mark-all-read", notif_views.notifications_mark_all, name="notifications_mark_all"),
     path("notifications/settings", notif_views.notifications_settings, name="notifications_settings"),
+    path("notifications/test-trigger", notif_views.notifications_test_trigger, name="notifications_test_trigger"),
     path("notifications/<str:notif_id>/read", notif_views.notification_read, name="notification_read"),
     path("notifications/<str:notif_id>", notif_views.notification_delete, name="notification_delete"),
     path("notifications/push/public-key", notif_views.notifications_push_public_key, name="notifications_push_public_key"),

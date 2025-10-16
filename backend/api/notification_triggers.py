@@ -381,3 +381,228 @@ def trigger_leave_status_change(leave_request):
 
     except Exception as e:
         logger.error(f"Failed to trigger leave status change notification: {e}")
+
+
+# ========== Menu & POS Triggers ==========
+
+def trigger_menu_item_added(menu_item):
+    """
+    Trigger notification when new menu item is added.
+
+    Args:
+        menu_item: MenuItem instance
+    """
+    try:
+        # Notify all admins and managers
+        for user_id in get_admin_users():
+            create_notification.delay(
+                user_id=user_id,
+                title="New Menu Item Added",
+                message=f"New menu item '{menu_item.name}' has been added to the menu at ₱{menu_item.price:,.2f}.",
+                notification_type='success',
+                meta={'menu_item_id': str(menu_item.id), 'event_type': 'menu_item_added'}
+            )
+
+        logger.info(f"Menu item added notification triggered for {menu_item.name}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger menu item added notification: {e}")
+
+
+def trigger_large_order(order, threshold=5000):
+    """
+    Trigger notification for large orders exceeding threshold.
+
+    Args:
+        order: Order instance
+        threshold: Amount threshold for large orders (default: 5000)
+    """
+    try:
+        if order.total_amount and order.total_amount >= threshold:
+            # Notify all admins and managers
+            for user_id in get_admin_users():
+                create_notification.delay(
+                    user_id=user_id,
+                    title="Large Order Alert",
+                    message=f"Large order #{order.id} placed for ₱{order.total_amount:,.2f}. Please review and prioritize.",
+                    notification_type='warning',
+                    meta={'order_id': str(order.id), 'event_type': 'large_order', 'amount': str(order.total_amount)}
+                )
+
+            logger.info(f"Large order notification triggered for order {order.id}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger large order notification: {e}")
+
+
+# ========== User & Account Triggers ==========
+
+def trigger_new_user_registration(user):
+    """
+    Trigger notification when new user registers.
+
+    Args:
+        user: AppUser instance
+    """
+    try:
+        # Notify all admins
+        for user_id in get_admin_users():
+            create_notification.delay(
+                user_id=user_id,
+                title="New User Registration",
+                message=f"New user {user.email} has registered and is pending approval.",
+                notification_type='info',
+                meta={'new_user_id': str(user.id), 'event_type': 'new_user_registration'}
+            )
+
+        logger.info(f"New user registration notification triggered for {user.email}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger new user registration notification: {e}")
+
+
+def trigger_user_role_changed(user, old_role, new_role):
+    """
+    Trigger notification when user role changes.
+
+    Args:
+        user: AppUser instance
+        old_role: Previous role
+        new_role: New role
+    """
+    try:
+        # Notify the user
+        create_notification.delay(
+            user_id=user.id,
+            title="Role Updated",
+            message=f"Your role has been changed from {old_role} to {new_role}.",
+            notification_type='info',
+            meta={'event_type': 'role_changed', 'old_role': old_role, 'new_role': new_role}
+        )
+
+        # Notify admins
+        for admin_id in get_admin_users():
+            if admin_id != user.id:
+                create_notification.delay(
+                    user_id=admin_id,
+                    title="User Role Changed",
+                    message=f"User {user.email}'s role changed from {old_role} to {new_role}.",
+                    notification_type='info',
+                    meta={'affected_user_id': str(user.id), 'event_type': 'role_changed'}
+                )
+
+        logger.info(f"Role change notification triggered for user {user.email}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger role change notification: {e}")
+
+
+# ========== Daily Summary Triggers ==========
+
+def trigger_daily_sales_summary():
+    """
+    Trigger daily sales summary notification.
+    Should be run daily via Celery beat at end of day.
+    """
+    try:
+        from .models import Order
+        from django.db.models import Sum, Count
+
+        today = timezone.now().date()
+        today_start = timezone.datetime.combine(today, timezone.datetime.min.time())
+        today_end = timezone.datetime.combine(today, timezone.datetime.max.time())
+
+        # Get today's stats
+        stats = Order.objects.filter(
+            created_at__range=(today_start, today_end),
+            status='completed'
+        ).aggregate(
+            total_sales=Sum('total_amount'),
+            order_count=Count('id')
+        )
+
+        total_sales = stats['total_sales'] or 0
+        order_count = stats['order_count'] or 0
+
+        # Notify all admins and managers
+        for user_id in get_admin_users():
+            create_notification.delay(
+                user_id=user_id,
+                title="Daily Sales Summary",
+                message=f"Today's sales: ₱{total_sales:,.2f} from {order_count} completed orders.",
+                notification_type='success',
+                meta={'event_type': 'daily_sales_summary', 'date': str(today), 'total_sales': str(total_sales)}
+            )
+
+        logger.info(f"Daily sales summary notification triggered: ₱{total_sales:,.2f}")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger daily sales summary: {e}")
+
+
+def trigger_low_inventory_report():
+    """
+    Trigger low inventory report notification.
+    Should be run daily via Celery beat.
+    """
+    try:
+        from .models import InventoryItem
+
+        low_stock_items = InventoryItem.objects.filter(
+            stock_quantity__lte=F('reorder_level'),
+            status='active'
+        )
+
+        if low_stock_items.exists():
+            count = low_stock_items.count()
+
+            # Notify all admins and managers
+            for user_id in get_admin_users():
+                create_notification.delay(
+                    user_id=user_id,
+                    title="Low Inventory Report",
+                    message=f"{count} item(s) are currently low on stock. Please review and reorder.",
+                    notification_type='warning',
+                    meta={'event_type': 'low_inventory_report', 'item_count': count}
+                )
+
+            logger.info(f"Low inventory report notification triggered: {count} items")
+
+    except Exception as e:
+        logger.error(f"Failed to trigger low inventory report: {e}")
+
+
+# ========== Test Trigger (for frontend testing) ==========
+
+def trigger_test_notification(user_id, notification_type='info'):
+    """
+    Trigger a test notification for testing purposes.
+
+    Args:
+        user_id: User ID to send notification to
+        notification_type: Type of notification (info, success, warning, error)
+    """
+    try:
+        messages = {
+            'info': ('Test Notification', 'This is a test info notification sent at ' + timezone.now().strftime('%I:%M %p')),
+            'success': ('Success Notification', 'This is a test success notification! Everything is working great.'),
+            'warning': ('Warning Notification', 'This is a test warning notification. Please review this alert.'),
+            'error': ('Error Notification', 'This is a test error notification. Immediate action may be required.'),
+        }
+
+        title, message = messages.get(notification_type, messages['info'])
+
+        create_notification.delay(
+            user_id=user_id,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            meta={'event_type': 'test_notification', 'test_type': notification_type}
+        )
+
+        logger.info(f"Test notification ({notification_type}) triggered for user {user_id}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to trigger test notification: {e}")
+        return False
