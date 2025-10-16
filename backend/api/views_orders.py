@@ -778,6 +778,15 @@ def orders(request):
             },
         )
         publish_event("order.created", {"order": order_payload}, roles={"admin", "manager", "staff"}, user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None)
+
+        # Trigger notifications for new order and large orders
+        try:
+            from .notification_triggers import trigger_new_order, trigger_large_order
+            trigger_new_order(o)
+            trigger_large_order(o)
+        except Exception:
+            pass
+
         return JsonResponse({"success": True, "data": order_payload})
     except Exception:
         logger.exception("Failed to create order")
@@ -1577,6 +1586,14 @@ def order_status(request, oid):
                         consume_for_order(order_id=str(o.id), components=components, location=loc, actor=actor if hasattr(actor, "id") else None)
             except Exception:
                 pass
+
+            # Trigger notification for completed order
+            if status_changed and previous_canonical != "completed":
+                try:
+                    from .notification_triggers import trigger_order_completed
+                    trigger_order_completed(o)
+                except Exception:
+                    pass
         # Optional: audit log
         try:
             from .utils_audit import record_audit

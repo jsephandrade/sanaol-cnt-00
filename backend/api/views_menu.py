@@ -269,6 +269,12 @@ def menu_items(request):
                 preparation_time=prep,
             )
         item = _safe_menu_item(mi)
+        # Trigger notification for new menu item
+        try:
+            from .notification_triggers import trigger_menu_item_added
+            trigger_menu_item_added(mi)
+        except Exception:
+            pass
     except Exception:
         if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
             return JsonResponse({"success": False, "message": "Failed to create menu item"}, status=500)
