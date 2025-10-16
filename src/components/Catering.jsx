@@ -6,11 +6,9 @@ import { format, parseISO, parse } from 'date-fns';
 import { NewEventModal } from './catering/NewEventModal';
 import { CalendarViewModal } from './catering/CalendarViewModal';
 import { EventDetailsModal } from './catering/EventDetailsModal';
-import { MenuItemsModal } from './catering/MenuItemsModal';
 import { CateringEventTable } from './catering/CateringEventTable';
 import { EventSearchAndFilters } from './catering/EventSearchAndFilters';
 import { toast } from 'sonner';
-import { useMenuItems } from '@/hooks/useMenuItems';
 import cateringService from '@/api/services/cateringService';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
@@ -150,43 +148,10 @@ const Catering = () => {
   const [showNewEventModal, setShowNewEventModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showEventDetailsModal, setShowEventDetailsModal] = useState(false);
-  const [showMenuItemsModal, setShowMenuItemsModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [events, setEvents] = useState([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState(null);
-
-  const { items: rawMenuItems } = useMenuItems();
-
-  const cateringMenu = useMemo(() => {
-    const getCategoryName = (category) => {
-      if (!category) return 'Uncategorized';
-      if (typeof category === 'string') return category;
-      if (typeof category === 'object') {
-        return (
-          category.name ||
-          category.label ||
-          category.title ||
-          category.slug ||
-          category.id ||
-          'Uncategorized'
-        );
-      }
-      return String(category);
-    };
-
-    const toNumber = (value) => {
-      const num = Number(value ?? 0);
-      return Number.isFinite(num) ? num : 0;
-    };
-
-    return (rawMenuItems || []).map((item) => ({
-      ...item,
-      category: getCategoryName(item.category),
-      price: toNumber(item.price ?? item.unitPrice ?? item.basePrice),
-      description: item.description || '',
-    }));
-  }, [rawMenuItems]);
 
   const fetchEvents = useCallback(async () => {
     setIsLoadingEvents(true);
@@ -314,28 +279,6 @@ const Catering = () => {
     }
   }, []);
 
-  const handleMenuItems = useCallback(async (event) => {
-    setSelectedEvent(event);
-    setShowMenuItemsModal(true);
-    try {
-      const res = await cateringService.getEvent(event.id, {
-        includeItems: true,
-      });
-      if (!res?.success) throw new Error(res?.message);
-      const mapped = mapEventRecord(res.data);
-      setSelectedEvent(mapped);
-      setEvents((prev) =>
-        prev.map((item) => (item.id === mapped.id ? mapped : item))
-      );
-    } catch (error) {
-      const message =
-        error?.message ||
-        error?.details?.message ||
-        'Failed to load menu items';
-      toast.error(message);
-    }
-  }, []);
-
   const handleCancelEvent = useCallback(
     async (event) => {
       try {
@@ -405,33 +348,6 @@ const Catering = () => {
     [selectedEvent]
   );
 
-  const handleUpdateMenuItems = useCallback(
-    async (eventId, menuItemsPayload) => {
-      try {
-        const res = await cateringService.setEventMenuItems(
-          eventId,
-          menuItemsPayload
-        );
-        if (!res?.success) throw new Error(res?.message);
-        const mapped = mapEventRecord(res.data);
-        setEvents((prev) =>
-          prev.map((item) => (item.id === mapped.id ? mapped : item))
-        );
-        setSelectedEvent(mapped);
-        toast.success('Menu items updated successfully!');
-        return true;
-      } catch (error) {
-        const message =
-          error?.message ||
-          error?.details?.message ||
-          'Failed to update menu items';
-        toast.error(message);
-        return false;
-      }
-    },
-    []
-  );
-
   const renderTable = (data, emptyMessage) => {
     if (isLoadingEvents) {
       return (
@@ -480,7 +396,6 @@ const Catering = () => {
       <CateringEventTable
         events={data}
         onViewDetails={handleViewDetails}
-        onMenuItems={handleMenuItems}
         onCancelEvent={handleCancelEvent}
         onRemoveEvent={handleRemoveEvent}
       />
@@ -546,14 +461,6 @@ const Catering = () => {
         onOpenChange={setShowEventDetailsModal}
         event={selectedEvent}
         onUpdateEvent={handleUpdateEventSchedule}
-      />
-
-      <MenuItemsModal
-        open={showMenuItemsModal}
-        onOpenChange={setShowMenuItemsModal}
-        event={selectedEvent}
-        menuItems={cateringMenu}
-        onUpdateMenuItems={handleUpdateMenuItems}
       />
     </>
   );
