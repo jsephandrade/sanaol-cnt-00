@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -8,10 +8,28 @@ import {
 import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Bell, LogOut } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Bell,
+  LogOut,
+  Settings,
+  HelpCircle,
+  User,
+  ChevronDown,
+} from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import PageTransition from '@/components/PageTransition';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 // ⬇️ Logout dialog imports
 import {
@@ -39,7 +57,40 @@ const LAYOUT_SCROLLBAR_STYLES = `
 
 const MainLayout = ({ children }) => {
   const isMobile = useIsMobile();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const location = useLocation();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  // Mock notification count (replace with actual count from your API)
+  const notificationCount = 3;
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user?.email) return 'U';
+    const email = user.email;
+    return email.charAt(0).toUpperCase();
+  };
+
+  // Get page title from route
+  const getPageTitle = () => {
+    const path = location.pathname;
+    const titles = {
+      '/': 'Dashboard',
+      '/pos': 'Point of Sale',
+      '/menu': 'Menu Management',
+      '/orders': 'Orders',
+      '/inventory': 'Inventory',
+      '/catering': 'Catering',
+      '/employees': 'Employees',
+      '/schedule': 'Schedule',
+      '/analytics': 'Analytics',
+      '/customers': 'Customers',
+      '/notifications': 'Notifications',
+      '/settings': 'Settings',
+      '/help': 'Help & Support',
+    };
+    return titles[path] || 'Dashboard';
+  };
 
   return (
     <>
@@ -53,67 +104,144 @@ const MainLayout = ({ children }) => {
 
           {/* Main content */}
           <SidebarInset className="flex flex-col">
-            {/* Header */}
-            <header className="flex justify-between items-center bg-white border-b px-4 py-2 h-16 shadow-sm">
-              <div className="flex items-center gap-2">
-                {/* ⬇️ Shrink / Expand Sidebar button */}
-                <SidebarTrigger title="Close Sidebar" />
+            {/* Modern Header */}
+            <header className="sticky top-0 z-50 flex items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6 h-16">
+              {/* Left Section */}
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="h-9 w-9" />
+                <Separator orientation="vertical" className="h-6" />
+                <h1 className="text-lg font-semibold tracking-tight">
+                  {getPageTitle()}
+                </h1>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Button variant="outline" asChild>
-                  <Link to="/notifications">
-                    <Bell className="h-4 w-4" />
-                  </Link>
-                </Button>
+              {/* Right Section */}
+              <div className="flex items-center gap-2">
+                {/* Quick Actions */}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    asChild
+                  >
+                    <Link to="/help">
+                      <HelpCircle className="h-4 w-4" />
+                      <span className="sr-only">Help</span>
+                    </Link>
+                  </Button>
 
-                <Button variant="outline" asChild>
-                  <Link to="/help">Help</Link>
-                </Button>
+                  {/* Notifications with Badge */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 relative"
+                    asChild
+                  >
+                    <Link to="/notifications">
+                      <Bell className="h-4 w-4" />
+                      {notificationCount > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                        >
+                          {notificationCount}
+                        </Badge>
+                      )}
+                      <span className="sr-only">Notifications</span>
+                    </Link>
+                  </Button>
+                </div>
 
-                <Button variant="outline" asChild>
-                  <Link to="/settings">Settings</Link>
-                </Button>
+                <Separator orientation="vertical" className="h-6 mx-2" />
 
-                {/* Logout with confirmation */}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" title="Logout">
-                      <LogOut className="mr-1" />
-                      Logout
+                {/* User Menu Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="h-9 gap-2 px-2 hover:bg-accent"
+                    >
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage src={user?.avatarUrl} alt={user?.email} />
+                        <AvatarFallback className="text-xs">
+                          {getUserInitials()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="hidden md:inline-block text-sm font-medium">
+                        {user?.email?.split('@')[0] || 'User'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Are you sure you want to logout?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You’ll be signed out of your account and may need to log
-                        in again to continue.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={logout}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        Logout
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.email?.split('@')[0] || 'User'}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.email || 'user@example.com'}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/help" className="cursor-pointer">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        <span>Help & Support</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive cursor-pointer"
+                      onClick={() => setShowLogoutDialog(true)}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </header>
 
             {/* Page Content */}
-            <main className="flex-1 overflow-y-auto p-6 hide-scrollbar">
+            <main className="flex-1 overflow-y-auto p-6 hide-scrollbar bg-muted/30">
               <PageTransition>{children}</PageTransition>
             </main>
           </SidebarInset>
         </div>
       </SidebarProvider>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to logout?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll be signed out of your account and may need to log in again
+              to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={logout}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Logout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
