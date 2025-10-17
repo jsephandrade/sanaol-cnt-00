@@ -12,8 +12,6 @@ import { Label } from '@/components/ui/label';
 import { CustomBadge } from '@/components/ui/custom-badge';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import {
   CalendarDays,
   Users,
@@ -28,9 +26,6 @@ import {
   CreditCard,
   Smartphone,
   AlertCircle,
-  Clock,
-  Mail,
-  FileText,
   Sparkles,
   TrendingUp,
 } from 'lucide-react';
@@ -106,9 +101,6 @@ export const EventDetailsModal = ({
   const [isEditingPayment, setIsEditingPayment] = useState(false);
   const [paymentType, setPaymentType] = useState('deposit');
   const [paymentMethod, setPaymentMethod] = useState('cash');
-
-  // Tab state
-  const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
     if (!event) {
@@ -355,7 +347,7 @@ export const EventDetailsModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Enhanced Header with Gradient */}
-        <div className="relative -mx-6 -mt-6 mb-6 overflow-hidden">
+        <div className="relative -mx-6 -mt-6 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
           <div className="absolute inset-0 bg-grid-pattern opacity-5" />
           <DialogHeader className="relative px-6 pt-6 pb-4">
@@ -373,24 +365,26 @@ export const EventDetailsModal = ({
           </DialogHeader>
         </div>
 
-        <div className="space-y-6">
-          {/* Enhanced Main Event Card */}
-          <Card className="relative overflow-hidden border-2 shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -z-0" />
-            <CardHeader className="relative">
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl font-bold mb-1.5 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+        <div className="space-y-4">
+          {/* Main Event Card - Compact */}
+          <Card className="relative overflow-hidden border shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -z-0" />
+            <CardHeader className="relative py-3 px-4">
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg font-bold mb-1 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text truncate">
                     {event.name}
                   </CardTitle>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <p className="font-medium">{event.client}</p>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <User className="h-3.5 w-3.5 shrink-0" />
+                    <p className="font-medium text-sm truncate">
+                      {event.client}
+                    </p>
                   </div>
                 </div>
                 <CustomBadge
                   variant={getStatusBadgeVariant(event.status)}
-                  className="capitalize text-sm px-3 py-1.5 shadow-sm"
+                  className="capitalize text-xs px-2.5 py-1 shadow-sm shrink-0"
                 >
                   {event.status.replace('-', ' ')}
                 </CustomBadge>
@@ -398,15 +392,15 @@ export const EventDetailsModal = ({
             </CardHeader>
           </Card>
 
-          {/* Enhanced Grid Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Date & Time Card */}
-            <Card className="border-2 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-card to-card/95">
-              <CardHeader className="pb-3">
+          {/* Compact Grid Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Date & Time Card - Compact */}
+            <Card className="border shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/95">
+              <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-base flex items-center gap-2 font-bold">
-                    <div className="bg-primary/10 rounded-md p-1.5">
-                      <CalendarDays className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
+                    <div className="bg-primary/10 rounded p-1">
+                      <CalendarDays className="h-3.5 w-3.5 text-primary" />
                     </div>
                     {isEditingSchedule ? 'Reschedule' : 'Date & Time'}
                   </CardTitle>
@@ -415,7 +409,7 @@ export const EventDetailsModal = ({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-6 w-6"
                       onClick={handleToggleScheduleEdit}
                       disabled={isRescheduleLocked}
                       aria-disabled={isRescheduleLocked}
@@ -429,15 +423,15 @@ export const EventDetailsModal = ({
                       }
                     >
                       {isEditingSchedule ? (
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3" />
                       ) : (
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-3 w-3" />
                       )}
                     </Button>
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 pb-3">
                 {isEditingSchedule ? (
                   <form className="space-y-4" onSubmit={handleScheduleSubmit}>
                     {isRescheduleLocked && (
@@ -550,33 +544,32 @@ export const EventDetailsModal = ({
                     )}
                   </form>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {isRescheduleLocked && (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
                         {rescheduleLockMessage}
                       </div>
                     )}
-                    <div className="text-sm text-muted-foreground">
-                      <span>Current schedule:</span>
-                      <div className="font-medium text-foreground">
+                    <div className="text-xs">
+                      <p className="text-muted-foreground mb-0.5">Date</p>
+                      <p className="font-semibold text-foreground text-sm">
                         {scheduleDateLabel}
-                        {event.time ? ` - ${event.time}` : ''}
-                      </div>
+                      </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          Start Time
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          Start
                         </p>
-                        <p className="font-medium">
+                        <p className="font-semibold text-sm">
                           {scheduleStartTimeLabel || 'Not set'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">
-                          End Time
+                        <p className="text-xs text-muted-foreground mb-0.5">
+                          End
                         </p>
-                        <p className="font-medium">
+                        <p className="font-semibold text-sm">
                           {scheduleEndTimeLabel || 'Not set'}
                         </p>
                       </div>
@@ -586,57 +579,56 @@ export const EventDetailsModal = ({
               </CardContent>
             </Card>
 
-            {/* Attendees Card */}
-            <Card className="border-2 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-card to-card/95">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold">
-                  <div className="bg-primary/10 rounded-md p-1.5">
-                    <Users className="h-4 w-4 text-primary" />
+            {/* Attendees Card - Compact */}
+            <Card className="border shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/95">
+              <CardHeader className="pb-2 pt-3 px-3">
+                <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
+                  <div className="bg-primary/10 rounded p-1">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                   </div>
                   Attendees
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-primary mb-1">
-                  {attendeesCount}
-                </p>
-                <p className="text-sm text-muted-foreground font-medium">
-                  Expected guests
-                </p>
+              <CardContent className="px-3 pb-3">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-2xl font-bold text-primary">
+                    {attendeesCount}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    guests
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
-            {/* Location Card */}
-            <Card className="border-2 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-card to-card/95">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2 font-bold">
-                  <div className="bg-primary/10 rounded-md p-1.5">
-                    <MapPin className="h-4 w-4 text-primary" />
+            {/* Location Card - Compact */}
+            <Card className="border shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/95">
+              <CardHeader className="pb-2 pt-3 px-3">
+                <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
+                  <div className="bg-primary/10 rounded p-1">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
                   </div>
                   Location
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="font-semibold text-foreground">
+              <CardContent className="px-3 pb-3">
+                <p className="font-semibold text-foreground text-sm line-clamp-2">
                   {event.location || '—'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Venue address
                 </p>
               </CardContent>
             </Card>
 
-            {/* Financial Card */}
-            <Card className="border-2 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-card to-card/95">
-              <CardHeader className="pb-3">
+            {/* Financial Card - Compact */}
+            <Card className="border shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/95">
+              <CardHeader className="pb-2 pt-3 px-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2 font-bold">
-                    <div className="bg-primary/10 rounded-md p-1.5">
-                      <Banknote className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
+                    <div className="bg-primary/10 rounded p-1">
+                      <Banknote className="h-3.5 w-3.5 text-primary" />
                     </div>
                     {isEditingPayment ? 'Process Payment' : 'Financial'}
                   </CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {!isEditingPayment && getPaymentStatusBadge()}
                     {(localEvent || event)?.paymentStatus !== 'paid' &&
                       (localEvent || event)?.payment_status !== 'paid' && (
@@ -644,7 +636,7 @@ export const EventDetailsModal = ({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 hover:bg-primary/10"
+                          className="h-6 w-6 hover:bg-primary/10"
                           onClick={handleTogglePaymentEdit}
                           aria-label={
                             isEditingPayment
@@ -653,16 +645,16 @@ export const EventDetailsModal = ({
                           }
                         >
                           {isEditingPayment ? (
-                            <X className="h-4 w-4" />
+                            <X className="h-3 w-3" />
                           ) : (
-                            <Wallet className="h-4 w-4 text-primary" />
+                            <Wallet className="h-3 w-3 text-primary" />
                           )}
                         </Button>
                       )}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 px-3 pb-3">
                 {isEditingPayment ? (
                   <div className="space-y-4">
                     {/* Payment Type Selection */}
@@ -900,24 +892,24 @@ export const EventDetailsModal = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
+                  <div className="space-y-2">
+                    <div className="rounded border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <TrendingUp className="h-3 w-3 text-primary" />
                         <span className="text-xs font-semibold text-primary">
                           Total Amount
                         </span>
                       </div>
-                      <p className="text-3xl font-bold text-primary">
+                      <p className="text-2xl font-bold text-primary">
                         ₱{totalValue.toFixed(2)}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center py-1.5 border-b border-border/50">
-                        <span className="text-sm text-muted-foreground font-medium">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center py-1 border-b border-border/50">
+                        <span className="text-xs text-muted-foreground font-medium">
                           Per person:
                         </span>
-                        <span className="font-semibold text-foreground">
+                        <span className="font-semibold text-sm">
                           {attendeesCount > 0
                             ? `₱${(totalValue / attendeesCount).toFixed(2)}`
                             : '₱0.00'}
@@ -925,11 +917,11 @@ export const EventDetailsModal = ({
                       </div>
                       {((localEvent || event)?.depositAmount ||
                         (localEvent || event)?.deposit) && (
-                        <div className="flex justify-between items-center py-1.5">
-                          <span className="text-sm text-muted-foreground font-medium">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-xs text-muted-foreground font-medium">
                             Deposit (50%):
                           </span>
-                          <span className="font-semibold text-foreground">
+                          <span className="font-semibold text-sm">
                             ₱
                             {Number(
                               (localEvent || event)?.depositAmount ||
@@ -946,32 +938,30 @@ export const EventDetailsModal = ({
             </Card>
           </div>
 
-          {/* Enhanced Contact Information Card */}
-          <Card className="border-2 shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-br from-card to-card/95">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2 font-bold">
-                <div className="bg-primary/10 rounded-md p-1.5">
-                  <User className="h-4 w-4 text-primary" />
+          {/* Contact Information Card - Compact */}
+          <Card className="border shadow-sm hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/95">
+            <CardHeader className="pb-2 pt-3 px-3">
+              <CardTitle className="text-sm flex items-center gap-1.5 font-semibold">
+                <div className="bg-primary/10 rounded p-1">
+                  <User className="h-3.5 w-3.5 text-primary" />
                 </div>
                 Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-gradient-to-r from-muted/50 to-transparent border border-border/50">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-sm">
-                  <span className="font-bold text-primary text-lg">
+            <CardContent className="px-3 pb-3">
+              <div className="flex items-center gap-3 p-2 rounded-lg bg-gradient-to-r from-muted/50 to-transparent border border-border/50">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-sm shrink-0">
+                  <span className="font-bold text-primary text-sm">
                     {getInitials(contactPerson.name) || '—'}
                   </span>
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">
                     {contactPerson.name || '—'}
                   </p>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <div className="bg-primary/10 rounded p-0.5">
-                      <Phone className="h-3 w-3 text-primary" />
-                    </div>
-                    <span className="font-medium">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Phone className="h-2.5 w-2.5 text-primary shrink-0" />
+                    <span className="font-medium truncate">
                       {contactPerson.phone || '—'}
                     </span>
                   </div>
