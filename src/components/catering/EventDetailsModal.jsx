@@ -81,6 +81,17 @@ const getDaysUntilDate = (value) => {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 };
 
+const EVENT_DETAILS_SCROLLBAR_STYLES = `
+  .event-details-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .event-details-scroll::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
 export const EventDetailsModal = ({
   open,
   onOpenChange,
@@ -345,7 +356,8 @@ export const EventDetailsModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto event-details-scroll">
+        <style>{EVENT_DETAILS_SCROLLBAR_STYLES}</style>
         {/* Enhanced Header with Gradient */}
         <div className="relative -mx-6 -mt-6 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" />
