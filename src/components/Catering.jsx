@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Utensils, UtensilsCrossed } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -143,6 +144,7 @@ const isEventPast = (event) => {
 };
 
 const Catering = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentTab, setCurrentTab] = useState('upcoming');
   const [showNewEventModal, setShowNewEventModal] = useState(false);
@@ -348,6 +350,13 @@ const Catering = () => {
     [selectedEvent]
   );
 
+  const handleMenuItems = useCallback(
+    (event) => {
+      navigate(`/catering-menu-selection/${event.id}`);
+    },
+    [navigate]
+  );
+
   const renderTable = (data, emptyMessage) => {
     if (isLoadingEvents) {
       return (
@@ -396,6 +405,7 @@ const Catering = () => {
       <CateringEventTable
         events={data}
         onViewDetails={handleViewDetails}
+        onMenuItems={handleMenuItems}
         onCancelEvent={handleCancelEvent}
         onRemoveEvent={handleRemoveEvent}
       />

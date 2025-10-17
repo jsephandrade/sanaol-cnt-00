@@ -179,19 +179,9 @@ export default function LeaveManagement() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-semibold">Leave Requests</h2>
-        </div>
-        <div className="flex gap-2">
-          {isManager && <Button onClick={onAdd}>Add Leave</Button>}
-        </div>
-      </div>
-
       {/* Staff inline request form */}
       {!isManager && (
         <FeaturePanelCard
-          badgeText="Leave Request"
           description="Submit a leave request for review"
           className="max-w-md"
           contentClassName="space-y-3"
@@ -223,6 +213,12 @@ export default function LeaveManagement() {
                 <SelectContent>
                   <SelectItem value="sick">Sick</SelectItem>
                   <SelectItem value="vacation">Vacation</SelectItem>
+                  <SelectItem value="emergency">Emergency</SelectItem>
+                  <SelectItem value="bereavement">Bereavement</SelectItem>
+                  <SelectItem value="maternity">Maternity</SelectItem>
+                  <SelectItem value="paternity">Paternity</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -312,6 +308,11 @@ export default function LeaveManagement() {
         <FeaturePanelCard
           badgeText="Leave Requests"
           description="Request and manage leave"
+          headerActions={
+            <Button onClick={onAdd} className="shrink-0">
+              Add Leave
+            </Button>
+          }
           contentClassName="space-y-4"
         >
           <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-4">
@@ -349,6 +350,12 @@ export default function LeaveManagement() {
                   <SelectItem value="_any">Any</SelectItem>
                   <SelectItem value="sick">Sick</SelectItem>
                   <SelectItem value="vacation">Vacation</SelectItem>
+                  <SelectItem value="emergency">Emergency</SelectItem>
+                  <SelectItem value="bereavement">Bereavement</SelectItem>
+                  <SelectItem value="maternity">Maternity</SelectItem>
+                  <SelectItem value="paternity">Paternity</SelectItem>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
                   <SelectItem value="other">Other</SelectItem>
                 </SelectContent>
               </Select>
@@ -512,6 +519,12 @@ export default function LeaveManagement() {
                   <SelectContent>
                     <SelectItem value="sick">Sick</SelectItem>
                     <SelectItem value="vacation">Vacation</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
+                    <SelectItem value="bereavement">Bereavement</SelectItem>
+                    <SelectItem value="maternity">Maternity</SelectItem>
+                    <SelectItem value="paternity">Paternity</SelectItem>
+                    <SelectItem value="training">Training</SelectItem>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>

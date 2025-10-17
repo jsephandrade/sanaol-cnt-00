@@ -86,6 +86,7 @@ def _serialize_event(event, include_items=False):
         "notes": event.notes or "",
         "total": float(event.estimated_total or 0),
         "estimatedTotal": float(event.estimated_total or 0),
+        "orderDiscount": float(event.order_discount or 0),
         "deposit": float(event.deposit_amount or 0),
         "depositAmount": float(event.deposit_amount or 0),
         "depositPaid": event.deposit_paid,
@@ -228,6 +229,10 @@ def catering_events(request):
         or payload.get("deposit")
         or 0
     )
+    # If deposit_amount is not provided, automatically set to 50% of total
+    if deposit_amount == 0 and estimated_total > 0:
+        deposit_amount = estimated_total * Decimal("0.5")
+
     deposit_paid = payload.get("depositPaid", False)
     payment_status = (payload.get("paymentStatus") or "unpaid").strip()
 
@@ -362,12 +367,17 @@ def catering_event_detail(request, event_id):
             default=event.estimated_total,
         )
         updated_fields.append("estimated_total")
+        # Auto-update deposit_amount to 50% of new total if not explicitly provided
+        if "depositAmount" not in payload and "deposit" not in payload:
+            event.deposit_amount = event.estimated_total * Decimal("0.5")
+            updated_fields.append("deposit_amount")
     if "depositAmount" in payload or "deposit" in payload:
         event.deposit_amount = _decimal(
             payload.get("depositAmount") or payload.get("deposit"),
             default=event.deposit_amount,
         )
-        updated_fields.append("deposit_amount")
+        if "deposit_amount" not in updated_fields:
+            updated_fields.append("deposit_amount")
     if "depositPaid" in payload:
         event.deposit_paid = bool(payload.get("depositPaid", False))
         updated_fields.append("deposit_paid")
@@ -469,9 +479,98 @@ def catering_event_menu_items(request, event_id):
                 unit_price=item["unit_price"],
             )
         event.estimated_total = total_amount
+        # Automatically set deposit_amount to 50% of total
+        event.deposit_amount = total_amount * Decimal("0.5")
         event.updated_by_id = actor_id if actor_id else None
-        event.save(update_fields=["estimated_total", "updated_by", "updated_at"])
+        event.save(update_fields=["estimated_total", "deposit_amount", "updated_by", "updated_at"])
 
     event.refresh_from_db()
     return JsonResponse({"success": True, "data": _serialize_event(event, include_items=True)})
+
+
+@require_http_methods(["POST"])
+def catering_event_payment(request, event_id):
+    """Process payment for a catering event (deposit or full)"""
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+
+    if not (_has_permission(actor, "catering.manage") or _has_permission(actor, "all")):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    try:
+        event = CateringEvent.objects.filter(deleted_at__isnull=True).get(pk=event_id)
+    except CateringEvent.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Event not found"}, status=404)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
+
+    payment_type = (payload.get("paymentType") or "").strip()  # 'deposit' or 'full'
+    payment_method = (payload.get("paymentMethod") or "cash").strip()  # 'cash', 'card', 'mobile'
+    amount = _decimal(payload.get("amount") or 0)
+
+    if payment_type not in {"deposit", "full"}:
+        return JsonResponse({"success": False, "message": "Invalid payment type"}, status=400)
+
+    if payment_method not in {"cash", "card", "mobile"}:
+        return JsonResponse({"success": False, "message": "Invalid payment method"}, status=400)
+
+    if amount <= 0:
+        return JsonResponse({"success": False, "message": "Invalid amount"}, status=400)
+
+    # Calculate expected amount based on payment type
+    if payment_type == "deposit":
+        expected_amount = event.deposit_amount
+    else:  # full payment
+        expected_amount = event.estimated_total
+
+    # Validate amount (allow small floating point differences)
+    if abs(amount - expected_amount) > Decimal("0.01"):
+        return JsonResponse({
+            "success": False,
+            "message": f"Amount mismatch. Expected: {float(expected_amount):.2f}, Received: {float(amount):.2f}"
+        }, status=400)
+
+    actor_id = _actor_uuid(actor)
+
+    with transaction.atomic():
+        # Update event payment status
+        if payment_type == "deposit":
+            event.deposit_paid = True
+            event.payment_status = "partial"
+        else:  # full payment
+            event.deposit_paid = True
+            event.payment_status = "paid"
+
+        event.updated_by_id = actor_id if actor_id else None
+        event.save(update_fields=["deposit_paid", "payment_status", "updated_by", "updated_at"])
+
+        # Record payment transaction (if PaymentTransaction model is being used)
+        try:
+            from .models import PaymentTransaction
+            PaymentTransaction.objects.create(
+                order_id=str(event.id),
+                amount=amount,
+                method=payment_method,
+                status=PaymentTransaction.STATUS_COMPLETED,
+                customer=event.client_name,
+                processed_by_id=actor_id if actor_id else None,
+                meta={
+                    "event_name": event.name,
+                    "payment_type": payment_type,
+                    "event_date": event.event_date.isoformat() if event.event_date else None,
+                }
+            )
+        except Exception:
+            pass  # PaymentTransaction is optional
+
+    event.refresh_from_db()
+    return JsonResponse({
+        "success": True,
+        "message": f"{'Deposit' if payment_type == 'deposit' else 'Full'} payment processed successfully",
+        "data": _serialize_event(event, include_items=True)
+    })
 

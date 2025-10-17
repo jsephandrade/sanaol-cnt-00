@@ -141,6 +141,11 @@ urlpatterns = [
         catering_views.catering_event_menu_items,
         name="catering_event_menu_items",
     ),
+    path(
+        "catering/events/<uuid:event_id>/payment",
+        catering_views.catering_event_payment,
+        name="catering_event_payment",
+    ),
 
     # Reports
     path("reports/dashboard", rpt_views.reports_dashboard, name="reports_dashboard"),

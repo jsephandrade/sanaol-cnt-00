@@ -8,8 +8,11 @@ import {
   Utensils,
   Trash2,
   X,
+  CheckCircle2,
+  Wallet,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +29,39 @@ export const CateringEventTable = ({
   onCancelEvent,
   onRemoveEvent,
 }) => {
+  const getPaymentStatusBadge = (event) => {
+    const paymentStatus =
+      event?.paymentStatus || event?.payment_status || 'unpaid';
+    const depositPaid = event?.depositPaid || event?.deposit_paid;
+
+    if (paymentStatus === 'paid') {
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200">
+          <CheckCircle2 className="h-3 w-3 mr-1" />
+          Fully Paid
+        </Badge>
+      );
+    }
+
+    if (depositPaid || paymentStatus === 'partial') {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          <Wallet className="h-3 w-3 mr-1" />
+          Partially Paid
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge
+        variant="outline"
+        className="bg-amber-50 text-amber-700 border-amber-200"
+      >
+        Unpaid
+      </Badge>
+    );
+  };
+
   return (
     <div className="rounded-md border">
       <div className="relative w-full overflow-auto">
@@ -39,6 +75,9 @@ export const CateringEventTable = ({
               <th className="h-10 px-4 text-left font-medium">Date & Time</th>
               <th className="h-10 px-4 text-left font-medium hidden md:table-cell">
                 Guests
+              </th>
+              <th className="h-10 px-4 text-left font-medium hidden lg:table-cell">
+                Payment Status
               </th>
               <th className="h-10 px-4 text-right font-medium">Actions</th>
             </tr>
@@ -79,6 +118,9 @@ export const CateringEventTable = ({
                     <Users className="h-3 w-3" />
                     <span>{event.attendees}</span>
                   </div>
+                </td>
+                <td className="p-4 align-middle hidden lg:table-cell whitespace-nowrap">
+                  {getPaymentStatusBadge(event)}
                 </td>
                 <td
                   className="p-4 align-middle text-right"
