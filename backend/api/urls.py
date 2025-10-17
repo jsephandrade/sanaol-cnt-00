@@ -102,6 +102,7 @@ urlpatterns = [
     path("orders/history", order_views.order_history, name="order_history"),
     path("orders/bulk-progress", order_views.order_bulk_progress, name="order_bulk_progress"),
     path("orders/<uuid:oid>", order_views.order_detail, name="order_detail"),
+    path("orders/<uuid:oid>/auto-flow", order_views.order_auto_flow, name="order_auto_flow"),
     path("orders/<uuid:oid>/status", order_views.order_status, name="order_status"),
     path("orders/<uuid:oid>/items/<uuid:item_id>/state", order_views.order_item_state, name="order_item_state"),
 

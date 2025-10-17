@@ -9,12 +9,16 @@ Permissions:
 from __future__ import annotations
 
 import json
+import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
 
 from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
+
+
+logger = logging.getLogger(__name__)
 
 
 def _lookup_order_number(order_id, order_numbers=None):
@@ -135,14 +139,31 @@ def order_payment(request, order_id: str):
         try:
             from .models import Order
             o = Order.objects.filter(id=order_id).first()
-            if o and getattr(o, "payment_method", None) != method:
-                o.payment_method = method
+            if o:
+                if getattr(o, "payment_method", None) != method:
+                    o.payment_method = method
+                    try:
+                        o.save(update_fields=["payment_method", "updated_at"])
+                    except Exception:
+                        o.save(update_fields=["payment_method"])  # fallback if updated_at missing
                 try:
-                    o.save(update_fields=["payment_method", "updated_at"])
+                    from .views_orders import _start_auto_flow
+
+                    needs_start = (
+                        not getattr(o, "auto_advance_at", None)
+                        or getattr(o, "phase_started_at", None) is None
+                        or getattr(o, "auto_advance_paused", False)
+                    )
+                    if needs_start:
+                        auto_fields = _start_auto_flow(o)
+                        if auto_fields:
+                            if "updated_at" not in auto_fields:
+                                auto_fields.append("updated_at")
+                            o.save(update_fields=auto_fields)
                 except Exception:
-                    o.save(update_fields=["payment_method"])  # fallback if updated_at missing
-            if o and getattr(o, "order_number", None):
-                order_number = o.order_number or ""
+                    logger.exception("Failed to initialize auto advance for order payment")
+                if getattr(o, "order_number", None):
+                    order_number = o.order_number or ""
         except Exception:
             pass
         # Audit log

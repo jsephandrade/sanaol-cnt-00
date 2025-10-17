@@ -961,6 +961,13 @@ class Order(models.Model):
     last_station_code = models.CharField(max_length=32, blank=True)
     late_by_seconds = models.IntegerField(default=0)
     meta = models.JSONField(default=dict, blank=True)
+    auto_advance_target = models.CharField(max_length=32, blank=True)
+    auto_advance_at = models.DateTimeField(blank=True, null=True)
+    phase_started_at = models.DateTimeField(blank=True, null=True)
+    phase_sequence = models.PositiveIntegerField(default=0)
+    auto_advance_paused = models.BooleanField(default=False)
+    auto_advance_pause_reason = models.CharField(max_length=255, blank=True)
+    auto_advance_duration_seconds = models.PositiveIntegerField(default=40)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -971,6 +978,7 @@ class Order(models.Model):
             models.Index(fields=["order_number"]),
             models.Index(fields=["status", "created_at"]),
             models.Index(fields=["created_at"]),
+            models.Index(fields=["auto_advance_at"], name="order_auto_advance_at_idx"),
         ]
 
     def __str__(self) -> str:

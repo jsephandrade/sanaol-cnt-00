@@ -131,6 +131,17 @@ const POS = () => {
     }
   };
 
+  const updateOrderAutoFlow = async (orderId, payload) => {
+    try {
+      const res = await orderService.updateOrderAutoFlow(orderId, payload);
+      await refreshQueue();
+      return res?.data ?? null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
   // Poll queue periodically for real-time-ish updates
   useEffect(() => {
     let timer = null;
@@ -200,6 +211,7 @@ const POS = () => {
             refreshQueue={refreshQueue}
             updateOrderStatus={updateOrderStatus}
             updateOrderItemState={updateOrderItemState}
+            updateOrderAutoFlow={updateOrderAutoFlow}
           />
         </TabsContent>
       </Tabs>

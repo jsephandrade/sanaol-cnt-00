@@ -1,4 +1,10 @@
-import React, { useMemo } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   Card,
   CardContent,
@@ -8,9 +14,17 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Smartphone, Clock, Check } from 'lucide-react';
+import {
+  Package,
+  Smartphone,
+  Clock,
+  Check,
+  PauseCircle,
+  PlayCircle,
+} from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { formatOrderNumber } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const truthyValues = new Set([true, 'true', 1, '1']);
 const falsyValues = new Set([false, 'false', 0, '0']);
@@ -18,6 +32,29 @@ const falsyValues = new Set([false, 'false', 0, '0']);
 const normalizeStatus = (value) => {
   if (!value) return '';
   return String(value).toLowerCase().trim();
+};
+
+const STATUS_CANONICAL_MAP = {
+  pending: 'new',
+  accepted: 'accepted',
+  in_queue: 'accepted',
+  'in-queue': 'accepted',
+  in_progress: 'in_prep',
+  'in-progress': 'in_prep',
+  in_prep: 'in_prep',
+  preparing: 'in_prep',
+  ready: 'staged',
+  staged: 'staged',
+  handoff: 'handoff',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  voided: 'voided',
+  refunded: 'refunded',
+};
+
+const toCanonicalStatus = (status) => {
+  const normalized = normalizeStatus(status);
+  return STATUS_CANONICAL_MAP[normalized] || normalized;
 };
 
 const isOrderPaid = (order) => {
@@ -141,7 +178,14 @@ const formatStatusLabel = (status) => {
     .join(' ');
 };
 
-const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
+const formatCountdown = (seconds) => {
+  const value = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const mins = Math.floor(value / 60);
+  const secs = value % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
+const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
   const { can } = useAuth();
   const queueOrders = useMemo(() => {
     if (!orderQueue) return [];
@@ -168,6 +212,151 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
         return channel !== 'walk-in';
       }),
     [visibleOrders]
+  );
+
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  const autoAdvanceLocksRef = useRef(new Map());
+
+  useEffect(() => {
+    const id =
+      typeof window !== 'undefined'
+        ? window.setInterval(() => setNowTs(Date.now()), 1000)
+        : null;
+    return () => {
+      if (id) {
+        window.clearInterval(id);
+      }
+    };
+  }, []);
+
+  const computeCountdownSeconds = useCallback(
+    (order) => {
+      if (!order || order.autoAdvancePaused || !order.autoAdvanceTarget) {
+        return null;
+      }
+      const target = order.autoAdvanceAt
+        ? new Date(order.autoAdvanceAt).getTime()
+        : NaN;
+      if (Number.isNaN(target)) {
+        return null;
+      }
+      const diff = Math.ceil((target - nowTs) / 1000);
+      return diff <= 0 ? 0 : diff;
+    },
+    [nowTs]
+  );
+
+  const handleToggleAutoFlow = useCallback(
+    async (order) => {
+      if (!updateOrderAutoFlow) return;
+      const action = order?.autoAdvancePaused ? 'resume' : 'pause';
+      const result = await updateOrderAutoFlow(order.id, { action });
+      if (!result) {
+        toast.error('Unable to update auto timer.');
+      }
+    },
+    [updateOrderAutoFlow]
+  );
+
+  const handleAdvanceNow = useCallback(
+    async (order) => {
+      if (!order?.autoAdvanceTarget) return;
+      const success = await updateOrderStatus(
+        order.id,
+        order.autoAdvanceTarget
+      );
+      if (!success) {
+        toast.error('Failed to advance order.');
+      }
+    },
+    [updateOrderStatus]
+  );
+
+  useEffect(() => {
+    if (!updateOrderStatus) return;
+
+    const activeKeys = new Set();
+
+    visibleOrders.forEach((order) => {
+      const targetRaw = order?.autoAdvanceTarget;
+      if (!targetRaw) {
+        return;
+      }
+
+      const target = normalizeStatus(targetRaw);
+      const canonicalTarget = toCanonicalStatus(target);
+      const canonicalStatus = toCanonicalStatus(getOrderStatus(order));
+      const key = `${order.id}:${target}`;
+      activeKeys.add(key);
+
+      if (order.autoAdvancePaused) {
+        autoAdvanceLocksRef.current.delete(key);
+        return;
+      }
+
+      if (canonicalStatus === canonicalTarget) {
+        autoAdvanceLocksRef.current.delete(key);
+        return;
+      }
+
+      const countdown = computeCountdownSeconds(order);
+      if (countdown === null) {
+        autoAdvanceLocksRef.current.delete(key);
+        return;
+      }
+
+      if (countdown === 0) {
+        if (!autoAdvanceLocksRef.current.has(key)) {
+          autoAdvanceLocksRef.current.set(key, true);
+          handleAdvanceNow(order).catch(() => {
+            autoAdvanceLocksRef.current.delete(key);
+          });
+        }
+      } else {
+        autoAdvanceLocksRef.current.delete(key);
+      }
+    });
+
+    for (const key of Array.from(autoAdvanceLocksRef.current.keys())) {
+      if (!activeKeys.has(key)) {
+        autoAdvanceLocksRef.current.delete(key);
+      }
+    }
+  }, [
+    visibleOrders,
+    computeCountdownSeconds,
+    handleAdvanceNow,
+    updateOrderStatus,
+  ]);
+
+  const renderAutoBadge = useCallback(
+    (order) => {
+      if (!order?.autoAdvanceTarget) return null;
+      const countdown = computeCountdownSeconds(order);
+      const paused = order.autoAdvancePaused;
+      const displayCountdown =
+        paused || countdown === null ? null : formatCountdown(countdown);
+      const nextLabel = formatStatusLabel(order.autoAdvanceTarget);
+      const badgeClasses = paused
+        ? 'border bg-slate-200 text-slate-700 border-slate-300'
+        : countdown !== null && countdown <= 5
+          ? 'border bg-red-100 text-red-700 border-red-200'
+          : 'border bg-slate-100 text-slate-700 border-slate-200';
+
+      return (
+        <div className="flex flex-col items-end gap-1 text-xs">
+          <Badge variant="outline" className={badgeClasses}>
+            {paused
+              ? 'Auto Paused'
+              : displayCountdown
+                ? `Auto ${displayCountdown}`
+                : 'Auto'}
+          </Badge>
+          <span className="text-muted-foreground">{`Next: ${nextLabel}`}</span>
+        </div>
+      );
+    },
+    [computeCountdownSeconds]
   );
 
   const formatTimeAgo = (input) => {
@@ -237,38 +426,42 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
           {walkInOrders.length > 0 ? (
             <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
               {walkInOrders.map((order) => {
-                  const status = getOrderStatus(order);
-                  const statusLabel = formatStatusLabel(status);
-                  const isPending = [
-                    'pending',
-                    'accepted',
-                    'in_queue',
-                    'new',
-                  ].includes(status);
-                  const isPreparing = [
-                    'preparing',
-                    'in_progress',
-                    'in_prep',
-                  ].includes(status);
-                  const isReady = ['ready', 'staged', 'handoff'].includes(
-                    status
-                  );
+                const status = getOrderStatus(order);
+                const statusLabel = formatStatusLabel(status);
+                const isPending = [
+                  'pending',
+                  'accepted',
+                  'in_queue',
+                  'new',
+                ].includes(status);
+                const isPreparing = [
+                  'preparing',
+                  'in_progress',
+                  'in_prep',
+                ].includes(status);
+                const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const showAutoControls = Boolean(
+                  updateOrderAutoFlow &&
+                    order.autoAdvanceTarget &&
+                    can('order.status.update')
+                );
 
-                  return (
-                    <div key={order.id} className="p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            #
-                            {formatOrderNumber(order.orderNumber) ||
-                              order.orderNumber ||
-                              'N/A'}
-                          </h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />{' '}
-                            {formatTimeAgo(order.timeReceived)}
-                          </p>
-                        </div>
+                return (
+                  <div key={order.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          #
+                          {formatOrderNumber(order.orderNumber) ||
+                            order.orderNumber ||
+                            'N/A'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />{' '}
+                          {formatTimeAgo(order.timeReceived)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
                         <div
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
                             status
@@ -276,24 +469,24 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                         >
                           {statusLabel}
                         </div>
+                        {renderAutoBadge(order)}
                       </div>
+                    </div>
 
-                      <div className="bg-muted/50 p-3 rounded-md">
-                        {order.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>
-                              {item.quantity}x {item.name}
-                            </span>
-                            <span>
-                              PHP {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-muted/50 p-3 rounded-md">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span>
+                            PHP {(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
 
+                    <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         {isPending && can('order.status.update') && (
                           <Button
@@ -330,9 +523,43 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                           </Button>
                         )}
                       </div>
+
+                      {showAutoControls && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleToggleAutoFlow(order)}
+                          >
+                            {order.autoAdvancePaused ? (
+                              <>
+                                <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                                Timer
+                              </>
+                            ) : (
+                              <>
+                                <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                                Timer
+                              </>
+                            )}
+                          </Button>
+                          {!order.autoAdvancePaused && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="flex-1 text-muted-foreground"
+                              onClick={() => handleAdvanceNow(order)}
+                            >
+                              Advance Now
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -372,41 +599,45 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
           {onlineOrders.length > 0 ? (
             <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
               {onlineOrders.map((order) => {
-                  const status = getOrderStatus(order);
-                  const statusLabel = formatStatusLabel(status);
-                  const isPending = [
-                    'pending',
-                    'accepted',
-                    'in_queue',
-                    'new',
-                  ].includes(status);
-                  const isPreparing = [
-                    'preparing',
-                    'in_progress',
-                    'in_prep',
-                  ].includes(status);
-                  const isReady = ['ready', 'staged', 'handoff'].includes(
-                    status
-                  );
+                const status = getOrderStatus(order);
+                const statusLabel = formatStatusLabel(status);
+                const isPending = [
+                  'pending',
+                  'accepted',
+                  'in_queue',
+                  'new',
+                ].includes(status);
+                const isPreparing = [
+                  'preparing',
+                  'in_progress',
+                  'in_prep',
+                ].includes(status);
+                const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const showAutoControls = Boolean(
+                  updateOrderAutoFlow &&
+                    order.autoAdvanceTarget &&
+                    can('order.status.update')
+                );
 
-                  return (
-                    <div key={order.id} className="p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            #
-                            {formatOrderNumber(order.orderNumber) ||
-                              order.orderNumber ||
-                              'N/A'}
-                          </h3>
-                          <p className="text-sm font-medium">
-                            {order.customerName}
-                          </p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />{' '}
-                            {formatTimeAgo(order.timeReceived)}
-                          </p>
-                        </div>
+                return (
+                  <div key={order.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          #
+                          {formatOrderNumber(order.orderNumber) ||
+                            order.orderNumber ||
+                            'N/A'}
+                        </h3>
+                        <p className="text-sm font-medium">
+                          {order.customerName}
+                        </p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />{' '}
+                          {formatTimeAgo(order.timeReceived)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
                         <div
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
                             status
@@ -414,24 +645,24 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                         >
                           {statusLabel}
                         </div>
+                        {renderAutoBadge(order)}
                       </div>
+                    </div>
 
-                      <div className="bg-muted/50 p-3 rounded-md">
-                        {order.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>
-                              {item.quantity}x {item.name}
-                            </span>
-                            <span>
-                              PHP {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-muted/50 p-3 rounded-md">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span>
+                            PHP {(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
 
+                    <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         {isPending && can('order.status.update') && (
                           <Button
@@ -468,9 +699,43 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                           </Button>
                         )}
                       </div>
+
+                      {showAutoControls && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleToggleAutoFlow(order)}
+                          >
+                            {order.autoAdvancePaused ? (
+                              <>
+                                <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                                Timer
+                              </>
+                            ) : (
+                              <>
+                                <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                                Timer
+                              </>
+                            )}
+                          </Button>
+                          {!order.autoAdvancePaused && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="flex-1 text-muted-foreground"
+                              onClick={() => handleAdvanceNow(order)}
+                            >
+                              Advance Now
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">

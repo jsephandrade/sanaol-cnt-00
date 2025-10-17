@@ -173,6 +173,135 @@ def send_push_notification(self, user_id: int, title: str, message: str, notific
 
 
 @shared_task
+def auto_advance_orders(limit: int = 50):
+    """
+    Automatically advance POS orders whose auto-advance timers have elapsed.
+    Returns the number of orders processed in this run.
+    """
+    from django.utils import timezone as dj_timezone
+
+    try:
+        from .models import Order
+        from .views_orders import (
+            canonical_status,
+            can_transition,
+            _auto_next_status,
+            _start_auto_flow,
+            _clear_auto_flow,
+            _safe_order,
+            recalc_order_counters,
+            record_order_event,
+            publish_event,
+        )
+    except Exception as exc:
+        logger.error(f"Auto advance initialization failed: {exc}")
+        return 0
+
+    now_ts = dj_timezone.now()
+    pending_ids = list(
+        Order.objects.filter(
+            auto_advance_paused=False,
+            auto_advance_at__isnull=False,
+            auto_advance_at__lte=now_ts,
+        )
+        .exclude(status__in={"completed", "cancelled", "voided", "refunded"})
+        .values_list("id", flat=True)[: max(1, int(limit or 50))]
+    )
+
+    processed = 0
+
+    for order_id in pending_ids:
+        try:
+            with transaction.atomic():
+                order = (
+                    Order.objects.select_for_update()
+                    .select_related("placed_by")
+                    .prefetch_related("items__menu_item")
+                    .get(id=order_id)
+                )
+
+                if order.auto_advance_paused:
+                    continue
+
+                now_inner = dj_timezone.now()
+                if not order.auto_advance_at or order.auto_advance_at > now_inner:
+                    continue
+
+                target_status = order.auto_advance_target or _auto_next_status(order.status)
+                if not target_status:
+                    clear_fields = _clear_auto_flow(order, reason="auto_no_target")
+                    if clear_fields:
+                        if "updated_at" not in clear_fields:
+                            clear_fields.append("updated_at")
+                        order.save(update_fields=clear_fields)
+                    continue
+
+                current_canonical = canonical_status(order.status)
+                target_canonical = canonical_status(target_status)
+
+                if not can_transition(current_canonical, target_canonical):
+                    clear_fields = _clear_auto_flow(order, reason="auto_invalid_transition")
+                    if clear_fields:
+                        if "updated_at" not in clear_fields:
+                            clear_fields.append("updated_at")
+                        order.save(update_fields=clear_fields)
+                    continue
+
+                previous_status = order.status
+                order.status = target_status
+                update_fields = ["status", "updated_at"]
+
+                if target_canonical == "completed":
+                    order.completed_at = now_inner
+                    update_fields.append("completed_at")
+
+                auto_fields = _start_auto_flow(order, now=now_inner)
+                if auto_fields:
+                    update_fields.extend(auto_fields)
+
+                # Deduplicate update fields while preserving order
+                update_fields = list(dict.fromkeys(update_fields))
+                order.save(update_fields=update_fields)
+
+                try:
+                    recalc_order_counters(order)
+                except Exception:
+                    pass
+
+                order.refresh_from_db()
+                order_payload = _safe_order(order)
+
+                record_order_event(
+                    order,
+                    event_type="order.auto_advanced",
+                    from_state=current_canonical,
+                    to_state=canonical_status(order.status),
+                    actor=None,
+                    payload={
+                        "previousStatus": previous_status,
+                        "nextStatus": order.status,
+                        "autoAdvanceAt": order_payload.get("autoAdvanceAt"),
+                    },
+                )
+
+                publish_event(
+                    "order.status_changed",
+                    {"order": order_payload, "status": canonical_status(order.status)},
+                    roles={"admin", "manager", "staff"},
+                    user_ids=[str(order.placed_by_id)] if getattr(order, "placed_by_id", None) else None,
+                )
+
+                processed += 1
+        except Order.DoesNotExist:
+            continue
+        except Exception as exc:
+            logger.error(f"Failed to auto advance order {order_id}: {exc}")
+            continue
+
+    return processed
+
+
+@shared_task
 def process_notification_outbox():
     """
     Process pending notifications in the outbox.

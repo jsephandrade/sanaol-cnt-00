@@ -38,6 +38,10 @@ app.conf.beat_schedule = {
         'task': 'api.tasks.process_notification_outbox',
         'schedule': crontab(minute='*/2'),  # Every 2 minutes
     },
+    'auto-advance-orders': {
+        'task': 'api.tasks.auto_advance_orders',
+        'schedule': 10.0,  # Every 10 seconds
+    },
     'cleanup-old-notifications': {
         'task': 'api.tasks.cleanup_old_notifications',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
