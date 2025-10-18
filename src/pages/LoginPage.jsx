@@ -16,6 +16,52 @@ import {
   clearRememberedEmail,
 } from '@/lib/credentials';
 
+const PASSWORD_MISMATCH_MESSAGE = 'Incorrect email and password.';
+
+const isPasswordMismatchError = (result) => {
+  if (!result || (result?.status ?? null) !== 401) return false;
+  const raw = result?.error || result?.message || '';
+  const code = result?.code || '';
+
+  const normalize = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    try {
+      return String(value);
+    } catch {
+      return '';
+    }
+  };
+
+  const rawMessage = normalize(raw);
+  if (
+    /invalid credential/i.test(rawMessage) ||
+    /incorrect password/i.test(rawMessage)
+  ) {
+    return true;
+  }
+
+  if (
+    typeof code === 'string' &&
+    /invalid_credential|invalid_password/i.test(code)
+  ) {
+    return true;
+  }
+
+  const details = result?.details;
+  if (typeof details === 'string') {
+    return /invalid credential|incorrect password/i.test(details);
+  }
+  if (details && typeof details === 'object') {
+    const detailMessage = normalize(details.message || details.reason);
+    if (detailMessage) {
+      return /invalid credential|incorrect password/i.test(detailMessage);
+    }
+  }
+
+  return false;
+};
+
 const LoginPage = () => {
   const { login, socialLogin, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -41,15 +87,27 @@ const LoginPage = () => {
   const resolveLoginErrorMessage = (result) => {
     const status = result?.status ?? null;
     const raw = result?.error || result?.message || '';
-    if (status === 401 || status === 404)
-      return 'Incorrect account credentials.';
+    if (status === 401) {
+      if (isPasswordMismatchError(result)) {
+        return PASSWORD_MISMATCH_MESSAGE;
+      }
+      if (typeof raw === 'string' && raw.trim()) {
+        return raw;
+      }
+      return PASSWORD_MISMATCH_MESSAGE;
+    }
+    if (status === 404) return 'Account not found.';
     if (typeof raw === 'string') {
-      if (/invalid credentials/i.test(raw))
-        return 'Incorrect account credentials.';
-      if (/account not found/i.test(raw))
-        return 'Incorrect account credentials.';
+      if (/invalid credentials/i.test(raw)) return PASSWORD_MISMATCH_MESSAGE;
+      if (/account not found/i.test(raw)) return 'Account not found.';
     }
     return raw || 'Something went wrong. Please try again.';
+  };
+
+  const applyAuthFailure = (result) => {
+    const mismatch = isPasswordMismatchError(result);
+    setPasswordError(mismatch ? PASSWORD_MISMATCH_MESSAGE : '');
+    setError(resolveLoginErrorMessage(result));
   };
 
   const validate = () => {
@@ -83,7 +141,7 @@ const LoginPage = () => {
     try {
       const res = await login(email, password, { remember });
       if (!res?.success) {
-        setError(resolveLoginErrorMessage(res));
+        applyAuthFailure(res);
         return;
       }
 
@@ -116,12 +174,12 @@ const LoginPage = () => {
       remember ? rememberEmail(email) : clearRememberedEmail();
       navigate('/');
     } catch (err) {
-      setError(
-        resolveLoginErrorMessage({
-          error: err?.message,
-          status: err?.status ?? null,
-        })
-      );
+      applyAuthFailure({
+        error: err?.message,
+        status: err?.status ?? null,
+        code: err?.code ?? null,
+        details: err?.details ?? null,
+      });
     } finally {
       setPending(false);
     }

@@ -35,15 +35,8 @@ const DEFAULT_SCHEDULE_ENTRY = {
   employeeId: '',
   employeeName: '',
   day: '',
-  startTime: '',
-  endTime: '',
-};
-
-const DEFAULT_EMPLOYEE = {
-  name: '',
-  position: '',
-  hourlyRate: 0,
-  contact: '',
+  startTime: '06:00',
+  endTime: '14:00',
 };
 
 const EmployeeSchedule = () => {
@@ -53,7 +46,7 @@ const EmployeeSchedule = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { employees = [], addEmployee } = useEmployees();
+  const { employees = [], updateEmployee } = useEmployees();
 
   const displayEmployees = useMemo(
     () =>
@@ -68,17 +61,67 @@ const EmployeeSchedule = () => {
     addScheduleEntry,
     updateScheduleEntry,
     deleteScheduleEntry,
+    loading: scheduleLoading,
   } = useSchedule({}, { autoFetch: true });
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogOpen, setDialogOpenState] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [newScheduleEntry, setNewScheduleEntry] = useState({
     ...DEFAULT_SCHEDULE_ENTRY,
   });
-  const [newEmployee, setNewEmployee] = useState({ ...DEFAULT_EMPLOYEE });
   const [activeTab, setActiveTab] = useState('schedule');
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+
+  const hasShiftToday = useMemo(() => {
+    // Check if user has a linked Employee record
+    const userEmployeeId = user?.employeeId || user?.id;
+    if (!userEmployeeId || !Array.isArray(schedule) || schedule.length === 0) {
+      return false;
+    }
+
+    const todayIndex = new Date().getDay();
+    const todayName = DAYS_OF_WEEK[todayIndex] || '';
+    if (!todayName) return false;
+    const normalize = (value) =>
+      typeof value === 'string' ? value.trim().toLowerCase() : '';
+    const todayKey = normalize(todayName);
+
+    return schedule.some((entry) => {
+      if (!entry) return false;
+      const entryEmployeeId =
+        entry.employeeId ??
+        entry.employee?.id ??
+        entry.employee?.employeeId ??
+        null;
+      if (entryEmployeeId == null) return false;
+      // Compare with user's employeeId (preferred) or fall back to user.id for backwards compat
+      if (String(entryEmployeeId) !== String(userEmployeeId)) return false;
+      return normalize(entry.day) === todayKey;
+    });
+  }, [schedule, user?.employeeId, user?.id]);
+
+  const handleScheduleDialogOpenChange = (open) => {
+    if (!open) {
+      setNewScheduleEntry({ ...DEFAULT_SCHEDULE_ENTRY });
+    }
+    setDialogOpenState(open);
+  };
+
+  useEffect(() => {
+    if (canManage) return;
+
+    if (editingSchedule) {
+      setEditingSchedule(null);
+    }
+    if (dialogOpen) {
+      setDialogOpenState(false);
+      setNewScheduleEntry({ ...DEFAULT_SCHEDULE_ENTRY });
+    }
+    if (employeeDialogOpen) {
+      setEmployeeDialogOpen(false);
+    }
+  }, [canManage, dialogOpen, editingSchedule, employeeDialogOpen]);
 
   useEffect(() => {
     if (!isStaffOnly) return;
@@ -91,10 +134,9 @@ const EmployeeSchedule = () => {
     const openFromState = Boolean(
       location.state && location.state.openAttendance
     );
+    const requested = openFromSearch || openFromState;
 
-    if ((openFromSearch || openFromState) && !attendanceDialogOpen) {
-      setAttendanceDialogOpen(true);
-
+    const clearAttendanceIndicators = () => {
       if (openFromSearch || searchParams.has('attendance')) {
         searchParams.delete('attendance');
         navigate(
@@ -115,36 +157,71 @@ const EmployeeSchedule = () => {
           state: { ...(location.state || {}), openAttendance: false },
         });
       }
-    }
-  }, [attendanceDialogOpen, isStaffOnly, location, navigate]);
+    };
 
-  useEffect(() => {
-    if (!location.state?.openAttendancePopup) return;
+    if (!requested) return;
+
+    if (scheduleLoading) return;
+
+    if (!hasShiftToday) {
+      clearAttendanceIndicators();
+      return;
+    }
 
     if (!attendanceDialogOpen) {
       setAttendanceDialogOpen(true);
     }
+
+    clearAttendanceIndicators();
+  }, [
+    attendanceDialogOpen,
+    hasShiftToday,
+    isStaffOnly,
+    location,
+    scheduleLoading,
+    navigate,
+  ]);
+
+  useEffect(() => {
+    if (!location.state?.openAttendancePopup) return;
+
+    if (scheduleLoading) return;
 
     const { openAttendancePopup, attendanceNavTimestamp, ...restState } =
       location.state || {};
 
     const nextState = Object.keys(restState).length > 0 ? restState : undefined;
 
-    navigate(
-      {
-        pathname: location.pathname,
-        search: location.search || '',
-      },
-      {
-        replace: true,
-        state: nextState,
-      }
-    );
+    const clearPopupState = () => {
+      navigate(
+        {
+          pathname: location.pathname,
+          search: location.search || '',
+        },
+        {
+          replace: true,
+          state: nextState,
+        }
+      );
+    };
+
+    if (!hasShiftToday) {
+      clearPopupState();
+      return;
+    }
+
+    if (!attendanceDialogOpen) {
+      setAttendanceDialogOpen(true);
+    }
+
+    clearPopupState();
   }, [
     attendanceDialogOpen,
+    hasShiftToday,
     location.pathname,
     location.search,
     location.state,
+    scheduleLoading,
     navigate,
   ]);
 
@@ -158,32 +235,9 @@ const EmployeeSchedule = () => {
     return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
   };
 
-  const handleAddEmployee = async () => {
-    if (!canManage) return;
-    const { name, position, hourlyRate, contact } = newEmployee;
-    if (!name?.trim() || !position?.trim()) {
-      toast.error('Please provide employee name and position');
-      return;
-    }
-
-    try {
-      const sanitizedRate = Number.isFinite(Number(hourlyRate))
-        ? Number(hourlyRate)
-        : 0;
-
-      await addEmployee({
-        name: name.trim(),
-        position: position.trim(),
-        hourlyRate: sanitizedRate,
-        contact: contact?.trim() || '',
-      });
-
-      setNewEmployee({ ...DEFAULT_EMPLOYEE });
-      setEmployeeDialogOpen(false);
-    } catch (error) {
-      console.error(error);
-      // Errors are already surfaced via useEmployees toast handler.
-    }
+  const handleUpdateEmployee = (employeeId, updates) => {
+    if (!canManage) return Promise.resolve();
+    return updateEmployee(employeeId, updates);
   };
 
   const handleAddSchedule = async () => {
@@ -217,8 +271,7 @@ const EmployeeSchedule = () => {
         ...newScheduleEntry,
         employeeName: lookupEmployeeName(employeeId),
       });
-      setDialogOpen(false);
-      setNewScheduleEntry({ ...DEFAULT_SCHEDULE_ENTRY });
+      handleScheduleDialogOpenChange(false);
     } catch (error) {
       console.error(error);
       toast.error('Failed to add schedule');
@@ -271,7 +324,7 @@ const EmployeeSchedule = () => {
             daysOfWeek={DAYS_OF_WEEK}
             employeeList={displayEmployees}
             schedule={schedule}
-            onEditSchedule={setEditingSchedule}
+            onEditSchedule={canManage ? setEditingSchedule : undefined}
             onDeleteSchedule={handleDeleteSchedule}
             onAddScheduleForDay={(employeeId, day) => {
               if (!canManage) return;
@@ -281,12 +334,16 @@ const EmployeeSchedule = () => {
                 employeeName: lookupEmployeeName(employeeId),
                 day,
               });
-              setDialogOpen(true);
+              handleScheduleDialogOpenChange(true);
             }}
             onOpenManageEmployees={() =>
               canManage && setEmployeeDialogOpen(true)
             }
-            onOpenAddSchedule={() => canManage && setDialogOpen(true)}
+            onOpenAddSchedule={() => {
+              if (!canManage) return;
+              setNewScheduleEntry({ ...DEFAULT_SCHEDULE_ENTRY });
+              handleScheduleDialogOpenChange(true);
+            }}
             canManage={canManage}
           />
           <div className="space-y-6 lg:w-full lg:max-w-md lg:justify-self-end">
@@ -357,15 +414,14 @@ const EmployeeSchedule = () => {
       <ManageEmployeesDialog
         open={employeeDialogOpen}
         onOpenChange={setEmployeeDialogOpen}
-        newEmployee={newEmployee}
-        setNewEmployee={setNewEmployee}
-        onAddEmployee={handleAddEmployee}
+        employees={displayEmployees}
+        onUpdateEmployee={handleUpdateEmployee}
         showTrigger={false}
       />
 
       <AddScheduleDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleScheduleDialogOpenChange}
         newScheduleEntry={newScheduleEntry}
         setNewScheduleEntry={setNewScheduleEntry}
         employeeList={displayEmployees}

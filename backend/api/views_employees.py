@@ -76,12 +76,13 @@ def employees(request):
 
     if request.method == "GET":
         try:
-            from .models import Employee
+            from .models import Employee, AppUser
             search = (request.GET.get("search") or "").lower()
             status = (request.GET.get("status") or "").lower()
             page = request.GET.get("page", 1)
             limit = request.GET.get("limit", 50)
 
+            # Query only explicitly created employees (no auto-sync)
             qs = Employee.objects.all()
             # Confidentiality: Staff should only see themselves
             role_l = (getattr(actor, "role", "") or "").lower()

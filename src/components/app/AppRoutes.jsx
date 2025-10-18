@@ -371,11 +371,11 @@ const AppRoutes = () => {
             path="/logs"
             element={
               <ProtectedRoute>
-                <RoleGuard disallowRoles={['staff']}>
+                <AdminRoute>
                   <MainLayout title="Activity Logs">
                     <UserLogs />
                   </MainLayout>
-                </RoleGuard>
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

@@ -106,7 +106,7 @@ const WeeklyScheduleCard = ({
         onClick={onOpenManageEmployees}
       >
         <Users className="h-4 w-4" />
-        Team
+        Edit Employee
       </Button>
       <Button size="sm" className="gap-2" onClick={onOpenAddSchedule}>
         <Plus className="h-4 w-4" />
@@ -114,6 +114,130 @@ const WeeklyScheduleCard = ({
       </Button>
     </div>
   ) : null;
+
+  const renderShiftRow = (shift) => {
+    if (!shift) return null;
+
+    const canEditShift = canManage && typeof onEditSchedule === 'function';
+    const shiftRowClasses = [
+      'group flex items-center justify-between bg-background border rounded-lg px-4 py-3 transition-colors',
+      canEditShift ? 'hover:bg-muted/30 cursor-pointer' : 'cursor-default',
+    ].join(' ');
+
+    return (
+      <div
+        key={shift.id}
+        className={shiftRowClasses}
+        onClick={canEditShift ? () => onEditSchedule(shift) : undefined}
+      >
+        {/* Left: Employee Info */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Avatar className="h-9 w-9 ring-2 ring-background">
+            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+              {shift.employee.name?.charAt(0)?.toUpperCase() || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">
+              {shift.employee.name}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                <span className="truncate">
+                  {shift.employee.position || 'Staff'}
+                </span>
+              </div>
+              {shift.employee.hourlyRate > 0 && (
+                <div className="flex items-center gap-1">
+                  <span className="font-semibold text-muted-foreground">
+                    PHP
+                  </span>
+                  <span className="font-medium">
+                    {pesoFormatter.format(shift.employee.hourlyRate)}/hr
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Middle: Time Range */}
+        <div className="flex items-center gap-4 mx-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">
+              Start:
+            </span>
+            <Badge
+              variant="outline"
+              className="font-mono text-xs text-green-600"
+            >
+              {formatTimeLabel(shift.startTime)}
+            </Badge>
+          </div>
+          <Separator orientation="vertical" className="h-6" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">
+              End:
+            </span>
+            <Badge
+              variant="outline"
+              className="font-mono text-xs text-orange-600"
+            >
+              {formatTimeLabel(shift.endTime)}
+            </Badge>
+          </div>
+        </div>
+
+        {/* Right: Duration & Actions */}
+        <div className="flex items-center gap-3">
+          <Badge variant="secondary" className="text-xs gap-1 font-medium">
+            <Clock className="h-3 w-3" />
+            {(() => {
+              const start = new Date(`2000-01-01T${shift.startTime}`);
+              const end = new Date(`2000-01-01T${shift.endTime}`);
+              const hours = (end - start) / (1000 * 60 * 60);
+              return `${hours.toFixed(1)}h`;
+            })()}
+          </Badge>
+
+          {canManage && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditSchedule(shift);
+                  }}
+                >
+                  Edit Shift
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSchedule(shift.id);
+                  }}
+                >
+                  Delete Shift
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <FeaturePanelCard
@@ -199,138 +323,7 @@ const WeeklyScheduleCard = ({
                     <>
                       {daySchedules.length > 0 ? (
                         <div className="space-y-1 pl-2">
-                          {daySchedules.map((shift) => (
-                            <div
-                              key={shift.id}
-                              className="group flex items-center justify-between bg-background hover:bg-muted/30 border rounded-lg px-4 py-3 transition-colors cursor-pointer"
-                              onClick={() => onEditSchedule(shift)}
-                            >
-                              {/* Left: Employee Info */}
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <Avatar className="h-9 w-9 ring-2 ring-background">
-                                  <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                                    {shift.employee.name
-                                      ?.charAt(0)
-                                      ?.toUpperCase() || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-sm truncate">
-                                    {shift.employee.name}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <Briefcase className="h-3 w-3" />
-                                      <span className="truncate">
-                                        {shift.employee.position || 'Staff'}
-                                      </span>
-                                    </div>
-                                    {shift.employee.hourlyRate > 0 && (
-                                      <>
-                                        <span>•</span>
-                                        <div className="flex items-center gap-1">
-                                          <span className="font-medium">
-                                            {pesoFormatter.format(
-                                              shift.employee.hourlyRate
-                                            )}
-                                            /hr
-                                          </span>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Middle: Time Range */}
-                              <div className="flex items-center gap-4 mx-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground font-medium">
-                                    Start:
-                                  </span>
-                                  <Badge
-                                    variant="outline"
-                                    className="font-mono text-xs text-green-600"
-                                  >
-                                    {formatTimeLabel(shift.startTime)}
-                                  </Badge>
-                                </div>
-                                <Separator
-                                  orientation="vertical"
-                                  className="h-6"
-                                />
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs text-muted-foreground font-medium">
-                                    End:
-                                  </span>
-                                  <Badge
-                                    variant="outline"
-                                    className="font-mono text-xs text-orange-600"
-                                  >
-                                    {formatTimeLabel(shift.endTime)}
-                                  </Badge>
-                                </div>
-                              </div>
-
-                              {/* Right: Duration & Actions */}
-                              <div className="flex items-center gap-3">
-                                <Badge
-                                  variant="secondary"
-                                  className="text-xs gap-1 font-medium"
-                                >
-                                  <Clock className="h-3 w-3" />
-                                  {(() => {
-                                    const start = new Date(
-                                      `2000-01-01T${shift.startTime}`
-                                    );
-                                    const end = new Date(
-                                      `2000-01-01T${shift.endTime}`
-                                    );
-                                    const hours =
-                                      (end - start) / (1000 * 60 * 60);
-                                    return `${hours.toFixed(1)}h`;
-                                  })()}
-                                </Badge>
-
-                                {canManage && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger
-                                      asChild
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <MoreHorizontal className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onEditSchedule(shift);
-                                        }}
-                                      >
-                                        Edit Shift
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onDeleteSchedule(shift.id);
-                                        }}
-                                      >
-                                        Delete Shift
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                          {daySchedules.map(renderShiftRow)}
                         </div>
                       ) : (
                         <div className="flex items-center justify-center py-8 text-center border border-dashed rounded-lg bg-muted/20 ml-2">

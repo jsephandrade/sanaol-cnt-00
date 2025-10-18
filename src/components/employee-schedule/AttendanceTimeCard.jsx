@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Clock, LogOut } from 'lucide-react';
@@ -7,7 +7,22 @@ import FeaturePanelCard from '../shared/FeaturePanelCard';
 import { cn } from '@/lib/utils';
 
 const AttendanceTimeCard = ({ user, className }) => {
-  const { records = [], createRecord, updateRecord } = useAttendance();
+  const subjectEmployeeId = useMemo(() => {
+    if (!user) return null;
+    return user.employeeId ?? user.id ?? null;
+  }, [user]);
+
+  const attendanceParams = useMemo(() => {
+    if (!subjectEmployeeId) return {};
+    return { employeeId: subjectEmployeeId };
+  }, [subjectEmployeeId]);
+
+  const {
+    records = [],
+    createRecord,
+    updateRecord,
+    setParams,
+  } = useAttendance(attendanceParams);
 
   const toLocalDateStr = (d) => {
     const y = d.getFullYear();
@@ -23,20 +38,8 @@ const AttendanceTimeCard = ({ user, className }) => {
     ).padStart(2, '0')}:${String(current.getSeconds()).padStart(2, '0')}`;
   };
 
-  const initialSubjectId = useMemo(
-    () => user?.employeeId || user?.id,
-    [user?.employeeId, user?.id]
-  );
-  const [resolvedEmployeeId, setResolvedEmployeeId] =
-    useState(initialSubjectId);
   const today = todayStr();
   const [currentTime, setCurrentTime] = useState(() => new Date());
-
-  useEffect(() => {
-    if (user?.employeeId && user.employeeId !== resolvedEmployeeId) {
-      setResolvedEmployeeId(user.employeeId);
-    }
-  }, [user?.employeeId, resolvedEmployeeId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -47,24 +50,31 @@ const AttendanceTimeCard = ({ user, className }) => {
   }, []);
 
   useEffect(() => {
-    if (!records || records.length === 0) return;
-    const known = records.find((record) => record.employeeId)?.employeeId;
-    if (known && known !== resolvedEmployeeId) {
-      setResolvedEmployeeId(known);
-    }
-  }, [records, resolvedEmployeeId]);
+    if (!subjectEmployeeId) return;
+
+    setParams((prev = {}) => {
+      const nextId = String(subjectEmployeeId);
+      const prevId =
+        prev && prev.employeeId != null ? String(prev.employeeId) : null;
+      if (prevId === nextId) return prev;
+      return { ...prev, employeeId: subjectEmployeeId };
+    });
+  }, [subjectEmployeeId, setParams]);
 
   const todayRecord = useMemo(() => {
-    const possibleIds = [resolvedEmployeeId, initialSubjectId].filter(Boolean);
+    if (!subjectEmployeeId) return undefined;
+    const targetId = String(subjectEmployeeId);
     return records.find(
       (record) =>
-        possibleIds.includes(record.employeeId) && record.date === today
+        record &&
+        record.date === today &&
+        record.employeeId != null &&
+        String(record.employeeId) === targetId
     );
-  }, [records, resolvedEmployeeId, initialSubjectId, today]);
-
-  const selectedEmployeeId = resolvedEmployeeId || initialSubjectId;
+  }, [records, subjectEmployeeId, today]);
 
   const handleTimeIn = async () => {
+    const selectedEmployeeId = subjectEmployeeId;
     if (!selectedEmployeeId) {
       toast.error('Unable to identify user for attendance.');
       return;
@@ -82,9 +92,6 @@ const AttendanceTimeCard = ({ user, className }) => {
         checkIn: nowTime(),
         status: 'present',
       });
-      if (created?.employeeId) {
-        setResolvedEmployeeId(created.employeeId);
-      }
       toast.success('Timed in successfully');
     } catch (error) {
       console.error(error);
@@ -93,6 +100,7 @@ const AttendanceTimeCard = ({ user, className }) => {
   };
 
   const handleTimeOut = async () => {
+    const selectedEmployeeId = subjectEmployeeId;
     if (!selectedEmployeeId) {
       toast.error('Unable to identify user for attendance.');
       return;
@@ -106,9 +114,6 @@ const AttendanceTimeCard = ({ user, className }) => {
       const updated = await updateRecord(todayRecord.id, {
         checkOut: nowTime(),
       });
-      if (updated?.employeeId) {
-        setResolvedEmployeeId(updated.employeeId);
-      }
       toast.success('Timed out successfully');
     } catch (error) {
       console.error(error);
@@ -186,6 +191,7 @@ const AttendanceTimeCard = ({ user, className }) => {
   const hasTimedInToday = Boolean(todayRecord?.checkIn);
   const isClockedIn = Boolean(todayRecord?.checkIn && !todayRecord?.checkOut);
   const canTimeOut = Boolean(todayRecord?.checkIn) && !todayRecord?.checkOut;
+  const selectedEmployeeId = subjectEmployeeId;
 
   return (
     <FeaturePanelCard

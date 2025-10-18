@@ -139,8 +139,20 @@ def _safe_user_from_db(db_user):
     role = (getattr(db_user, "role", "") or "").lower()
     if role not in {"admin", "manager", "staff"}:
         role = "staff"
+
+    # Look up linked Employee record to include employeeId
+    employee_id = None
+    try:
+        # Use the employee_profile reverse relation from the OneToOne field
+        if hasattr(db_user, "employee_profile") and db_user.employee_profile:
+            employee_id = str(db_user.employee_profile.id)
+    except Exception:
+        # If employee_profile doesn't exist or there's an error, leave as None
+        employee_id = None
+
     return {
         "id": str(db_user.id),
+        "employeeId": employee_id,
         "name": db_user.name,
         "email": db_user.email,
         "role": role,
@@ -222,6 +234,7 @@ DEFAULT_ROLE_PERMISSIONS = {
         "attendance.manage",
         "leave.manage",
         # Reports and Analytics
+        "reports.dashboard.view",
         "reports.sales.view",
         "reports.inventory.view",
         "reports.orders.view",
@@ -272,6 +285,8 @@ DEFAULT_ROLE_PERMISSIONS = {
         "notification.view",
         # Catering module (view-only access)
         "catering.view",
+        # Reports - Dashboard view
+        "reports.dashboard.view",
     },
 }
 

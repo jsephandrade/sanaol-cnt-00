@@ -148,19 +148,13 @@ class UserService {
   async createUser(userData) {
     const payload = userModelToCreatePayload(userData);
     if (!USE_MOCKS) {
-      try {
-        const res = await apiClient.post('/users', payload, {
-          retry: { retries: 1 },
-        });
-        const data = userApiToModel(res?.data || res);
-        return { success: true, data };
-      } catch (e) {
-        console.warn(
-          'createUser API failed, falling back to mocks:',
-          e?.message
-        );
-      }
+      const res = await apiClient.post('/users', payload, {
+        retry: { retries: 1 },
+      });
+      const data = userApiToModel(res?.data || res);
+      return { success: true, data };
     }
+    // Mock implementation (only runs when USE_MOCKS is enabled)
     await mockDelay(400);
     const newUser = {
       id: Date.now().toString(),

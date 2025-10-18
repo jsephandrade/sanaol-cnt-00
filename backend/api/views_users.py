@@ -152,21 +152,45 @@ def users(request):
             return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
         from .models import AppUser
+        from django.db import IntegrityError
         _maybe_seed_from_memory()
+
+        # Validate email
+        new_email = (payload.get("email") or "").lower().strip()
+        if not new_email or new_email == "user@example.com":
+            return JsonResponse({"success": False, "message": "Valid email is required"}, status=400)
+
+        # Check if email already exists
+        existing_user = AppUser.objects.filter(email=new_email).first()
+        if existing_user:
+            return JsonResponse({
+                "success": False,
+                "message": f"Email '{new_email}' is already in use. Please use a different email."
+            }, status=400)
+
         # Optional initial password support (admin create)
         raw_password = (payload.get("password") or "").strip()
         if raw_password and len(raw_password) < 8:
             return JsonResponse({"success": False, "message": "Password must be at least 8 characters"}, status=400)
-        with transaction.atomic():
-            db_user = AppUser.objects.create(
-                email=(payload.get("email") or "user@example.com").lower().strip(),
-                name=payload.get("name") or "New User",
-                role=(payload.get("role") or "staff").lower(),
-                status="active",
-                permissions=payload.get("permissions") or [],
-                phone=(payload.get("phone") or ""),
-                password_hash=make_password(raw_password) if raw_password else "",
-            )
+
+        try:
+            with transaction.atomic():
+                db_user = AppUser.objects.create(
+                    email=new_email,
+                    name=payload.get("name") or "New User",
+                    role=(payload.get("role") or "staff").lower(),
+                    status="active",
+                    permissions=payload.get("permissions") or [],
+                    phone=(payload.get("phone") or ""),
+                    password_hash=make_password(raw_password) if raw_password else "",
+                )
+        except IntegrityError:
+            # Safety net in case of race condition
+            return JsonResponse({
+                "success": False,
+                "message": f"Email '{new_email}' is already in use. Please use a different email."
+            }, status=400)
+
         return JsonResponse({"success": True, "data": _safe_user_from_db(db_user)})
     except (OperationalError, ProgrammingError):
         pass
