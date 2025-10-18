@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuSelection from '@/components/pos/MenuSelection';
 import CurrentOrder from '@/components/pos/CurrentOrder';
@@ -11,14 +11,8 @@ import { usePOSLogic } from '@/hooks/usePOSLogic';
 import { useOrderHistory } from '@/hooks/useOrderManagement';
 import { orderService } from '@/api/services/orderService';
 import { paymentsService } from '@/api/services/paymentsService';
-import { useAuth } from '@/components/AuthContext';
 
 const POS = () => {
-  const { user, token, can } = useAuth();
-  const canManageQueue = useMemo(
-    () => Boolean(user && token && can('order.queue.handle')),
-    [user, token, can]
-  );
   const [searchTerm, setSearchTerm] = useState('');
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [isOrderHistoryModalOpen, setIsOrderHistoryModalOpen] = useState(false);
@@ -89,10 +83,6 @@ const POS = () => {
   };
 
   const refreshQueue = useCallback(async () => {
-    if (!canManageQueue) {
-      setOrderQueue(EMPTY_QUEUE_STATE);
-      return EMPTY_QUEUE_STATE;
-    }
     try {
       const res = await orderService.getOrderQueue();
       if (res?.data) {
@@ -104,7 +94,7 @@ const POS = () => {
     }
     setOrderQueue(EMPTY_QUEUE_STATE);
     return EMPTY_QUEUE_STATE;
-  }, [canManageQueue, setOrderQueue]);
+  }, [setOrderQueue]);
 
   const handleProcessPayment = async (paymentDetails) => {
     const info = await processPayment(paymentMethod, paymentDetails);

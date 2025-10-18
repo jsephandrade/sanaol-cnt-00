@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthContext';
 import { useEmployees, useSchedule } from '@/hooks/useEmployees';
-import { useUsers } from '@/hooks/useUsers';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import ManageEmployeesDialog from '@/components/employee-schedule/ManageEmployeesDialog';
@@ -47,10 +46,6 @@ const DEFAULT_EMPLOYEE_FORM = {
   hourlyRate: 0,
   contact: '',
   status: 'active',
-  userId: '',
-  userName: '',
-  userEmail: '',
-  userRole: '',
 };
 
 const EmployeeSchedule = () => {
@@ -60,28 +55,7 @@ const EmployeeSchedule = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { employees = [], addEmployee, updateEmployee } = useEmployees();
-  const { users: rawUsers = [] } = useUsers();
-
-  const assignableUsers = useMemo(() => {
-    let list = [];
-    if (Array.isArray(rawUsers)) {
-      list = rawUsers;
-    } else if (rawUsers && Array.isArray(rawUsers.data)) {
-      list = rawUsers.data;
-    } else if (rawUsers && Array.isArray(rawUsers.results)) {
-      list = rawUsers.results;
-    }
-
-    return list
-      .map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: (user.role || '').toLowerCase(),
-      }))
-      .filter((user) => user.role === 'manager' || user.role === 'staff');
-  }, [rawUsers]);
+  const { employees = [], updateEmployee } = useEmployees();
 
   const displayEmployees = useMemo(
     () =>
@@ -276,8 +250,7 @@ const EmployeeSchedule = () => {
 
   const handleUpdateEmployee = async (updates) => {
     if (!canManage) return;
-    const { id, name, position, hourlyRate, contact, status, userId } =
-      updates || {};
+    const { id, name, position, hourlyRate, contact, status } = updates || {};
 
     if (!id) {
       toast.error('Select an employee to update');
@@ -300,7 +273,6 @@ const EmployeeSchedule = () => {
         hourlyRate: sanitizedRate,
         contact: contact?.trim() || '',
         status: status ? String(status).toLowerCase() : 'active',
-        userId: userId ? String(userId) : null,
       });
 
       setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
@@ -308,36 +280,6 @@ const EmployeeSchedule = () => {
     } catch (error) {
       console.error(error);
       // useEmployees hook surfaces toast messaging on failure.
-    }
-  };
-
-  const handleAddEmployee = async (payload) => {
-    if (!canManage) return null;
-    const { name, position, hourlyRate, contact, status, userId } =
-      payload || {};
-
-    if (!name?.trim() || !position?.trim()) {
-      toast.error('Please provide employee name and position');
-      return null;
-    }
-
-    try {
-      const sanitizedRate = Number.isFinite(Number(hourlyRate))
-        ? Number(hourlyRate)
-        : 0;
-
-      const created = await addEmployee({
-        name: name.trim(),
-        position: position.trim(),
-        hourlyRate: sanitizedRate,
-        contact: contact?.trim() || '',
-        status: status ? String(status).toLowerCase() : 'active',
-        userId: userId ? String(userId) : null,
-      });
-      return created;
-    } catch (error) {
-      console.error(error);
-      return null;
     }
   };
 
@@ -448,10 +390,6 @@ const EmployeeSchedule = () => {
                   hourlyRate: firstEmployee.hourlyRate ?? 0,
                   contact: firstEmployee.contact || '',
                   status: firstEmployee.status || 'active',
-                  userId: firstEmployee.userId || '',
-                  userName: firstEmployee.userName || '',
-                  userEmail: firstEmployee.userEmail || '',
-                  userRole: firstEmployee.userRole || '',
                 });
               } else {
                 setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
@@ -539,11 +477,9 @@ const EmployeeSchedule = () => {
           setEmployeeDialogOpen(open);
         }}
         employeeList={displayEmployees}
-        userList={assignableUsers}
         managedEmployee={managedEmployee}
         setManagedEmployee={setManagedEmployee}
         onUpdateEmployee={handleUpdateEmployee}
-        onAddEmployee={handleAddEmployee}
         showTrigger={false}
       />
 

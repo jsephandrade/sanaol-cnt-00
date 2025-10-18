@@ -17,7 +17,6 @@ from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
 
 from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
-from .models import AppUser
 
 
 logger = logging.getLogger(__name__)
@@ -52,39 +51,7 @@ def _lookup_order_number(order_id, order_numbers=None):
         return ""
 
 
-def _resolve_processed_by(p, cache=None):
-    processed_id = getattr(p, "processed_by_id", None)
-    if not processed_id:
-        return ""
-    cache_key = str(processed_id)
-    if cache is not None and cache_key in cache:
-        return cache[cache_key] or ""
-
-    email = ""
-    try:
-        related = getattr(p, "processed_by", None)
-        if related:
-            email = getattr(related, "email", "") or ""
-    except Exception:
-        related = None
-
-    if not email:
-        try:
-            email = (
-                AppUser.objects.filter(id=processed_id)
-                .values_list("email", flat=True)
-                .first()
-                or ""
-            )
-        except Exception:
-            email = ""
-
-    if cache is not None:
-        cache[cache_key] = email
-    return email
-
-
-def _serialize_db(p, order_numbers=None, processed_users=None):
+def _serialize_db(p, order_numbers=None):
     order_id = str(p.order_id)
     order_number = _lookup_order_number(order_id, order_numbers)
     if not order_number:
@@ -104,7 +71,7 @@ def _serialize_db(p, order_numbers=None, processed_users=None):
         "status": p.status,
         "reference": p.reference or "",
         "customer": p.customer or "",
-        "processedBy": _resolve_processed_by(p, processed_users),
+        "processedBy": (p.processed_by.email if getattr(p, "processed_by", None) else ""),
         "date": (p.created_at or dj_timezone.now()).isoformat(),
     }
 
@@ -316,27 +283,7 @@ def payments_list(request):
                     }
                 except Exception:
                     order_numbers = {}
-        processed_lookup = None
-        if slice_items:
-            processed_ids = {
-                str(x.processed_by_id)
-                for x in slice_items
-                if getattr(x, "processed_by_id", None)
-            }
-            if processed_ids:
-                processed_lookup = {pid: "" for pid in processed_ids}
-                try:
-                    lookup = {
-                        str(u.id): u.email or ""
-                        for u in AppUser.objects.filter(id__in=processed_ids)
-                    }
-                    processed_lookup.update(lookup)
-                except Exception:
-                    processed_lookup = {pid: "" for pid in processed_ids}
-        items = [
-            _serialize_db(x, order_numbers, processed_lookup)
-            for x in slice_items
-        ]
+        items = [_serialize_db(x, order_numbers) for x in slice_items]
         return JsonResponse(
             {
                 "success": True,
@@ -472,17 +419,16 @@ def payment_invoice(request, pid: str):
             c.drawString(72, y, "Payment Invoice")
             y -= 24
             c.setFont("Helvetica", 10)
-            processed_email = _resolve_processed_by(p)
             fields = [
                 ("Invoice ID", str(p.id)),
                 ("Order ID", p.order_id),
                 ("Date", (p.created_at or dj_timezone.now()).strftime("%Y-%m-%d %H:%M:%S")),
-                ("Amount", f"PHP {float(p.amount):.2f}"),
+                ("Amount", f"₱{float(p.amount):.2f}"),
                 ("Method", p.method.title()),
                 ("Status", p.status),
                 ("Reference", p.reference or ""),
                 ("Customer", p.customer or ""),
-                ("Processed By", processed_email),
+                ("Processed By", (p.processed_by.email if getattr(p, 'processed_by', None) else '')),
             ]
             for label, val in fields:
                 y -= 16

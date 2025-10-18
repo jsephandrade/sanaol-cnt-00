@@ -2,29 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import orderService from '@/api/services/orderService';
 import { createRealtime } from '@/lib/realtime';
-import { useAuth } from '@/components/AuthContext';
-
-const EMPTY_QUEUE = {
-  orders: [],
-  stations: [],
-  summary: {
-    totalOrders: 0,
-    statusCounts: {},
-    channelCounts: {},
-    priorityCounts: {},
-  },
-  capacity: {
-    stations: [],
-    shouldThrottle: false,
-    peakUtilization: 0,
-    recommendedQuoteMinutes: 0,
-    throttleReasons: [],
-  },
-  batches: [],
-  handoff: { pending: [], lateOrders: [] },
-  generatedAt: null,
-  eventCursor: null,
-};
 
 export const useOrderManagement = (params = {}) => {
   const [orders, setOrders] = useState([]);
@@ -222,12 +199,10 @@ export const useOrderManagement = (params = {}) => {
 };
 
 export const useOrderQueue = (params = {}) => {
-  const [orderQueue, setOrderQueue] = useState(EMPTY_QUEUE);
+  const [orderQueue, setOrderQueue] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { toast } = useToast();
-  const { user, token, can } = useAuth();
-  const canManageQueue = Boolean(user && token && can('order.queue.handle'));
   const pollRef = useRef(null);
   const rtRef = useRef(null);
 
@@ -248,10 +223,6 @@ export const useOrderQueue = (params = {}) => {
   );
 
   const fetchOrderQueue = useCallback(async () => {
-    if (!canManageQueue) {
-      setOrderQueue(EMPTY_QUEUE);
-      return;
-    }
     setLoading(true);
     setError(null);
 
@@ -273,13 +244,9 @@ export const useOrderQueue = (params = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [queueParamKey, toast, canManageQueue]);
+  }, [queueParamKey, toast]);
 
   useEffect(() => {
-    if (!canManageQueue) {
-      setOrderQueue(EMPTY_QUEUE);
-      return undefined;
-    }
     fetchOrderQueue();
 
     const enableRealtime = Boolean(import.meta?.env?.VITE_WS_URL);
@@ -332,7 +299,7 @@ export const useOrderQueue = (params = {}) => {
       stopPolling();
       rtRef.current?.close?.();
     };
-  }, [queueParamKey, fetchOrderQueue, canManageQueue]);
+  }, [queueParamKey, fetchOrderQueue]);
 
   const updateOrderStatus = async (orderId, status) => {
     try {

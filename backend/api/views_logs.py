@@ -11,62 +11,17 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.utils import timezone as dj_timezone
 
 from .views_common import _actor_from_request, _require_admin_or_manager, _client_meta
-from .models import AppUser
 
 
 LOGS_MEM = []  # in-memory fallback: list of dicts
 
 
-def _resolve_log_user(log, cache=None):
-    user_id = getattr(log, "user_id", None)
-    actor_email = getattr(log, "actor_email", "") or ""
-    user_email = actor_email
-    user_id_str = ""
-
-    if user_id:
-        user_id_str = str(user_id)
-        if cache is not None and user_id_str in cache:
-            cached_email = cache[user_id_str]
-            if cached_email:
-                user_email = cached_email
-        else:
-            try:
-                related = getattr(log, "user", None)
-            except AppUser.DoesNotExist:
-                related = None
-            except Exception:
-                related = None
-
-            if related:
-                user_email = getattr(related, "email", "") or actor_email
-            else:
-                try:
-                    lookup_email = (
-                        AppUser.objects.filter(id=user_id)
-                        .values_list("email", flat=True)
-                        .first()
-                        or ""
-                    )
-                    if lookup_email:
-                        user_email = lookup_email
-                except Exception:
-                    pass
-
-            if cache is not None:
-                cache[user_id_str] = user_email
-
-    return user_email or actor_email or "", user_id_str
-
-
-def _serialize_db(log, user_cache=None):
-    user_email, user_id_str = _resolve_log_user(log, user_cache)
-    actor_id = getattr(log, "actor_id", None)
-    actor_id_str = str(actor_id) if actor_id else ""
+def _serialize_db(log):
     return {
         "id": str(log.id),
         "action": log.action,
-        "user": user_email,
-        "userId": user_id_str or actor_id_str,
+        "user": (getattr(log, "user", None).email if getattr(log, "user", None) else (log.actor_email or "")),
+        "userId": (str(getattr(getattr(log, "user", None), "id", "")) if getattr(log, "user", None) else ""),
         "type": log.type,
         "timestamp": (log.created_at or dj_timezone.now()).isoformat(),
         "details": log.details or "",
@@ -222,25 +177,7 @@ def logs(request):
             limit = max(1, limit)
             start_i = (page - 1) * limit
             end_i = start_i + limit
-            slice_items = list(qs[start_i:end_i])
-            user_cache = None
-            if slice_items:
-                user_ids = {
-                    str(x.user_id)
-                    for x in slice_items
-                    if getattr(x, "user_id", None)
-                }
-                if user_ids:
-                    user_cache = {uid: "" for uid in user_ids}
-                    try:
-                        lookup = {
-                            str(u.id): u.email or ""
-                            for u in AppUser.objects.filter(id__in=user_ids)
-                        }
-                        user_cache.update(lookup)
-                    except Exception:
-                        user_cache = {uid: "" for uid in user_ids}
-            items = [_serialize_db(x, user_cache) for x in slice_items]
+            items = [_serialize_db(x) for x in qs[start_i:end_i]]
             return JsonResponse(
                 {
                     "success": True,

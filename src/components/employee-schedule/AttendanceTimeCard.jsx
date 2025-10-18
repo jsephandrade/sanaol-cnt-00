@@ -9,9 +9,8 @@ import { cn } from '@/lib/utils';
 const AttendanceTimeCard = ({ user, className }) => {
   const subjectEmployeeId = useMemo(() => {
     if (!user) return null;
-    return user.employeeId ?? user.employee?.id ?? null;
+    return user.employeeId ?? user.id ?? null;
   }, [user]);
-  const attendanceEnabled = Boolean(subjectEmployeeId);
 
   const attendanceParams = useMemo(() => {
     if (!subjectEmployeeId) return {};
@@ -23,7 +22,7 @@ const AttendanceTimeCard = ({ user, className }) => {
     createRecord,
     updateRecord,
     setParams,
-  } = useAttendance(attendanceParams, { enabled: attendanceEnabled });
+  } = useAttendance(attendanceParams);
 
   const toLocalDateStr = (d) => {
     const y = d.getFullYear();
@@ -51,7 +50,7 @@ const AttendanceTimeCard = ({ user, className }) => {
   }, []);
 
   useEffect(() => {
-    if (!attendanceEnabled || !subjectEmployeeId) return;
+    if (!subjectEmployeeId) return;
 
     setParams((prev = {}) => {
       const nextId = String(subjectEmployeeId);
@@ -60,10 +59,10 @@ const AttendanceTimeCard = ({ user, className }) => {
       if (prevId === nextId) return prev;
       return { ...prev, employeeId: subjectEmployeeId };
     });
-  }, [attendanceEnabled, subjectEmployeeId, setParams]);
+  }, [subjectEmployeeId, setParams]);
 
   const todayRecord = useMemo(() => {
-    if (!attendanceEnabled || !subjectEmployeeId) return undefined;
+    if (!subjectEmployeeId) return undefined;
     const targetId = String(subjectEmployeeId);
     return records.find(
       (record) =>
@@ -72,16 +71,11 @@ const AttendanceTimeCard = ({ user, className }) => {
         record.employeeId != null &&
         String(record.employeeId) === targetId
     );
-  }, [attendanceEnabled, records, subjectEmployeeId, today]);
+  }, [records, subjectEmployeeId, today]);
 
   const handleTimeIn = async () => {
-    if (!attendanceEnabled) {
-      toast.error(
-        'Attendance tracking is unavailable. Please contact your manager.'
-      );
-      return;
-    }
-    if (!subjectEmployeeId) {
+    const selectedEmployeeId = subjectEmployeeId;
+    if (!selectedEmployeeId) {
       toast.error('Unable to identify user for attendance.');
       return;
     }
@@ -92,7 +86,7 @@ const AttendanceTimeCard = ({ user, className }) => {
 
     try {
       const created = await createRecord({
-        employeeId: subjectEmployeeId,
+        employeeId: selectedEmployeeId,
         employeeName: user?.name || '',
         date: todayStr(),
         checkIn: nowTime(),
@@ -106,13 +100,8 @@ const AttendanceTimeCard = ({ user, className }) => {
   };
 
   const handleTimeOut = async () => {
-    if (!attendanceEnabled) {
-      toast.error(
-        'Attendance tracking is unavailable. Please contact your manager.'
-      );
-      return;
-    }
-    if (!subjectEmployeeId) {
+    const selectedEmployeeId = subjectEmployeeId;
+    if (!selectedEmployeeId) {
       toast.error('Unable to identify user for attendance.');
       return;
     }
@@ -184,12 +173,6 @@ const AttendanceTimeCard = ({ user, className }) => {
   }, [checkInDate, checkOutDate, currentTime]);
 
   const statusConfig = useMemo(() => {
-    if (!attendanceEnabled) {
-      return {
-        label: 'No Employee Profile',
-        className: 'text-amber-600',
-      };
-    }
     if (!todayRecord) {
       return { label: 'Not Clocked In', className: 'text-muted-foreground' };
     }
@@ -203,20 +186,12 @@ const AttendanceTimeCard = ({ user, className }) => {
       label: todayRecord.status || 'Unknown Status',
       className: 'text-muted-foreground',
     };
-  }, [attendanceEnabled, todayRecord]);
+  }, [todayRecord]);
 
-  const hasTimedInToday = attendanceEnabled && Boolean(todayRecord?.checkIn);
-  const isClockedIn =
-    attendanceEnabled &&
-    Boolean(todayRecord?.checkIn && !todayRecord?.checkOut);
-  const canTimeIn = attendanceEnabled && !todayRecord?.checkIn;
-  const canTimeOut =
-    attendanceEnabled &&
-    Boolean(todayRecord?.checkIn) &&
-    !todayRecord?.checkOut;
-  const showUnavailableMessage = !attendanceEnabled;
-  const availabilityNotice =
-    'Attendance tracking is unavailable because your account is not linked to an employee profile yet. Please contact your manager.';
+  const hasTimedInToday = Boolean(todayRecord?.checkIn);
+  const isClockedIn = Boolean(todayRecord?.checkIn && !todayRecord?.checkOut);
+  const canTimeOut = Boolean(todayRecord?.checkIn) && !todayRecord?.checkOut;
+  const selectedEmployeeId = subjectEmployeeId;
 
   return (
     <FeaturePanelCard
@@ -238,12 +213,6 @@ const AttendanceTimeCard = ({ user, className }) => {
         </div>
       </div>
 
-      {showUnavailableMessage ? (
-        <div className="rounded-md border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-          {availabilityNotice}
-        </div>
-      ) : null}
-
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button
           size="lg"
@@ -251,7 +220,7 @@ const AttendanceTimeCard = ({ user, className }) => {
             'flex-1 min-w-[140px] border-2 border-emerald-600 bg-emerald-600 text-white transition-colors hover:bg-emerald-600/90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:opacity-60'
           )}
           onClick={handleTimeIn}
-          disabled={!canTimeIn}
+          disabled={hasTimedInToday}
         >
           <Clock className="mr-2 h-4 w-4" aria-hidden="true" />
           Time In

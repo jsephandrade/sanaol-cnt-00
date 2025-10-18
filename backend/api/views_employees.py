@@ -6,10 +6,9 @@ checks via helpers in views_common, and JSON responses with { success, data }.
 
 import json
 from datetime import time
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.db import transaction
 
 from .views_common import _actor_from_request, _has_permission, _paginate
 
@@ -45,10 +44,6 @@ def _safe_emp(e):
         "hourlyRate": float(e.hourly_rate or 0),
         "contact": e.contact,
         "status": e.status,
-        "userId": str(e.user_id) if e.user_id else None,
-        "userEmail": getattr(e.user, "email", "") if getattr(e, "user", None) else "",
-        "userName": getattr(e.user, "name", "") if getattr(e, "user", None) else "",
-        "userRole": (getattr(e.user, "role", "") or "").lower() if getattr(e, "user", None) else "",
         "createdAt": e.created_at.isoformat() if e.created_at else None,
         "updatedAt": e.updated_at.isoformat() if e.updated_at else None,
     }
@@ -88,7 +83,7 @@ def employees(request):
             limit = request.GET.get("limit", 50)
 
             # Query only explicitly created employees (no auto-sync)
-            qs = Employee.objects.select_related("user").all()
+            qs = Employee.objects.all()
             # Confidentiality: Staff should only see themselves
             role_l = (getattr(actor, "role", "") or "").lower()
             if role_l not in {"admin", "manager"} and not _has_permission(actor, "employees.manage"):
@@ -161,45 +156,16 @@ def employees(request):
     if not name:
         return JsonResponse({"success": False, "message": "Name is required"}, status=400)
     try:
-        from .models import Employee, AppUser
+        from .models import Employee
         with transaction.atomic():
-            user_obj = None
-            user_id = payload.get("userId")
-            if user_id not in (None, "", "null"):
-                user_obj = AppUser.objects.filter(id=user_id).first()
-                if not user_obj:
-                    return JsonResponse({"success": False, "message": "User not found"}, status=404)
-                role = (getattr(user_obj, "role", "") or "").lower()
-                if role not in {"staff", "manager"}:
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": "Only staff and manager accounts can be linked to an employee.",
-                        },
-                        status=400,
-                    )
             emp = Employee.objects.create(
                 name=name,
                 position=(payload.get("position") or "").strip(),
                 hourly_rate=float(payload.get("hourlyRate") or 0),
                 contact=(payload.get("contact") or "").strip(),
                 status=(payload.get("status") or "active").lower(),
-                user=user_obj,
             )
         return JsonResponse({"success": True, "data": _safe_emp(emp)})
-    except ValidationError as exc:
-        return JsonResponse(
-            {"success": False, "message": exc.message_dict or str(exc)},
-            status=400,
-        )
-    except IntegrityError:
-        return JsonResponse(
-            {
-                "success": False,
-                "message": "Selected user is already linked to a different employee.",
-            },
-            status=400,
-        )
     except Exception as e:
         return JsonResponse({"success": False, "message": "Failed to create employee"}, status=500)
 
@@ -210,8 +176,8 @@ def employee_detail(request, emp_id):
     if not actor:
         return err
     try:
-        from .models import Employee, AppUser
-        emp = Employee.objects.select_related("user").filter(id=emp_id).first()
+        from .models import Employee
+        emp = Employee.objects.filter(id=emp_id).first()
         if not emp:
             return JsonResponse({"success": False, "message": "Not found"}, status=404)
         if request.method == "GET":
@@ -244,46 +210,8 @@ def employee_detail(request, emp_id):
             emp.contact = str(payload["contact"]).strip(); changed = True
         if "status" in payload and payload["status"] is not None:
             emp.status = str(payload["status"]).lower(); changed = True
-        if "userId" in payload:
-            user_value = payload.get("userId")
-            if user_value in (None, "", "null"):
-                if emp.user_id is not None:
-                    emp.user = None
-                    changed = True
-            else:
-                user_obj = AppUser.objects.filter(id=user_value).first()
-                if not user_obj:
-                    return JsonResponse({"success": False, "message": "User not found"}, status=404)
-                role = (getattr(user_obj, "role", "") or "").lower()
-                if role not in {"staff", "manager"}:
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": "Only staff and manager accounts can be linked to an employee.",
-                        },
-                        status=400,
-                    )
-                if str(emp.user_id) != str(user_obj.id):
-                    emp.user = user_obj
-                    changed = True
         if changed:
-            try:
-                emp.full_clean()
-            except ValidationError as exc:
-                return JsonResponse(
-                    {"success": False, "message": exc.message_dict or str(exc)},
-                    status=400,
-                )
-            try:
-                emp.save()
-            except IntegrityError:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "message": "Selected user is already linked to another employee.",
-                    },
-                    status=400,
-                )
+            emp.save()
         return JsonResponse({"success": True, "data": _safe_emp(emp)})
     except Exception:
         return JsonResponse({"success": False, "message": "Server error"}, status=500)

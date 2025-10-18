@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,14 +30,6 @@ const AddScheduleDialog = ({
   onAddSchedule,
   showTrigger = true,
 }) => {
-  const eligibleEmployees = useMemo(() => {
-    if (!Array.isArray(employeeList)) return [];
-    return employeeList.filter((employee) => {
-      const role = (employee.userRole || '').toLowerCase();
-      return role !== 'admin';
-    });
-  }, [employeeList]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {showTrigger ? (
@@ -72,17 +64,11 @@ const AddScheduleDialog = ({
                 <SelectValue placeholder="Select an employee" />
               </SelectTrigger>
               <SelectContent>
-                {eligibleEmployees.length > 0 ? (
-                  eligibleEmployees.map((employee) => (
-                    <SelectItem key={employee.id} value={String(employee.id)}>
-                      {employee.name} ({employee.position})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="__none__" disabled>
-                    No eligible employees available
+                {employeeList.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name} ({employee.position})
                   </SelectItem>
-                )}
+                ))}
               </SelectContent>
             </Select>
           </div>
