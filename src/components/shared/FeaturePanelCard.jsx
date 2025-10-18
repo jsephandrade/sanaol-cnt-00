@@ -8,6 +8,12 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
+const accentContainerClasses =
+  'inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 px-3.5 py-1.5 text-sm font-bold uppercase tracking-wider text-primary backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-sm';
+
+const accentTitleClasses =
+  'text-base font-bold uppercase tracking-wider bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent leading-tight md:text-lg';
+
 const FeaturePanelCard = ({
   children,
   className,
@@ -15,6 +21,11 @@ const FeaturePanelCard = ({
   badgeIcon: BadgeIcon,
   badgeClassName,
   title,
+  titleStyle = 'default',
+  titleIcon: TitleIcon,
+  titleIconClassName,
+  titleClassName,
+  titleAccentClassName,
   description,
   headerActions,
   headerContent,
@@ -78,18 +89,53 @@ const FeaturePanelCard = ({
           <div className="space-y-2.5 md:flex-1 md:min-w-0">
             {(title || badgeText) && (
               <div className="flex flex-wrap items-center gap-3">
-                {title && (
-                  <CardTitle className="text-2xl font-bold tracking-tight md:text-3xl">
-                    {title}
-                  </CardTitle>
-                )}
+                {title &&
+                  (titleStyle === 'accent' ? (
+                    <div
+                      className={cn(
+                        accentContainerClasses,
+                        'text-base md:text-lg',
+                        titleAccentClassName
+                      )}
+                    >
+                      {TitleIcon && (
+                        <TitleIcon
+                          className={cn(
+                            'h-4 w-4 text-primary/90 drop-shadow-sm',
+                            titleIconClassName
+                          )}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <CardTitle
+                        className={cn(accentTitleClasses, titleClassName)}
+                      >
+                        {title}
+                      </CardTitle>
+                    </div>
+                  ) : (
+                    <CardTitle
+                      className={cn(
+                        'text-2xl font-bold tracking-tight md:text-3xl',
+                        titleClassName
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        {TitleIcon && (
+                          <TitleIcon
+                            className={cn(
+                              'h-6 w-6 text-primary drop-shadow-sm',
+                              titleIconClassName
+                            )}
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span>{title}</span>
+                      </span>
+                    </CardTitle>
+                  ))}
                 {badgeText && (
-                  <div
-                    className={cn(
-                      'inline-flex items-center gap-2 rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 px-3.5 py-1.5 text-sm font-bold uppercase tracking-wider text-primary backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-sm',
-                      badgeClassName
-                    )}
-                  >
+                  <div className={cn(accentContainerClasses, badgeClassName)}>
                     {BadgeIcon && (
                       <BadgeIcon className="h-4 w-4" aria-hidden="true" />
                     )}

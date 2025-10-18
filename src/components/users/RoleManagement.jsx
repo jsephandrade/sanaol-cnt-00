@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit } from 'lucide-react';
+import { Edit, ShieldCheck } from 'lucide-react';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 import { Button } from '@/components/ui/button';
 
@@ -7,6 +7,10 @@ export const RoleManagement = ({ roles, onConfigureRole }) => {
   return (
     <FeaturePanelCard
       title="Role Management"
+      titleStyle="accent"
+      titleIcon={ShieldCheck}
+      titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+      titleClassName="text-xs md:text-sm"
       description="Configure user roles and permissions"
       contentClassName="space-y-4"
     >

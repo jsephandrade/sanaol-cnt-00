@@ -454,6 +454,7 @@ def reports_customer_history(request):
             {
                 "id": str(p.id),
                 "orderId": p.order_id,
+                "orderNumber": str(p.order_id) if p.order_id else "",
                 "amount": float(p.amount or 0),
                 "method": p.method,
                 "status": p.status,

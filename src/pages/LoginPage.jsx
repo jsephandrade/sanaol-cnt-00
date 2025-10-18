@@ -179,7 +179,7 @@ const LoginPage = () => {
       />
       <SocialProviders onSocial={handleSocial} pending={pending} />
       <p className="mt-6 text-sm text-gray-600 text-center">
-        Don’t have an account yet?{' '}
+        Don't have an account yet?{' '}
         <button
           onClick={() => navigate('/signup')}
           className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60"

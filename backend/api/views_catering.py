@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, date
 from decimal import Decimal
+from uuid import UUID
 
 from django.db import transaction
 from django.db.models import Q
@@ -62,6 +63,20 @@ def _format_time_range(start, end):
     if start and end:
         return f"{_fmt(start)} - {_fmt(end)}"
     return _fmt(start) or _fmt(end)
+
+
+def _catering_order_number(event_id):
+    """
+    Generate a stable catering order number with prefix 'C-' followed by six digits.
+    The digits are derived from the UUID to ensure consistency for each event.
+    """
+    try:
+        uid = UUID(str(event_id))
+    except Exception:
+        return ""
+    number = uid.int % 900_000
+    number += 100_000  # ensures six digits without leading zeros
+    return f"C-{number:06d}"
 
 
 def _serialize_event(event, include_items=False):
@@ -562,6 +577,9 @@ def catering_event_payment(request, event_id):
                     "event_name": event.name,
                     "payment_type": payment_type,
                     "event_date": event.event_date.isoformat() if event.event_date else None,
+                    "order_number": _catering_order_number(event.id),
+                    "event_id": str(event.id),
+                    "source": "catering",
                 }
             )
         except Exception:

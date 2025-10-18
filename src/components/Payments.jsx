@@ -232,6 +232,10 @@ const Payments = () => {
       <div className="md:col-span-2 space-y-4">
         <FeaturePanelCard
           title="Payment Management"
+          titleStyle="accent"
+          titleIcon={CreditCard}
+          titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+          titleClassName="text-xs md:text-sm"
           description="Track and process payments"
           headerActions={<PaymentsHeader />}
           contentClassName="space-y-4"
@@ -384,6 +388,10 @@ const Payments = () => {
       <div className="space-y-4">
         <FeaturePanelCard
           title="Recent Transactions"
+          titleStyle="accent"
+          titleIcon={Receipt}
+          titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+          titleClassName="text-xs md:text-sm"
           description="View latest payment activities"
           contentClassName="space-y-4"
         >

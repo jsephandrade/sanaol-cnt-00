@@ -23,7 +23,13 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Check, X, Image as ImageIcon, MoreVertical } from 'lucide-react';
+import {
+  Check,
+  X,
+  Image as ImageIcon,
+  MoreVertical,
+  ClipboardList,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -106,6 +112,10 @@ export const PendingVerifications = () => {
   return (
     <FeaturePanelCard
       title="Pending Verifications"
+      titleStyle="accent"
+      titleIcon={ClipboardList}
+      titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+      titleClassName="text-xs md:text-sm"
       description="Review new account requests and assign roles"
       headerContent={
         <Badge variant="secondary" className="font-normal">

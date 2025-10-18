@@ -48,6 +48,10 @@ const InventoryRecentActivity = ({ recentActivities, loading = false }) => {
   return (
     <FeaturePanelCard
       title="Recent Inventory Activity"
+      titleStyle="accent"
+      titleIcon={History}
+      titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+      titleClassName="text-xs md:text-sm"
       description="Latest inventory changes and updates"
       headerContent={
         loading ? (

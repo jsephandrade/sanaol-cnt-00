@@ -10,7 +10,9 @@
       "Bash(curl -s \"http://localhost:8000/api/reports/dashboard?range=today\" -H \"Authorization: Token YOUR_TOKEN\")",
       "Bash(git rm:*)",
       "Bash(awk:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:www.uinkits.com)"
     ],
     "deny": [],
     "ask": []

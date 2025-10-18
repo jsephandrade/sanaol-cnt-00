@@ -10,7 +10,7 @@ import EditItemDialog from '@/components/menu/EditItemDialog';
 import CategoryTabs from '@/components/menu/CategoryTabs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Menu as MenuIcon } from 'lucide-react';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const MenuManagement = () => {
@@ -28,7 +28,8 @@ const MenuManagement = () => {
     restoreMenuItem: restoreArchivedItem,
     refetch: refetchArchived,
   } = useMenuManagement({ archived: true });
-  const { categories: categoryRows, refetch: refetchCategories } = useMenuCategories();
+  const { categories: categoryRows, refetch: refetchCategories } =
+    useMenuCategories();
   const categories = useMemo(
     () => (categoryRows || []).map((c) => c.name),
     [categoryRows]
@@ -150,7 +151,8 @@ const MenuManagement = () => {
     <div className="space-y-6 animate-fade-in">
       <FeaturePanelCard
         title="Menu Management"
-        description="Organize categories, combo meals, and menu items."
+        titleStyle="accent"
+        titleIcon={MenuIcon}
         headerActions={actionButtons}
         contentClassName="space-y-6"
       >

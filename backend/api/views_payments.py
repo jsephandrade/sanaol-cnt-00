@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+from uuid import UUID
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
@@ -19,6 +20,16 @@ from .views_common import _actor_from_request, _has_permission, _client_meta, _r
 
 
 logger = logging.getLogger(__name__)
+
+
+def _derive_catering_order_number(order_id: str) -> str:
+    try:
+        uid = UUID(str(order_id))
+    except Exception:
+        return ""
+    number = uid.int % 900_000
+    number += 100_000
+    return f"C-{number:06d}"
 
 
 def _lookup_order_number(order_id, order_numbers=None):
@@ -43,6 +54,14 @@ def _lookup_order_number(order_id, order_numbers=None):
 def _serialize_db(p, order_numbers=None):
     order_id = str(p.order_id)
     order_number = _lookup_order_number(order_id, order_numbers)
+    if not order_number:
+        meta = getattr(p, "meta", {}) or {}
+        if isinstance(meta, dict):
+            order_number = meta.get("order_number") or meta.get("orderNumber") or ""
+            if not order_number and (
+                meta.get("source") == "catering" or "event_name" in meta
+            ):
+                order_number = _derive_catering_order_number(order_id)
     return {
         "id": str(p.id),
         "orderId": order_id,

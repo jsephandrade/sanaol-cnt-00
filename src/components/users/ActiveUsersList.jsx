@@ -8,6 +8,10 @@ export const ActiveUsersList = ({ users, getInitials }) => {
   return (
     <FeaturePanelCard
       title="Active Users"
+      titleStyle="accent"
+      titleIcon={UserCheck}
+      titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+      titleClassName="text-xs md:text-sm"
       description="Currently active system users"
       contentClassName="space-y-2"
     >

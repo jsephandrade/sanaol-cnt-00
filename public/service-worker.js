@@ -3,7 +3,7 @@
  * Handles push notification display and click events
  */
 
-const CACHE_NAME = 'sanaol-cnt-notifications-v1';
+const CACHE_NAME = 'technomart-notifications-v1';
 
 // Install event - cache essential resources
 self.addEventListener('install', (event) => {

@@ -5,7 +5,7 @@ echo Starting Django + React...
 start cmd /k "npm run dev"
 
 :: Move to frontend directory (optional)
-cd C:\Django\sanaol-cnt-00\backend
+cd C:\Django\technomart\backend
 
 :: Activate virtual environment
 call .venv\Scripts\activate
