@@ -413,7 +413,18 @@ def _reset_auto_flow(
         )
         return update_fields
 
-    selected_target = target or order.auto_advance_target or _auto_next_status(order.status)
+    auto_candidate = _auto_next_status(order.status)
+    selected_target = target or order.auto_advance_target or auto_candidate
+    if selected_target:
+        current_canonical = canonical_status(order.status)
+        target_canonical = canonical_status(selected_target)
+        allowed_targets = ALLOWED_TRANSITIONS.get(current_canonical, set())
+        if (
+            not allowed_targets
+            or target_canonical == current_canonical
+            or target_canonical not in allowed_targets
+        ):
+            selected_target = auto_candidate or ""
     if not selected_target:
         order.auto_advance_target = ""
         order.auto_advance_at = None
@@ -488,9 +499,11 @@ def _clear_auto_flow(order, *, reason: str = "") -> list[str]:
 def _start_auto_flow(order, *, now=None, duration_seconds: Optional[int] = None) -> list[str]:
     if not _auto_should_track(order.status):
         return _clear_auto_flow(order)
+    next_target = _auto_next_status(order.status)
     return _reset_auto_flow(
         order,
         now=now,
+        target=next_target,
         duration_seconds=duration_seconds,
         increment_sequence=True,
     )
