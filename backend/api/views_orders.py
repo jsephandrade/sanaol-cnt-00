@@ -339,7 +339,7 @@ ORDER_TERMINAL_STATUSES = {"completed", "cancelled", "voided", "refunded"}
 
 AUTO_ADVANCE_DEFAULT_SECONDS = max(
     5,
-    int(getattr(settings, "POS_QUEUE_AUTO_ADVANCE_SECONDS", 40) or 40),
+    int(getattr(settings, "POS_QUEUE_AUTO_ADVANCE_SECONDS", 60) or 60),
 )
 AUTO_ADVANCE_PHASE_RULES = [
     {

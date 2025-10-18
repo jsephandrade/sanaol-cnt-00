@@ -215,7 +215,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
   );
 
   const [nowTs, setNowTs] = useState(() => Date.now());
-  const autoAdvanceLocksRef = useRef(new Map());
 
   useEffect(() => {
     const id =
@@ -231,16 +230,16 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
 
   const computeCountdownSeconds = useCallback(
     (order) => {
-      if (!order || order.autoAdvancePaused || !order.autoAdvanceTarget) {
+      if (!order || order.autoAdvancePaused) {
         return null;
       }
-      const target = order.autoAdvanceAt
+      const targetTimestamp = order.autoAdvanceAt
         ? new Date(order.autoAdvanceAt).getTime()
         : NaN;
-      if (Number.isNaN(target)) {
+      if (Number.isNaN(targetTimestamp)) {
         return null;
       }
-      const diff = Math.ceil((target - nowTs) / 1000);
+      const diff = Math.ceil((targetTimestamp - nowTs) / 1000);
       return diff <= 0 ? 0 : diff;
     },
     [nowTs]
@@ -257,77 +256,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
     },
     [updateOrderAutoFlow]
   );
-
-  const handleAdvanceNow = useCallback(
-    async (order) => {
-      if (!order?.autoAdvanceTarget) return;
-      const success = await updateOrderStatus(
-        order.id,
-        order.autoAdvanceTarget
-      );
-      if (!success) {
-        toast.error('Failed to advance order.');
-      }
-    },
-    [updateOrderStatus]
-  );
-
-  useEffect(() => {
-    if (!updateOrderStatus) return;
-
-    const activeKeys = new Set();
-
-    visibleOrders.forEach((order) => {
-      const targetRaw = order?.autoAdvanceTarget;
-      if (!targetRaw) {
-        return;
-      }
-
-      const target = normalizeStatus(targetRaw);
-      const canonicalTarget = toCanonicalStatus(target);
-      const canonicalStatus = toCanonicalStatus(getOrderStatus(order));
-      const key = `${order.id}:${target}`;
-      activeKeys.add(key);
-
-      if (order.autoAdvancePaused) {
-        autoAdvanceLocksRef.current.delete(key);
-        return;
-      }
-
-      if (canonicalStatus === canonicalTarget) {
-        autoAdvanceLocksRef.current.delete(key);
-        return;
-      }
-
-      const countdown = computeCountdownSeconds(order);
-      if (countdown === null) {
-        autoAdvanceLocksRef.current.delete(key);
-        return;
-      }
-
-      if (countdown === 0) {
-        if (!autoAdvanceLocksRef.current.has(key)) {
-          autoAdvanceLocksRef.current.set(key, true);
-          handleAdvanceNow(order).catch(() => {
-            autoAdvanceLocksRef.current.delete(key);
-          });
-        }
-      } else {
-        autoAdvanceLocksRef.current.delete(key);
-      }
-    });
-
-    for (const key of Array.from(autoAdvanceLocksRef.current.keys())) {
-      if (!activeKeys.has(key)) {
-        autoAdvanceLocksRef.current.delete(key);
-      }
-    }
-  }, [
-    visibleOrders,
-    computeCountdownSeconds,
-    handleAdvanceNow,
-    updateOrderStatus,
-  ]);
 
   const renderAutoBadge = useCallback(
     (order) => {
@@ -525,36 +453,24 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                       </div>
 
                       {showAutoControls && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleToggleAutoFlow(order)}
-                          >
-                            {order.autoAdvancePaused ? (
-                              <>
-                                <PlayCircle className="h-4 w-4 mr-1" /> Resume
-                                Timer
-                              </>
-                            ) : (
-                              <>
-                                <PauseCircle className="h-4 w-4 mr-1" /> Pause
-                                Timer
-                              </>
-                            )}
-                          </Button>
-                          {!order.autoAdvancePaused && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="flex-1 text-muted-foreground"
-                              onClick={() => handleAdvanceNow(order)}
-                            >
-                              Advance Now
-                            </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleToggleAutoFlow(order)}
+                        >
+                          {order.autoAdvancePaused ? (
+                            <>
+                              <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                              Timer
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                              Timer
+                            </>
                           )}
-                        </div>
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -701,36 +617,24 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                       </div>
 
                       {showAutoControls && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleToggleAutoFlow(order)}
-                          >
-                            {order.autoAdvancePaused ? (
-                              <>
-                                <PlayCircle className="h-4 w-4 mr-1" /> Resume
-                                Timer
-                              </>
-                            ) : (
-                              <>
-                                <PauseCircle className="h-4 w-4 mr-1" /> Pause
-                                Timer
-                              </>
-                            )}
-                          </Button>
-                          {!order.autoAdvancePaused && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="flex-1 text-muted-foreground"
-                              onClick={() => handleAdvanceNow(order)}
-                            >
-                              Advance Now
-                            </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleToggleAutoFlow(order)}
+                        >
+                          {order.autoAdvancePaused ? (
+                            <>
+                              <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                              Timer
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                              Timer
+                            </>
                           )}
-                        </div>
+                        </Button>
                       )}
                     </div>
                   </div>

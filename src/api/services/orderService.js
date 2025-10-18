@@ -38,7 +38,7 @@ const STATUS_CANONICAL_MAP = {
   ready: 'staged',
 };
 
-const AUTO_ADVANCE_DEFAULT_SECONDS = 40;
+const AUTO_ADVANCE_DEFAULT_SECONDS = 60;
 
 const normalizeStatus = (status) => {
   const s = String(status || '').toLowerCase();
