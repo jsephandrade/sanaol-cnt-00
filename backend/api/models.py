@@ -1,5 +1,6 @@
 import os
 from uuid import uuid4
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
@@ -295,6 +296,7 @@ class Employee(models.Model):
         null=True,
         blank=True,
         related_name="employee_profile",
+        limit_choices_to={"role__in": ["staff", "manager"]},
     )
     name = models.CharField(max_length=255)
     position = models.CharField(max_length=128, blank=True)
@@ -313,6 +315,24 @@ class Employee(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.position})"
+
+    def clean(self):
+        super().clean()
+        self._validate_user_role()
+
+    def save(self, *args, **kwargs):
+        self._validate_user_role()
+        return super().save(*args, **kwargs)
+
+    def _validate_user_role(self):
+        if not self.user_id:
+            return
+
+        role = (getattr(self.user, "role", "") or "").lower()
+        if role not in {"staff", "manager"}:
+            raise ValidationError(
+                {"user": "Only staff and manager accounts can be linked to an employee record."}
+            )
 
 
 class ScheduleEntry(models.Model):

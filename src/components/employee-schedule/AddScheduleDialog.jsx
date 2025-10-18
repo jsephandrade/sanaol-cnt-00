@@ -32,13 +32,13 @@ const AddScheduleDialog = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {showTrigger && (
+      {showTrigger ? (
         <DialogTrigger asChild>
           <Button className="flex items-center gap-2">
             <Plus size={16} /> Add Schedule
           </Button>
         </DialogTrigger>
-      )}
+      ) : null}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New Schedule</DialogTitle>

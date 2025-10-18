@@ -66,36 +66,57 @@ const WeeklyScheduleCard = ({
     setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }));
   };
 
-  const scheduleMap = useMemo(() => {
+  const employeesById = useMemo(() => {
     const map = new Map();
-    schedule.forEach((entry) => {
-      if (!entry?.employeeId || !entry?.day) return;
-      const key = `${entry.employeeId}-${entry.day}`;
-      map.set(key, entry);
+    employeeList.forEach((employee) => {
+      if (!employee?.id) return;
+      map.set(String(employee.id), employee);
     });
     return map;
-  }, [schedule]);
+  }, [employeeList]);
 
-  // Group schedules by day
+  // Group schedules by day, only for employees that are explicitly available
   const schedulesByDay = useMemo(() => {
-    const days = daysOfWeek.filter((day) => day !== 'Sunday');
     const grouped = {};
 
-    days.forEach((day) => {
-      grouped[day] = [];
-      employeeList.forEach((employee) => {
-        const entry = scheduleMap.get(`${employee.id}-${day}`);
-        if (entry) {
-          grouped[day].push({
-            ...entry,
-            employee,
-          });
-        }
+    daysOfWeek
+      .filter((day) => day !== 'Sunday')
+      .forEach((day) => {
+        grouped[day] = [];
+      });
+
+    schedule.forEach((entry) => {
+      if (!entry?.day || !entry?.employeeId) return;
+
+      const normalizedDay = String(entry.day).trim();
+      if (!normalizedDay) return;
+      if (normalizedDay.toLowerCase() === 'sunday') return;
+
+      const employee = employeesById.get(String(entry.employeeId));
+      if (!employee) return;
+
+      if (!grouped[normalizedDay]) {
+        grouped[normalizedDay] = [];
+      }
+
+      grouped[normalizedDay].push({
+        ...entry,
+        employee,
+      });
+    });
+
+    Object.values(grouped).forEach((dayEntries = []) => {
+      dayEntries.sort((a, b) => {
+        const aKey = `${a.startTime ?? ''}`;
+        const bKey = `${b.startTime ?? ''}`;
+        if (aKey < bKey) return -1;
+        if (aKey > bKey) return 1;
+        return 0;
       });
     });
 
     return grouped;
-  }, [daysOfWeek, employeeList, scheduleMap]);
+  }, [daysOfWeek, employeesById, schedule]);
 
   const headerActions = canManage ? (
     <div className="flex flex-wrap gap-2">
@@ -110,7 +131,7 @@ const WeeklyScheduleCard = ({
       </Button>
       <Button size="sm" className="gap-2" onClick={onOpenAddSchedule}>
         <Plus className="h-4 w-4" />
-        New Shift
+        Add Schedule
       </Button>
     </div>
   ) : null;

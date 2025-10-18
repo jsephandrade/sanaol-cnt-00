@@ -39,6 +39,15 @@ const DEFAULT_SCHEDULE_ENTRY = {
   endTime: '14:00',
 };
 
+const DEFAULT_EMPLOYEE_FORM = {
+  id: '',
+  name: '',
+  position: '',
+  hourlyRate: 0,
+  contact: '',
+  status: 'active',
+};
+
 const EmployeeSchedule = () => {
   const { hasAnyRole, user } = useAuth();
   const canManage = hasAnyRole(['manager', 'admin']);
@@ -69,6 +78,9 @@ const EmployeeSchedule = () => {
   const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
   const [newScheduleEntry, setNewScheduleEntry] = useState({
     ...DEFAULT_SCHEDULE_ENTRY,
+  });
+  const [managedEmployee, setManagedEmployee] = useState({
+    ...DEFAULT_EMPLOYEE_FORM,
   });
   const [activeTab, setActiveTab] = useState('schedule');
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -120,6 +132,7 @@ const EmployeeSchedule = () => {
     }
     if (employeeDialogOpen) {
       setEmployeeDialogOpen(false);
+      setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
     }
   }, [canManage, dialogOpen, editingSchedule, employeeDialogOpen]);
 
@@ -235,9 +248,39 @@ const EmployeeSchedule = () => {
     return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
   };
 
-  const handleUpdateEmployee = (employeeId, updates) => {
-    if (!canManage) return Promise.resolve();
-    return updateEmployee(employeeId, updates);
+  const handleUpdateEmployee = async (updates) => {
+    if (!canManage) return;
+    const { id, name, position, hourlyRate, contact, status } = updates || {};
+
+    if (!id) {
+      toast.error('Select an employee to update');
+      return;
+    }
+
+    if (!name?.trim() || !position?.trim()) {
+      toast.error('Please provide employee name and position');
+      return;
+    }
+
+    try {
+      const sanitizedRate = Number.isFinite(Number(hourlyRate))
+        ? Number(hourlyRate)
+        : 0;
+
+      await updateEmployee(id, {
+        name: name.trim(),
+        position: position.trim(),
+        hourlyRate: sanitizedRate,
+        contact: contact?.trim() || '',
+        status: status ? String(status).toLowerCase() : 'active',
+      });
+
+      setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
+      setEmployeeDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      // useEmployees hook surfaces toast messaging on failure.
+    }
   };
 
   const handleAddSchedule = async () => {
@@ -336,9 +379,23 @@ const EmployeeSchedule = () => {
               });
               handleScheduleDialogOpenChange(true);
             }}
-            onOpenManageEmployees={() =>
-              canManage && setEmployeeDialogOpen(true)
-            }
+            onOpenManageEmployees={() => {
+              if (!canManage) return;
+              const firstEmployee = displayEmployees[0];
+              if (firstEmployee) {
+                setManagedEmployee({
+                  id: firstEmployee.id,
+                  name: firstEmployee.name || '',
+                  position: firstEmployee.position || '',
+                  hourlyRate: firstEmployee.hourlyRate ?? 0,
+                  contact: firstEmployee.contact || '',
+                  status: firstEmployee.status || 'active',
+                });
+              } else {
+                setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
+              }
+              setEmployeeDialogOpen(true);
+            }}
             onOpenAddSchedule={() => {
               if (!canManage) return;
               setNewScheduleEntry({ ...DEFAULT_SCHEDULE_ENTRY });
@@ -413,8 +470,15 @@ const EmployeeSchedule = () => {
 
       <ManageEmployeesDialog
         open={employeeDialogOpen}
-        onOpenChange={setEmployeeDialogOpen}
-        employees={displayEmployees}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManagedEmployee({ ...DEFAULT_EMPLOYEE_FORM });
+          }
+          setEmployeeDialogOpen(open);
+        }}
+        employeeList={displayEmployees}
+        managedEmployee={managedEmployee}
+        setManagedEmployee={setManagedEmployee}
         onUpdateEmployee={handleUpdateEmployee}
         showTrigger={false}
       />

@@ -80,12 +80,13 @@ def _safe_leave(l):
 def _employee_for_actor(actor, *, create_if_missing=False):
     """Resolve the employee profile linked to the authenticated actor.
 
-    Optionally creates a lightweight Employee entry when none exists so staff
-    can record attendance without admin intervention.
+    The resolver is intentionally strict: it only returns Employee records that
+    are explicitly linked to the AppUser through `employee.user`.
 
-    IMPORTANT: This function now STRICTLY uses the user_id relationship to prevent
-    multiple users from sharing the same Employee record. Fallback lookups by
-    email/name have been removed to fix the cross-user attendance bug.
+    Auto-creation/linking is disabled (even if `create_if_missing=True`) so that
+    merely logging in or accessing attendance endpoints does not insert new
+    Employee rows. Administrators must manage Employee records explicitly via the
+    employees endpoints.
     """
 
     if not actor:
@@ -99,53 +100,30 @@ def _employee_for_actor(actor, *, create_if_missing=False):
     # Extract actor information
     try:
         actor_id = getattr(actor, "id", None)
-        actor_email = (getattr(actor, "email", "") or "").strip()
-        actor_name = (getattr(actor, "name", "") or "").strip()
     except Exception:
         actor_id = None
-        actor_email = ""
-        actor_name = ""
 
     # STRICT lookup by user_id only - prevents cross-user sharing
     if not actor_id:
         return None
 
     try:
-        # Try to find existing employee linked to this user
+        # Return existing employee linked to this user (if any)
         emp = Employee.objects.filter(user_id=actor_id).first()
         if emp:
             return emp
-
-        # Create new employee ONLY if create_if_missing=True and ALWAYS link to user
+        # Do not auto-create or link employees to users.
         if create_if_missing:
-            # Check if an unlinked employee with matching email exists
-            # If so, link it to this user instead of creating a duplicate
-            if actor_email:
-                unlinked_emp = Employee.objects.filter(
-                    contact__iexact=actor_email,
-                    user__isnull=True
-                ).first()
-                if unlinked_emp:
-                    # Link the unlinked employee to this user
-                    unlinked_emp.user = actor
-                    unlinked_emp.save(update_fields=["user"])
-                    return unlinked_emp
-
-            # Create new employee with strict user link
-            emp = Employee.objects.create(
-                user=actor,
-                name=actor_name or actor_email or "Staff Member",
-                contact=actor_email,
-                position="Staff",
-                status="active",
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                "Employee lookup requested creation for user %s, but auto-creation is disabled.",
+                actor_id,
             )
-            return emp
     except Exception as e:
-        # Log the error for debugging
         import logging
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in _employee_for_actor for user {actor_id}: {e}")
-        return None
+        logger.error(f"Error resolving employee for user {actor_id}: {e}")
 
     return None
 
@@ -166,7 +144,7 @@ def attendance(request):
             can_manage = _has_permission(actor, "attendance.manage")
 
             # Always resolve the authenticated user's employee profile
-            self_employee = _employee_for_actor(actor, create_if_missing=True)
+            self_employee = _employee_for_actor(actor, create_if_missing=False)
             if not self_employee:
                 return JsonResponse({"success": False, "message": "No employee profile found"}, status=403)
 
@@ -200,7 +178,7 @@ def attendance(request):
         self_employee = None
         actor_id = getattr(actor, "id", None)
         if not can_manage:
-            self_employee = _employee_for_actor(actor, create_if_missing=True)
+            self_employee = _employee_for_actor(actor, create_if_missing=False)
             if not self_employee:
                 return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
