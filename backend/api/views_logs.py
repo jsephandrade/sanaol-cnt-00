@@ -17,11 +17,23 @@ LOGS_MEM = []  # in-memory fallback: list of dicts
 
 
 def _serialize_db(log):
+    try:
+        user_obj = log.user
+    except Exception:
+        user_obj = None
+
+    user_email = getattr(user_obj, "email", None) or getattr(log, "actor_email", "") or ""
+    user_id = ""
+    try:
+        user_id = str(getattr(user_obj, "id", "") or getattr(log, "user_id", "") or "")
+    except Exception:
+        user_id = str(getattr(log, "user_id", "") or "")
+
     return {
         "id": str(log.id),
         "action": log.action,
-        "user": (getattr(log, "user", None).email if getattr(log, "user", None) else (log.actor_email or "")),
-        "userId": (str(getattr(getattr(log, "user", None), "id", "")) if getattr(log, "user", None) else ""),
+        "user": user_email,
+        "userId": user_id,
         "type": log.type,
         "timestamp": (log.created_at or dj_timezone.now()).isoformat(),
         "details": log.details or "",
