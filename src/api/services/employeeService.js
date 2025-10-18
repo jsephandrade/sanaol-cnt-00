@@ -19,6 +19,10 @@ class EmployeeService {
       contact: e.contact || '',
       status: e.status || 'active',
       avatar: e.avatar || '/placeholder.svg',
+      userId: e.userId || null,
+      userEmail: e.userEmail || '',
+      userName: e.userName || '',
+      userRole: e.userRole || '',
     }));
   }
 
@@ -42,6 +46,10 @@ class EmployeeService {
       contact: e.contact || '',
       status: e.status || 'active',
       avatar: e.avatar || '/placeholder.svg',
+      userId: e.userId || null,
+      userEmail: e.userEmail || '',
+      userName: e.userName || '',
+      userRole: e.userRole || '',
     };
   }
 
@@ -59,6 +67,10 @@ class EmployeeService {
       contact: e.contact || '',
       status: e.status || 'active',
       avatar: e.avatar || '/placeholder.svg',
+      userId: e.userId || null,
+      userEmail: e.userEmail || '',
+      userName: e.userName || '',
+      userRole: e.userRole || '',
     };
   }
 

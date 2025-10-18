@@ -2,14 +2,20 @@ import { useEffect, useState, useCallback } from 'react';
 import { attendanceService } from '@/api/services/attendanceService';
 import { toast } from 'sonner';
 
-export function useAttendance(initialParams = {}) {
+export function useAttendance(initialParams = {}, options = {}) {
+  const { autoFetch = true, enabled = true } = options || {};
   const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(autoFetch && enabled));
   const [error, setError] = useState(null);
   const [params, setParams] = useState(initialParams);
 
   const fetchRecords = useCallback(
     async (override = null) => {
+      if (!enabled) {
+        setLoading(false);
+        setRecords([]);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
@@ -24,14 +30,21 @@ export function useAttendance(initialParams = {}) {
         setLoading(false);
       }
     },
-    [params]
+    [params, enabled]
   );
 
   useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
+    if (autoFetch && enabled) {
+      fetchRecords();
+    } else if (!enabled) {
+      setLoading(false);
+    }
+  }, [fetchRecords, autoFetch, enabled]);
 
   const createRecord = async (payload) => {
+    if (!enabled) {
+      throw new Error('Attendance tracking is not available for this user.');
+    }
     const created = await attendanceService.createAttendance(payload);
     setRecords((prev) => {
       const filtered = prev.filter((r) => r.id !== created.id);
@@ -40,11 +53,17 @@ export function useAttendance(initialParams = {}) {
     return created;
   };
   const updateRecord = async (id, updates) => {
+    if (!enabled) {
+      throw new Error('Attendance tracking is not available for this user.');
+    }
     const updated = await attendanceService.updateAttendance(id, updates);
     setRecords((prev) => prev.map((r) => (r.id === id ? updated : r)));
     return updated;
   };
   const deleteRecord = async (id) => {
+    if (!enabled) {
+      throw new Error('Attendance tracking is not available for this user.');
+    }
     await attendanceService.deleteAttendance(id);
     setRecords((prev) => prev.filter((r) => r.id !== id));
   };

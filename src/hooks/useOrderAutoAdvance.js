@@ -67,14 +67,21 @@ const resolveAutoAdvanceTarget = (order) => {
 };
 
 export const useOrderAutoAdvance = () => {
-  const { user, can } = useAuth();
+  const { user, can, token } = useAuth();
   const autoAdvanceLocksRef = useRef(new Map());
   const intervalRef = useRef(null);
   const isProcessingRef = useRef(false);
+  const unauthorizedRef = useRef(false);
 
   const processOrders = useCallback(async () => {
+    if (unauthorizedRef.current) {
+      return;
+    }
     // Skip if not authenticated or no permission
-    if (!user || !can('order.status.update')) {
+    const canAdvance = Boolean(
+      user && token && can('order.status.update') && can('order.queue.handle')
+    );
+    if (!canAdvance) {
       return;
     }
 
@@ -169,21 +176,40 @@ export const useOrderAutoAdvance = () => {
         }
       }
     } catch (error) {
-      console.error('[Auto-Advance] Error processing orders:', error);
+      const status = error?.status ?? error?.response?.status ?? null;
+      if (status === 401 || status === 403) {
+        if (!unauthorizedRef.current) {
+          console.warn(
+            '[Auto-Advance] Disabled due to unauthorized access. Background polling stopped.'
+          );
+        }
+        unauthorizedRef.current = true;
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        console.error('[Auto-Advance] Error processing orders:', error);
+      }
     } finally {
       isProcessingRef.current = false;
     }
-  }, [user, can]);
+  }, [user, token, can]);
 
   useEffect(() => {
     // Only run if user is authenticated and has permission
-    if (!user || !can('order.status.update')) {
+    const canAdvance = Boolean(
+      user && token && can('order.status.update') && can('order.queue.handle')
+    );
+    if (!canAdvance) {
+      unauthorizedRef.current = false;
       return;
     }
-
-    console.log('[Auto-Advance] Background service started');
+    // To test in console
+    // console.log('[Auto-Advance] Background service started');
 
     // Start polling
+    unauthorizedRef.current = false;
     intervalRef.current = setInterval(processOrders, POLL_INTERVAL_MS);
 
     // Initial run
@@ -199,5 +225,5 @@ export const useOrderAutoAdvance = () => {
       autoAdvanceLocksRef.current.clear();
       isProcessingRef.current = false;
     };
-  }, [user, can, processOrders]);
+  }, [user, token, can, processOrders]);
 };
