@@ -81,22 +81,65 @@ export const GoogleButton = ({ onClick, onCredential, pending }) => {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    if (failed) return;
     let mounted = true;
-    (async () => {
+    let lastWidth = null;
+    let observer;
+    let resizeHandler;
+
+    const renderWithWidth = async (width) => {
+      if (!mounted || !ref.current) return;
       try {
-        await renderGoogleButton(ref, { width: 320 }, (cred) => {
+        await renderGoogleButton(ref, { width }, (cred) => {
           if (!mounted) return;
           if (onCredential) onCredential(cred);
           else onClick?.('google');
         });
       } catch (e) {
-        setFailed(true);
+        if (mounted) setFailed(true);
       }
-    })();
+    };
+
+    const calculateWidth = () => {
+      const container = ref.current?.parentElement || null;
+      const available = container
+        ? Math.round(container.getBoundingClientRect().width)
+        : 320;
+      const clamped = Math.max(220, Math.min(320, available));
+      return clamped;
+    };
+
+    const updateButton = async () => {
+      if (!ref.current) return;
+      const width = calculateWidth();
+      if (width === lastWidth) return;
+      lastWidth = width;
+      ref.current.innerHTML = '';
+      await renderWithWidth(width);
+    };
+
+    updateButton();
+
+    const containerEl = ref.current?.parentElement || null;
+
+    if (typeof ResizeObserver !== 'undefined' && containerEl) {
+      observer = new ResizeObserver(() => {
+        updateButton();
+      });
+      observer.observe(containerEl);
+    } else {
+      resizeHandler = () => {
+        updateButton();
+      };
+      window.addEventListener('resize', resizeHandler);
+    }
+
     return () => {
       mounted = false;
+      if (observer) observer.disconnect();
+      if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     };
-  }, [onCredential, onClick]);
+  }, [failed, onCredential, onClick]);
 
   if (failed) {
     return (
@@ -137,7 +180,7 @@ export const GoogleButton = ({ onClick, onCredential, pending }) => {
     <div className="w-full flex justify-center">
       <div
         ref={ref}
-        className="max-w-[320px] w-full"
+        className="w-full sm:max-w-[320px]"
         aria-label="Continue with Google"
       />
     </div>

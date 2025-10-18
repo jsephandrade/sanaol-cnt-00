@@ -90,12 +90,12 @@ const AuthPageShell = ({
       <div
         className={`relative z-10 w-full max-w-5xl grid md:grid-cols-[minmax(0,420px)_minmax(0,1fr)] items-center px-4 md:px-0 ${gridClassName}`.trim()}
       >
+        {asideSlot && <div className={asideWrapperClassName}>{asideSlot}</div>}
         {formSlot && (
           <div className={`w-full ${formWrapperClassName}`.trim()}>
             {formSlot}
           </div>
         )}
-        {asideSlot && <div className={asideWrapperClassName}>{asideSlot}</div>}
       </div>
     </div>
   );

@@ -47,4 +47,5 @@ backend/.venv/
 
 # Backend uploads and private storage
 backend/private_media/
+backend/backend/private_media/
 backend/db.sqlite3

@@ -9,7 +9,12 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .models import CateringEvent, CateringEventItem, MenuItem
+from .models import (
+    CateringEvent,
+    CateringEventItem,
+    MenuItem,
+    PaymentMethodConfig,
+)
 from .views_common import _actor_from_request, _has_permission
 
 
@@ -523,12 +528,30 @@ def catering_event_payment(request, event_id):
     except Exception:
         return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
 
-    payment_type = (payload.get("paymentType") or "").strip()  # 'deposit' or 'full'
-    payment_method = (payload.get("paymentMethod") or "cash").strip()  # 'cash', 'card', 'mobile'
+    payment_type = (payload.get("paymentType") or "").strip().lower()  # 'deposit' or 'full'
+    payment_method = (payload.get("paymentMethod") or "cash").strip().lower()  # 'cash', 'card', 'mobile'
     amount = _decimal(payload.get("amount") or 0)
 
     if payment_type not in {"deposit", "full"}:
         return JsonResponse({"success": False, "message": "Invalid payment type"}, status=400)
+
+    # Enforce globally configured payment method availability
+    cfg = None
+    try:
+        cfg = PaymentMethodConfig.objects.first()
+    except Exception:
+        cfg = None
+    if cfg:
+        allowed_methods = {
+            "cash": bool(getattr(cfg, "cash_enabled", True)),
+            "card": bool(getattr(cfg, "card_enabled", True)),
+            "mobile": bool(getattr(cfg, "mobile_enabled", True)),
+        }
+        if not allowed_methods.get(payment_method, True):
+            return JsonResponse(
+                {"success": False, "message": f"Payment method '{payment_method}' is disabled"},
+                status=400,
+            )
 
     if payment_method not in {"cash", "card", "mobile"}:
         return JsonResponse({"success": False, "message": "Invalid payment method"}, status=400)

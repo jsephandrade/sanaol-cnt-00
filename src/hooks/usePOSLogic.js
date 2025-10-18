@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { orderService } from '@/api/services/orderService';
 
 const FALLBACK_PREFIX = 'W';
@@ -178,12 +179,12 @@ export const usePOSLogic = () => {
   const applyDiscount = (discountInput, discountType) => {
     const value = parseFloat(discountInput);
     if (isNaN(value) || value < 0) {
-      alert('Please enter a valid discount value');
+      toast.error('Please enter a valid discount value');
       return false;
     }
 
     if (discountType === 'percentage' && value > 100) {
-      alert('Percentage discount cannot exceed 100%');
+      toast.error('Percentage discount cannot exceed 100%');
       return false;
     }
 
@@ -198,7 +199,7 @@ export const usePOSLogic = () => {
   const processPayment = async (paymentMethod, paymentDetails = {}) => {
     const total = calculateTotal();
     if (!currentOrder.length) {
-      alert('No items in order.');
+      toast.error('No items in order.');
       return null;
     }
     const identifiers =
@@ -271,7 +272,11 @@ export const usePOSLogic = () => {
           console.error(cancelError);
         }
       }
-      alert('Failed to process payment. Please try again.');
+      const message =
+        e?.message ||
+        e?.details?.message ||
+        'Failed to process payment. Please try again.';
+      toast.error(message);
       return null;
     }
   };

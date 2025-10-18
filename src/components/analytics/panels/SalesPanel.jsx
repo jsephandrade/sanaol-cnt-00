@@ -22,7 +22,6 @@ import analyticsService from '@/api/services/analyticsService';
 import {
   CHART_STYLES,
   CHART_COLORS,
-  CHART_GRADIENTS,
   CHART_MARGINS,
   ANIMATION_CONFIG,
   CustomCurrencyTooltip,
@@ -84,9 +83,35 @@ export default function SalesPanel() {
   // Calculate key metrics
   const totalRevenue = salesData?.total || 0;
   const avgOrderValue = dashboardStats?.dailySales || 0;
-  const topItem = dashboardStats?.popularItems?.[0]?.name || 'N/A';
+  const topItems = useMemo(() => {
+    const items = Array.isArray(dashboardStats?.popularItems)
+      ? dashboardStats.popularItems
+      : [];
+    return items.slice(0, 3);
+  }, [dashboardStats]);
 
-  const revenueGradient = CHART_GRADIENTS.revenue();
+  const revenueStrokeColor = '#facc15';
+  const revenueGradient = {
+    id: 'dailyRevenueGradient',
+    definition: (
+      <linearGradient id="dailyRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="5%" stopColor={revenueStrokeColor} stopOpacity={0.85} />
+        <stop offset="95%" stopColor={revenueStrokeColor} stopOpacity={0.12} />
+      </linearGradient>
+    ),
+  };
+  const monthlyBarColor = '#8b5cf6';
+  const rankBadgeClasses = [
+    'bg-amber-500 text-white',
+    'bg-amber-200 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
+    'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200',
+  ];
+  const formatUnitsSold = (count) => {
+    if (typeof count !== 'number' || Number.isNaN(count)) {
+      return '0 sold';
+    }
+    return count === 1 ? '1 sold' : `${count} sold`;
+  };
 
   if (loading) {
     return (
@@ -149,18 +174,18 @@ export default function SalesPanel() {
       {/* Key Metrics - Individual Stat Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Total Revenue Card */}
-        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 via-card to-green-50/30 dark:from-green-950/20 dark:via-card dark:to-green-950/10 flex flex-col justify-center min-h-[180px]">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full blur-2xl" />
-          <CardHeader className="pb-3 pt-3 px-4 relative text-center">
+        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 via-card to-green-50/30 dark:from-green-950/20 dark:via-card dark:to-green-950/10 flex flex-col justify-center min-h-[150px]">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-green-400/20 to-transparent rounded-full blur-2xl" />
+          <CardHeader className="pb-2 pt-2 px-3 relative text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="bg-green-500/10 rounded-lg p-2">
                 <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
             </div>
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider mb-2">
+            <CardDescription className="text-[11px] font-semibold uppercase tracking-wider mb-2">
               Total Revenue
             </CardDescription>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-500 bg-clip-text text-transparent">
               {currency(totalRevenue)}
             </CardTitle>
             <div className="flex items-center justify-center gap-1 mt-2">
@@ -173,18 +198,18 @@ export default function SalesPanel() {
         </Card>
 
         {/* Monthly Sales Card */}
-        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 via-card to-blue-50/30 dark:from-blue-950/20 dark:via-card dark:to-blue-950/10 flex flex-col justify-center min-h-[180px]">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full blur-2xl" />
-          <CardHeader className="pb-3 pt-3 px-4 relative text-center">
+        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 via-card to-blue-50/30 dark:from-blue-950/20 dark:via-card dark:to-blue-950/10 flex flex-col justify-center min-h-[150px]">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full blur-2xl" />
+          <CardHeader className="pb-2 pt-2 px-3 relative text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="bg-blue-500/10 rounded-lg p-2">
                 <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider mb-2">
+            <CardDescription className="text-[11px] font-semibold uppercase tracking-wider mb-2">
               Monthly Sales
             </CardDescription>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">
               {currency(dashboardStats?.monthlySales || 0)}
             </CardTitle>
             <div className="flex items-center justify-center gap-1 mt-2">
@@ -197,18 +222,18 @@ export default function SalesPanel() {
         </Card>
 
         {/* Daily Sales Card */}
-        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-emerald-50 via-card to-emerald-50/30 dark:from-emerald-950/20 dark:via-card dark:to-emerald-950/10 flex flex-col justify-center min-h-[180px]">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-full blur-2xl" />
-          <CardHeader className="pb-3 pt-3 px-4 relative text-center">
+        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-emerald-50 via-card to-emerald-50/30 dark:from-emerald-950/20 dark:via-card dark:to-emerald-950/10 flex flex-col justify-center min-h-[150px]">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-full blur-2xl" />
+          <CardHeader className="pb-2 pt-2 px-3 relative text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="bg-emerald-500/10 rounded-lg p-2">
                 <ShoppingBag className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider mb-2">
+            <CardDescription className="text-[11px] font-semibold uppercase tracking-wider mb-2">
               Daily Sales
             </CardDescription>
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
               {currency(avgOrderValue)}
             </CardTitle>
             <div className="flex items-center justify-center gap-1 mt-2">
@@ -220,28 +245,63 @@ export default function SalesPanel() {
           </CardHeader>
         </Card>
 
-        {/* Top Item Card */}
-        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 via-card to-amber-50/30 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 flex flex-col justify-center min-h-[180px]">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full blur-2xl" />
-          <CardHeader className="pb-3 pt-3 px-4 relative text-center">
+        {/* Top Selling Items Card */}
+        <Card className="relative overflow-hidden border-2 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 via-card to-amber-50/30 dark:from-amber-950/20 dark:via-card dark:to-amber-950/10 flex flex-col justify-center min-h-[150px]">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full blur-2xl" />
+          <CardHeader className="pb-2 pt-2 px-3 relative text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="bg-amber-500/10 rounded-lg p-2">
                 <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
-            <CardDescription className="text-xs font-semibold uppercase tracking-wider mb-2">
-              Top Selling Item
+            <CardDescription className="text-[11px] font-semibold uppercase tracking-wider mb-1">
+              Top Selling Items
             </CardDescription>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent truncate px-2">
-              {topItem}
+            <CardTitle className="text-xl font-bold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+              Today&apos;s Leaders
             </CardTitle>
-            <div className="flex items-center justify-center gap-1 mt-2">
-              <Sparkles className="h-3 w-3 text-amber-600" />
-              <span className="text-xs text-amber-600 font-medium">
-                Most popular
-              </span>
-            </div>
           </CardHeader>
+          <CardContent className="px-3 pb-3">
+            {topItems.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {topItems.map((item, index) => {
+                    const badgeClass =
+                      rankBadgeClasses[index] ||
+                      rankBadgeClasses[rankBadgeClasses.length - 1];
+                    return (
+                      <div
+                        key={`${item?.name || 'item'}-${index}`}
+                        className="flex items-center gap-3 rounded-lg border border-amber-200/60 bg-amber-50/80 px-3 py-2 dark:border-amber-500/40 dark:bg-amber-500/10"
+                      >
+                        <span
+                          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${badgeClass}`}
+                        >
+                          #{index + 1}
+                        </span>
+                        <div className="flex flex-1 min-w-0 items-center justify-between gap-3">
+                          <span className="text-sm font-semibold text-amber-700 dark:text-amber-100 truncate">
+                            {item?.name || 'Unnamed item'}
+                          </span>
+                          <span className="text-xs text-amber-600 dark:text-amber-200 whitespace-nowrap">
+                            {formatUnitsSold(item?.count)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex items-center justify-center gap-1 text-xs text-amber-600 dark:text-amber-200">
+                  <Sparkles className="h-3 w-3" />
+                  <span>Most ordered menu items today</span>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground text-center">
+                No popular items recorded for this range.
+              </p>
+            )}
+          </CardContent>
         </Card>
       </div>
 
@@ -282,7 +342,8 @@ export default function SalesPanel() {
                         dx="0"
                         dy="3"
                         stdDeviation="3"
-                        floodOpacity="0.3"
+                        floodOpacity="0.35"
+                        floodColor={revenueStrokeColor}
                       />
                     </filter>
                   </defs>
@@ -310,10 +371,10 @@ export default function SalesPanel() {
                     cursor={CHART_STYLES.tooltip.cursor}
                   />
                   <Area
-                    type="monotone"
+                    type="linear"
                     dataKey="amount"
                     name="Revenue"
-                    stroke={CHART_COLORS.primary}
+                    stroke={revenueStrokeColor}
                     strokeWidth={3}
                     fill={`url(#${revenueGradient.id})`}
                     fillOpacity={1}
@@ -321,7 +382,7 @@ export default function SalesPanel() {
                     filter="url(#dailyShadow)"
                     activeDot={{
                       ...CHART_STYLES.activeDot,
-                      fill: CHART_COLORS.primary,
+                      fill: revenueStrokeColor,
                     }}
                   />
                 </AreaChart>
@@ -331,11 +392,11 @@ export default function SalesPanel() {
         </Card>
 
         <Card className="relative overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/10 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-400/10 to-transparent rounded-full blur-3xl" />
           <CardHeader className="pb-3 relative">
             <div className="flex items-center gap-2 mb-1">
-              <div className="bg-blue-500/10 rounded-lg p-2">
-                <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <div className="bg-purple-500/10 rounded-lg p-2">
+                <Calendar className="h-4 w-4 text-purple-600 dark:text-purple-400" />
               </div>
               <CardTitle className="text-base font-bold">
                 Monthly Revenue
@@ -368,12 +429,12 @@ export default function SalesPanel() {
                     >
                       <stop
                         offset="0%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor={monthlyBarColor}
                         stopOpacity={0.9}
                       />
                       <stop
                         offset="100%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor={monthlyBarColor}
                         stopOpacity={0.6}
                       />
                     </linearGradient>
@@ -383,6 +444,7 @@ export default function SalesPanel() {
                         dy="2"
                         stdDeviation="2"
                         floodOpacity="0.25"
+                        floodColor={monthlyBarColor}
                       />
                     </filter>
                   </defs>

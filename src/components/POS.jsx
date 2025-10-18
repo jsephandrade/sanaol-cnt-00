@@ -10,6 +10,7 @@ import { usePOSData, EMPTY_QUEUE_STATE } from '@/hooks/usePOSData';
 import { usePOSLogic } from '@/hooks/usePOSLogic';
 import { useOrderHistory } from '@/hooks/useOrderManagement';
 import { orderService } from '@/api/services/orderService';
+import { paymentsService } from '@/api/services/paymentsService';
 
 const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +22,11 @@ const POS = () => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('pos');
+  const [paymentConfig, setPaymentConfig] = useState({
+    cash: true,
+    card: true,
+    mobile: true,
+  });
 
   // Get data and business logic from custom hooks
   const { categories, orderQueue, setOrderQueue } = usePOSData();
@@ -52,6 +58,21 @@ const POS = () => {
   } = usePOSLogic();
 
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
+  const normalizedPaymentConfig = {
+    cash: paymentConfig.cash !== false,
+    card: paymentConfig.card !== false,
+    mobile: paymentConfig.mobile !== false,
+  };
+  const paymentMethodLabels = {
+    cash: 'Cash',
+    card: 'Card',
+    mobile: 'Mobile wallet',
+  };
+  const isSelectedPaymentEnabled =
+    normalizedPaymentConfig[paymentMethod] ?? true;
+  const paymentDisabledMessage = isSelectedPaymentEnabled
+    ? null
+    : `${paymentMethodLabels[paymentMethod] || 'Selected'} payments are disabled`;
 
   const handleApplyDiscount = () => {
     const success = applyDiscount(discountInput, discountType);
@@ -97,13 +118,33 @@ const POS = () => {
   };
 
   const handleOpenPaymentModal = () => {
-    if (!hasOrderItems) return;
+    if (!hasOrderItems || !isSelectedPaymentEnabled) return;
     setIsPaymentModalOpen(true);
   };
   // Fetch order history only when modal opens
   useEffect(() => {
     if (isOrderHistoryModalOpen) refetchHistory();
   }, [isOrderHistoryModalOpen, refetchHistory]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const cfg = await paymentsService.getConfig();
+        if (!active) return;
+        setPaymentConfig({
+          cash: cfg?.cash !== false,
+          card: cfg?.card !== false,
+          mobile: cfg?.mobile !== false,
+        });
+      } catch (error) {
+        console.error('Failed to load payment configuration', error);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -201,6 +242,8 @@ const POS = () => {
               onOpenPaymentModal={handleOpenPaymentModal}
               onOpenDiscountModal={() => setIsDiscountModalOpen(true)}
               onOpenHistoryModal={() => setIsOrderHistoryModalOpen(true)}
+              isPaymentMethodEnabled={isSelectedPaymentEnabled}
+              paymentDisabledMessage={paymentDisabledMessage}
             />
           </div>
         </TabsContent>

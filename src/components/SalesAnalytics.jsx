@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrendingUp, Boxes, Receipt, Users, Utensils } from 'lucide-react';
 
 // Import panel components
 import SalesPanel from '@/components/analytics/panels/SalesPanel';
@@ -12,12 +13,49 @@ export default function SalesAnalytics() {
   return (
     <div className="space-y-6 animate-fade-in">
       <Tabs defaultValue="sales" className="w-full">
-        <TabsList className="inline-flex flex-wrap gap-2 justify-start w-fit">
-          <TabsTrigger value="sales">Sales Reports</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory Reports</TabsTrigger>
-          <TabsTrigger value="orders">Orders & Transactions</TabsTrigger>
-          <TabsTrigger value="attendance">Staff Attendance</TabsTrigger>
-          <TabsTrigger value="catering">Catering Analytics</TabsTrigger>
+        <TabsList className="flex w-full flex-wrap items-center justify-between gap-1 sm:w-fit sm:justify-start sm:gap-2">
+          <TabsTrigger
+            value="sales"
+            aria-label="Sales Reports"
+            className="flex-1 min-w-[52px] px-2 sm:flex-none sm:min-w-0 sm:px-3"
+          >
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Sales Reports</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="inventory"
+            aria-label="Inventory Reports"
+            className="flex-1 min-w-[52px] px-2 sm:flex-none sm:min-w-0 sm:px-3"
+          >
+            <Boxes className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Inventory Reports</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="orders"
+            aria-label="Orders and Transactions"
+            className="flex-1 min-w-[52px] px-2 sm:flex-none sm:min-w-0 sm:px-3"
+          >
+            <Receipt className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">
+              Orders &amp; Transactions
+            </span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="attendance"
+            aria-label="Staff Attendance"
+            className="flex-1 min-w-[52px] px-2 sm:flex-none sm:min-w-0 sm:px-3"
+          >
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Staff Attendance</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="catering"
+            aria-label="Catering Analytics"
+            className="flex-1 min-w-[52px] px-2 sm:flex-none sm:min-w-0 sm:px-3"
+          >
+            <Utensils className="h-4 w-4" />
+            <span className="hidden sm:inline sm:ml-2">Catering Analytics</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="mt-6">

@@ -7,6 +7,7 @@ import {
   Banknote,
   Calendar,
   Check,
+  ChevronDown,
   CircleDollarSign,
   CreditCard,
   Download,
@@ -44,6 +45,7 @@ const Payments = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const loadPayments = async () => {
     setLoading(true);
@@ -166,6 +168,14 @@ const Payments = () => {
     [filteredPayments]
   );
 
+  const MAX_VISIBLE_PAYMENTS = 10;
+  const hasMorePayments = sortedPayments.length > MAX_VISIBLE_PAYMENTS;
+  const displayedPayments =
+    !hasMorePayments || isExpanded
+      ? sortedPayments
+      : sortedPayments.slice(0, MAX_VISIBLE_PAYMENTS);
+  const displayedCount = displayedPayments.length;
+
   const totalForSelectedStatus = useMemo(
     () =>
       filteredPayments
@@ -256,124 +266,169 @@ const Payments = () => {
           />
 
           <div className="rounded-md border">
-            <div className="relative w-full overflow-auto">
-              <table className="w-full caption-bottom text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="h-10 px-4 text-left font-medium">
-                      <div className="flex items-center gap-1">
-                        Order # <ArrowUpDown className="h-3 w-3" />
-                      </div>
-                    </th>
-                    <th className="h-10 px-4 text-left font-medium">
-                      <div className="flex items-center gap-1">
-                        Date <ArrowUpDown className="h-3 w-3" />
-                      </div>
-                    </th>
-                    <th className="h-10 px-4 text-left font-medium">Method</th>
-                    <th className="h-10 px-4 text-left font-medium">
-                      <div className="flex items-center gap-1">
-                        Amount <ArrowUpDown className="h-3 w-3" />
-                      </div>
-                    </th>
-                    <th className="h-10 px-4 text-left font-medium">Status</th>
-                    <th className="h-10 px-4 text-right font-medium">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={6} className="h-24 text-center">
-                        Loading...
-                      </td>
+            <div
+              className="relative w-full overflow-hidden transition-[max-height] duration-500 ease-in-out"
+              style={{ maxHeight: isExpanded ? '80rem' : '36rem' }}
+            >
+              <div className="relative w-full overflow-auto">
+                <table className="w-full caption-bottom text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Order # <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Date <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        Method
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        <div className="flex items-center gap-1">
+                          Amount <ArrowUpDown className="h-3 w-3" />
+                        </div>
+                      </th>
+                      <th className="h-10 px-4 text-left font-medium">
+                        Status
+                      </th>
+                      <th className="h-10 px-4 text-right font-medium">
+                        Actions
+                      </th>
                     </tr>
-                  ) : sortedPayments.length > 0 ? (
-                    sortedPayments.map((payment) => {
-                      const orderLabel = getOrderLabel(payment);
-                      const orderDisplay = orderLabel ? `#${orderLabel}` : '#—';
-                      return (
-                        <tr
-                          key={payment.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-4 align-middle font-medium">
-                            {orderDisplay}
-                          </td>
-                          <td className="p-4 align-middle whitespace-nowrap">
-                            {formatPaymentDate(payment.date)}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="flex items-center gap-2">
-                              {getPaymentMethodIcon(payment.method)}
-                              <span className="capitalize">
-                                {payment.method}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle">
-                            {`\u20B1${payment.amount.toFixed(2)}`}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <CustomBadge
-                              variant={getStatusBadgeVariant(payment.status)}
-                              className="capitalize"
-                            >
-                              {payment.status}
-                            </CustomBadge>
-                          </td>
-                          <td className="p-4 align-middle text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDownloadInvoice(payment)}
-                                >
-                                  <Download className="mr-2 h-4 w-4" /> Download
-                                  Invoice
-                                </DropdownMenuItem>
-                                {payment.status === 'completed' && (
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="h-24 text-center">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : sortedPayments.length > 0 ? (
+                      displayedPayments.map((payment) => {
+                        const orderLabel = getOrderLabel(payment);
+                        const orderDisplay = orderLabel
+                          ? `#${orderLabel}`
+                          : '#—';
+                        return (
+                          <tr
+                            key={payment.id}
+                            className="border-b transition-colors hover:bg-muted/50"
+                          >
+                            <td className="p-4 align-middle font-medium">
+                              {orderDisplay}
+                            </td>
+                            <td className="p-4 align-middle whitespace-nowrap">
+                              {formatPaymentDate(payment.date)}
+                            </td>
+                            <td className="p-4 align-middle">
+                              <div className="flex items-center gap-2">
+                                {getPaymentMethodIcon(payment.method)}
+                                <span className="capitalize">
+                                  {payment.method}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4 align-middle">
+                              {`\u20B1${payment.amount.toFixed(2)}`}
+                            </td>
+                            <td className="p-4 align-middle">
+                              <CustomBadge
+                                variant={getStatusBadgeVariant(payment.status)}
+                                className="capitalize"
+                              >
+                                {payment.status}
+                              </CustomBadge>
+                            </td>
+                            <td className="p-4 align-middle text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuItem
-                                    onClick={() => handleRefund(payment.id)}
+                                    onClick={() =>
+                                      handleDownloadInvoice(payment)
+                                    }
                                   >
-                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
-                                    Process Refund
+                                    <Download className="mr-2 h-4 w-4" />{' '}
+                                    Download Invoice
                                   </DropdownMenuItem>
-                                )}
-                                {payment.status === 'failed' && (
-                                  <DropdownMenuItem>
-                                    <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
-                                    Retry Payment
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="h-24 text-center">
-                        No transactions match your search criteria
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                                  {payment.status === 'completed' && (
+                                    <DropdownMenuItem
+                                      onClick={() => handleRefund(payment.id)}
+                                    >
+                                      <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                      Process Refund
+                                    </DropdownMenuItem>
+                                  )}
+                                  {payment.status === 'failed' && (
+                                    <DropdownMenuItem>
+                                      <ArrowDownUp className="mr-2 h-4 w-4" />{' '}
+                                      Retry Payment
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="h-24 text-center">
+                          No transactions match your search criteria
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {hasMorePayments && !isExpanded && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
+              )}
             </div>
           </div>
 
+          {hasMorePayments && (
+            <div className="flex justify-start md:justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="group flex items-center gap-1"
+                onClick={() => setIsExpanded((prev) => !prev)}
+                aria-expanded={isExpanded}
+                aria-label={
+                  isExpanded
+                    ? 'Collapse payment transactions'
+                    : 'Expand payment transactions'
+                }
+              >
+                <span className="text-sm font-medium">
+                  {isExpanded ? 'Show Less' : 'Show All Payments'}
+                </span>
+                <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform duration-300 ease-in-out ${
+                      isExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                </span>
+              </Button>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2 border-t pt-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Showing {sortedPayments.length} of {payments.length} transactions
+              Showing {displayedCount} of {sortedPayments.length} matching
+              transactions (out of {payments.length} total)
             </span>
             <span className="text-sm text-foreground">
               Total:{' '}

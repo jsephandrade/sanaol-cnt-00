@@ -13,6 +13,12 @@ import {
   X,
   Image as ImageIcon,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip';
 
 const currencyFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -35,6 +41,8 @@ const CurrentOrder = ({
   onOpenPaymentModal,
   onOpenDiscountModal,
   onOpenHistoryModal,
+  isPaymentMethodEnabled = true,
+  paymentDisabledMessage = null,
 }) => {
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
   const orderLabel = orderNumber
@@ -186,15 +194,42 @@ const CurrentOrder = ({
 
         <div className="flex flex-col gap-3 shrink-0">
           <div className="flex gap-2">
-            <Button
-              className="flex-1"
-              size="sm"
-              variant="default"
-              disabled={!hasOrderItems}
-              onClick={onOpenPaymentModal}
-            >
-              <CreditCard className="mr-1 h-4 w-4" /> Pay
-            </Button>
+            <div className="flex-1">
+              {paymentDisabledMessage ? (
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="flex w-full"
+                        tabIndex={0}
+                        aria-disabled={!isPaymentMethodEnabled}
+                      >
+                        <Button
+                          className="w-full"
+                          size="sm"
+                          variant="default"
+                          disabled
+                          onClick={onOpenPaymentModal}
+                        >
+                          <CreditCard className="mr-1 h-4 w-4" /> Pay
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{paymentDisabledMessage}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button
+                  className="w-full"
+                  size="sm"
+                  variant="default"
+                  disabled={!hasOrderItems}
+                  onClick={onOpenPaymentModal}
+                >
+                  <CreditCard className="mr-1 h-4 w-4" /> Pay
+                </Button>
+              )}
+            </div>
             <Button
               className="flex-1"
               size="sm"
