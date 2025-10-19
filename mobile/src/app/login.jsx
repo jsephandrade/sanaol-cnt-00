@@ -1,6 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { loginUser } from '../api/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useCallback, useState } from 'react';
 
 import {
   View,
@@ -11,6 +9,7 @@ import {
   ImageBackground,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -24,68 +23,124 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { useAuth } from '../context/AuthContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const googleConfig = {
+  expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  responseType: 'id_token',
+  scopes: ['profile', 'email'],
+  selectAccount: true,
+};
+
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [errors, setErrors] = useState({});
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Google Auth
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: '<YOUR_IOS_CLIENT_ID>',
-    androidClientId: '<YOUR_ANDROID_CLIENT_ID>',
-    webClientId: '<YOUR_WEB_CLIENT_ID>',
-  });
+  const [request, , promptAsync] = Google.useAuthRequest(googleConfig);
 
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const { authentication } = response;
-      Alert.alert('Google Login Success', JSON.stringify(authentication));
-    }
-  }, [response]);
-
-  const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
+  const validateEmail = useCallback((value) => /\S+@\S+\.\S+/.test(value), []);
 
   const handleLogin = async () => {
-    // 1️⃣ Validate email & password
-    let errs = {};
-    if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Invalid email address';
+    const errs = {};
+    if (!validateEmail(email)) errs.email = 'Invalid email address';
     if (password.length < 6)
       errs.password = 'Password must be at least 6 characters';
     setErrors(errs);
 
-    if (Object.keys(errs).length > 0) return; // Stop if validation fails
+    if (Object.keys(errs).length > 0) return;
 
     try {
-      // 2️⃣ Call backend login API
-      const data = await loginUser(email.trim(), password);
+      const result = await signIn({
+        email: email.trim(),
+        password,
+        remember: true,
+      });
 
-      console.log('Login response:', data);
-
-      if (data.success) {
-        // 3️⃣ Store user info in AsyncStorage
-        await AsyncStorage.setItem('userEmail', data.email);
-        await AsyncStorage.setItem('userRole', data.role || '');
-
-        // If backend sends JWT in future:
-        // if (data.accessToken) await AsyncStorage.setItem("accessToken", data.accessToken);
-        // if (data.refreshToken) await AsyncStorage.setItem("refreshToken", data.refreshToken);
-
-        Alert.alert('Success', data.message || 'Login successful!');
-        router.push('/(tabs)'); // Navigate to main app screen
+      if (result.success) {
+        Alert.alert('Success', result?.meta?.message || 'Login successful!');
+        router.replace('/(tabs)');
       } else {
-        Alert.alert('Login Failed', data.message || 'Invalid credentials');
+        Alert.alert('Login Failed', result.message || 'Invalid credentials');
       }
     } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
-      Alert.alert('Login Failed', 'Network error or server is unreachable.');
+      console.error('Login error:', error);
+      Alert.alert(
+        'Login Failed',
+        error.message || 'Network error or server is unreachable.'
+      );
     }
   };
+
+  const handleGoogleSignIn = useCallback(async () => {
+    if (!request) {
+      Alert.alert(
+        'Unavailable',
+        'Google Sign-In is not configured for this build. Please install client IDs or try again later.'
+      );
+      return;
+    }
+    setGoogleLoading(true);
+    try {
+      const res = await promptAsync();
+      if (!res || res.type !== 'success') {
+        if (res?.type === 'error') {
+          const description =
+            res?.error?.message || res?.params?.error_description;
+          Alert.alert(
+            'Google Login Failed',
+            description || 'Unable to complete Google login.'
+          );
+        }
+        return;
+      }
+      const idToken = res.authentication?.idToken || res.params?.id_token;
+      if (!idToken) {
+        throw new Error('Missing Google ID token in response');
+      }
+      const result = await signInWithGoogle({ credential: idToken });
+      if (!result?.success) {
+        Alert.alert(
+          'Google Login Failed',
+          result?.message || 'Unable to authenticate with Google.'
+        );
+        return;
+      }
+      if (result.pending) {
+        Alert.alert(
+          'Awaiting Approval',
+          result?.message ||
+            'Your profile is pending review. We will notify you once an administrator activates your account.'
+        );
+        return;
+      }
+      Alert.alert(
+        'Success',
+        result?.meta?.message || result?.message || 'Login successful!',
+        [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
+      );
+    } catch (error) {
+      console.error('Google login error:', error);
+      Alert.alert(
+        'Google Login Failed',
+        error?.message || 'Unable to authenticate with Google right now.'
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [promptAsync, request, router, signInWithGoogle]);
+
   // Load fonts
   let [fontsLoaded] = useFonts({
     Roboto_400Regular,
@@ -191,14 +246,24 @@ export default function LoginScreen() {
             {/* Continue with Google */}
             <TouchableOpacity
               style={styles.googleButton}
-              disabled={!request}
-              onPress={() => promptAsync()}
+              disabled={!request || googleLoading}
+              onPress={handleGoogleSignIn}
             >
-              <Image
-                source={require('../../assets/google.png')} // add google.png in assets
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleText}>Continue with Google</Text>
+              {googleLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#4285F4"
+                  style={styles.googleSpinner}
+                />
+              ) : (
+                <Image
+                  source={require('../../assets/google.png')} // add google.png in assets
+                  style={styles.googleIcon}
+                />
+              )}
+              <Text style={styles.googleText}>
+                {googleLoading ? 'Connecting...' : 'Continue with Google'}
+              </Text>
             </TouchableOpacity>
 
             {/* Links */}
@@ -295,6 +360,9 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 22,
     height: 22,
+    marginRight: 10,
+  },
+  googleSpinner: {
     marginRight: 10,
   },
   googleText: {

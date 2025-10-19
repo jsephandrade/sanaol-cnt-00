@@ -102,24 +102,25 @@ The following modules are implemented or planned in the UI. Use this matrix when
 
 ### API Base URL
 
-- Update `src/api/api.js` and set `BASE_URL` to your backend endpoint (`http://localhost:8000` when using a LAN connection, or the deployed URL).
-- For multi-environment support consider introducing `app.config.js` or `app.config.ts` and exposing `EXPO_PUBLIC_API_URL`; then replace the constant with `process.env.EXPO_PUBLIC_API_URL`.
+- Set `EXPO_PUBLIC_API_URL` in `.env` (or your shell) to the backend origin, e.g. `http://192.168.0.10:8000` for LAN testing.
+- The client automatically prefixes `/api/v1`; avoid trailing slashes in the environment variable.
 
 ### Authentication Tokens
 
-- The login flow stores `userEmail` and `userRole` in AsyncStorage. Uncomment the JWT storage lines in `loginUser` if the backend returns `accessToken` / `refreshToken`.
+- Access and refresh tokens are stored in AsyncStorage under `@sanaol/auth/accessToken` and `@sanaol/auth/refreshToken`. The cached profile lives at `@sanaol/auth/user`.
+- If you need to clear the session during development, run `expo start -c` or manually wipe those keys via the device inspector.
 
 ### Google OAuth
 
-- Replace the placeholder IDs in `src/app/login.jsx`:
-  ```js
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: '<YOUR_IOS_CLIENT_ID>',
-    androidClientId: '<YOUR_ANDROID_CLIENT_ID>',
-    webClientId: '<YOUR_WEB_CLIENT_ID>',
-  });
+- Provision OAuth client IDs in Google Cloud (one per platform) and expose them to Expo via environment variables:
+  ```bash
+  EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID=<Expo Go client ID>
+  EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=<Android native client ID>
+  EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=<iOS native client ID>
+  EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=<Web client ID - optional fallback>
   ```
-- Generate these IDs from the Google Cloud Console (OAuth client IDs) and ensure the Expo redirect URI is allowed.
+- `src/app/login.jsx` reads these values at runtime; when absent, the "Continue with Google" button stays disabled.
+- Add the Expo redirect URIs (`https://auth.expo.io/@<account>/<project>` for Expo Go, plus native scheme `mobilecapstone://`) to the OAuth consent screen.
 
 ### Biometric & Camera Permissions
 

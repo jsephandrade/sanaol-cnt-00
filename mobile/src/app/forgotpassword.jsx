@@ -19,7 +19,7 @@ import {
   Roboto_900Black,
 } from '@expo-google-fonts/roboto';
 
-import { forgotPassword } from '../api/api'; // <-- API call
+import { requestPasswordReset } from '../api/api';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -44,9 +44,9 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
 
     try {
-      const data = await forgotPassword(email.trim());
+      const data = await requestPasswordReset({ email: email.trim() });
 
-      if (data.success) {
+      if (data && data.data) {
         Alert.alert(
           'Reset Email Sent',
           `A reset code has been sent to ${email}. Check your email.`

@@ -8,6 +8,7 @@ urlpatterns = [
     # Redirect the root path to a simple health endpoint to avoid 404s
     path("", RedirectView.as_view(url="/api/health/", permanent=False), name="root"),
     path("admin/", admin.site.urls),
+    path("api/v1/", include("mobile_api.urls")),
     path("api/", include("api.urls")),
     path("accounts/", include("allauth.urls")),
 ]

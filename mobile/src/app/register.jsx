@@ -21,7 +21,7 @@ import {
   Roboto_900Black,
 } from '@expo-google-fonts/roboto';
 
-import { registerUser } from '../api/api';
+import { registerAccount } from '../api/api';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -64,7 +64,7 @@ export default function RegisterScreen() {
     if (Object.keys(errs).length === 0) {
       setLoading(true);
 
-      const result = await registerUser({
+      const result = await registerAccount({
         firstName: form.firstName,
         lastName: form.lastName,
         role: form.role,

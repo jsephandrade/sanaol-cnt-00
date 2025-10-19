@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Image,
@@ -11,10 +11,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
 
 export default function SplashScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { isAuthenticated, initializing } = useAuth();
 
   // Animations
   const opacity = useRef(new Animated.Value(0)).current;
@@ -27,16 +29,15 @@ export default function SplashScreen() {
   const spin3 = useRef(new Animated.Value(0)).current;
 
   // Go to login (replace so user can’t go back to splash)
-  const goNext = () => {
-    // Fade-out animation
+  const goNext = useCallback(() => {
     Animated.timing(fadeOut, {
       toValue: 0,
       duration: 500,
       useNativeDriver: true,
     }).start(() => {
-      router.replace('/login');
+      router.replace(isAuthenticated ? '/(tabs)' : '/login');
     });
-  };
+  }, [fadeOut, isAuthenticated, router]);
 
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility?.('Techno Mart is loading');
@@ -97,14 +98,18 @@ export default function SplashScreen() {
       Animated.delay(650),
     ]).start();
 
-    // Redirect after 2.5s
-    const timeout = setTimeout(goNext, 2500);
-
     return () => {
-      clearTimeout(timeout);
       loops.forEach((l) => l.stop());
     };
-  }, []);
+  }, [logoY, opacity, scale, spin1, spin2, spin3]);
+
+  useEffect(() => {
+    if (initializing) {
+      return undefined;
+    }
+    const timeout = setTimeout(goNext, 2500);
+    return () => clearTimeout(timeout);
+  }, [goNext, initializing]);
 
   // Spins
   const rotate1 = spin1.interpolate({

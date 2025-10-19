@@ -27,6 +27,17 @@ class AppUser(models.Model):
 
     class Meta:
         db_table = "app_user"
+        indexes = [
+            models.Index(fields=["role", "status"], name="app_user_role_status_idx"),
+        ]
+
+    @property
+    def is_authenticated(self) -> bool:
+        return True
+
+    @property
+    def is_anonymous(self) -> bool:
+        return False
 
     def __str__(self) -> str:
         return f"{self.email} ({self.role})"
