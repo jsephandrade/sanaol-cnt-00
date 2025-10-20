@@ -15,11 +15,16 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
+from django.db.models import F
+from decimal import Decimal
 
 from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
 
 
 logger = logging.getLogger(__name__)
+
+
+LOYALTY_EARN_PER_PURCHASE = Decimal("0.01")
 
 
 def _derive_catering_order_number(order_id: str) -> str:
@@ -100,13 +105,14 @@ def order_payment(request, order_id: str):
     if not amount or not method:
         return JsonResponse({"success": False, "message": "Missing amount or method"}, status=400)
     try:
-        from decimal import Decimal
         amt = Decimal(str(amount))
     except Exception:
         return JsonResponse({"success": False, "message": "Invalid amount"}, status=400)
 
+    reward_user_id = None
+
     try:
-        from .models import PaymentTransaction, PaymentMethodConfig
+        from .models import PaymentTransaction, PaymentMethodConfig, Order
         # Enforce allowed payment methods
         cfg = None
         try:
@@ -156,8 +162,7 @@ def order_payment(request, order_id: str):
         # Update the order's payment method for consistency
         order_number = ""
         try:
-            from .models import Order
-            o = Order.objects.filter(id=order_id).first()
+            o = Order.objects.filter(id=order_id).select_related("placed_by").first()
             if o:
                 if getattr(o, "payment_method", None) != method:
                     o.payment_method = method
@@ -183,8 +188,21 @@ def order_payment(request, order_id: str):
                     logger.exception("Failed to initialize auto advance for order payment")
                 if getattr(o, "order_number", None):
                     order_number = o.order_number or ""
+                if getattr(o, "placed_by_id", None):
+                    reward_user_id = o.placed_by_id
         except Exception:
             pass
+        if not reward_user_id and hasattr(actor, "id"):
+            reward_user_id = getattr(actor, "id", None)
+        if reward_user_id:
+            try:
+                from .models import AppUser
+                AppUser.objects.filter(id=reward_user_id).update(
+                    credit_points=F("credit_points") + LOYALTY_EARN_PER_PURCHASE
+                )
+            except Exception:
+                logger.exception("Failed to award credit points for purchase")
+
         # Audit log
         try:
             from .utils_audit import record_audit

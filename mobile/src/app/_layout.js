@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Platform } from 'react-native';
 
 import { queryClient } from '../api/queryClient';
+import { ApiProvider } from '../context/ApiContext';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { NotificationProvider } from '../context/NotificationContext';
@@ -15,21 +16,23 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <NotificationProvider>
-            <DietaryProvider>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="splash" />
-                <Stack.Screen name="login" />
-                <Stack.Screen name="register" />
-                <Stack.Screen name="forgotpassword" />
-                <Stack.Screen name="(tabs)" />
-              </Stack>
-            </DietaryProvider>
-          </NotificationProvider>
-        </CartProvider>
-      </AuthProvider>
+      <ApiProvider>
+        <AuthProvider>
+          <CartProvider>
+            <NotificationProvider>
+              <DietaryProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="splash" />
+                  <Stack.Screen name="login" />
+                  <Stack.Screen name="register" />
+                  <Stack.Screen name="forgotpassword" />
+                  <Stack.Screen name="(tabs)" />
+                </Stack>
+              </DietaryProvider>
+            </NotificationProvider>
+          </CartProvider>
+        </AuthProvider>
+      </ApiProvider>
       {showDevtools ? <ReactQueryDevtools /> : null}
     </QueryClientProvider>
   );

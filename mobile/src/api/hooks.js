@@ -11,6 +11,7 @@ import {
   updateOrderStatus,
   updateProfile,
 } from './api';
+import { useApiConfig } from '../context/ApiContext';
 
 export const queryKeys = {
   me: ['auth', 'me'],
@@ -28,18 +29,44 @@ export const queryKeys = {
   },
 };
 
-export function useCurrentUser(options = {}) {
+function useApiQuery(queryKey, queryFn, options = {}) {
+  const { setLastError } = useApiConfig() ?? {};
   return useQuery({
-    queryKey: queryKeys.me,
-    queryFn: () => getCurrentUser(),
+    queryKey,
+    queryFn: async () => {
+      try {
+        return await queryFn();
+      } catch (error) {
+        setLastError?.(error);
+        throw error;
+      }
+    },
     ...options,
   });
 }
 
+function useApiMutation(mutationFn, options = {}) {
+  const { setLastError } = useApiConfig() ?? {};
+  return useMutation({
+    mutationFn: async (variables) => {
+      try {
+        return await mutationFn(variables);
+      } catch (error) {
+        setLastError?.(error);
+        throw error;
+      }
+    },
+    ...options,
+  });
+}
+
+export function useCurrentUser(options = {}) {
+  return useApiQuery(queryKeys.me, () => getCurrentUser(), options);
+}
+
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateProfile,
+  return useApiMutation(updateProfile, {
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.me, user);
     },
@@ -47,16 +74,14 @@ export function useUpdateProfile() {
 }
 
 export function useInventoryItems(params) {
-  return useQuery({
-    queryKey: queryKeys.inventory.list(params),
-    queryFn: () => fetchInventory(params),
-  });
+  return useApiQuery(queryKeys.inventory.list(params), () =>
+    fetchInventory(params || {})
+  );
 }
 
 export function useUpdateInventoryItem() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }) => updateInventoryItem(id, payload),
+  return useApiMutation(({ id, payload }) => updateInventoryItem(id, payload), {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.inventory.all });
     },
@@ -64,16 +89,12 @@ export function useUpdateInventoryItem() {
 }
 
 export function useOrders(params) {
-  return useQuery({
-    queryKey: queryKeys.orders.list(params),
-    queryFn: () => fetchOrders(params),
-  });
+  return useApiQuery(queryKeys.orders.list(params), () => fetchOrders(params));
 }
 
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }) => updateOrderStatus(id, payload),
+  return useApiMutation(({ id, payload }) => updateOrderStatus(id, payload), {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
     },
@@ -81,16 +102,14 @@ export function useUpdateOrderStatus() {
 }
 
 export function usePayments(params) {
-  return useQuery({
-    queryKey: queryKeys.payments.list(params),
-    queryFn: () => fetchPayments(params),
-  });
+  return useApiQuery(queryKeys.payments.list(params), () =>
+    fetchPayments(params)
+  );
 }
 
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: createPayment,
+  return useApiMutation(createPayment, {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
     },
@@ -99,8 +118,7 @@ export function useCreatePayment() {
 
 export function useRefundPayment() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: refundPayment,
+  return useApiMutation(refundPayment, {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.payments.all });
     },

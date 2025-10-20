@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   BackHandler,
   ImageBackground,
   StyleSheet,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -21,6 +23,7 @@ import {
 } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import ConfirmLogoutModal from '../../components/ConfirmLogoutModal';
+import { useAuth } from '../../context/AuthContext';
 
 const Row = ({
   iconPack = 'Feather',
@@ -86,17 +89,92 @@ const Section = ({ children }) => (
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user, refreshProfile, signOut } = useAuth();
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [cameraAllowed, setCameraAllowed] = useState(false);
   const [locationAllowed, setLocationAllowed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const isLoggingOut = useRef(false);
-  const creditPoints = 0.01;
+
+  const formatLabel = useCallback(
+    (value) =>
+      (value || '')
+        .toString()
+        .replace(/[_-]/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase()),
+    []
+  );
+
+  const isGuest = Boolean(user?.is_guest);
+  const displayName = useMemo(() => {
+    if (!user) {
+      return 'Loading...';
+    }
+    if (user.name) {
+      return user.name;
+    }
+    const composed = [user.first_name, user.last_name]
+      .filter(Boolean)
+      .join(' ');
+    if (composed) {
+      return composed;
+    }
+    if (user.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  }, [user]);
+  const primaryEmail = user?.email || (isGuest ? 'guest@local.dev' : '');
+  const roleChipLabel = useMemo(() => {
+    if (isGuest) {
+      return 'Guest';
+    }
+    return user?.role ? formatLabel(user.role) : null;
+  }, [formatLabel, isGuest, user?.role]);
+  const statusChipLabel = useMemo(() => {
+    if (isGuest) {
+      return null;
+    }
+    const status = user?.status;
+    if (!status || status.toLowerCase() === 'active') {
+      return null;
+    }
+    return formatLabel(status);
+  }, [formatLabel, isGuest, user?.status]);
+  const phoneNumber = user?.phone?.trim() ? user.phone.trim() : null;
+  const avatarSource = useMemo(() => {
+    if (user?.avatar) {
+      return { uri: user.avatar };
+    }
+    return {
+      uri: 'https://media.istockphoto.com/id/2014684899/vector/placeholder-avatar-female-person-default-woman-avatar-image-gray-profile-anonymous-face.jpg?s=612x612&w=0&k=20&c=D-dk9ek0_jb19TiMVNVmlpvYVrQiFiJmgGmiLB5yE4w=',
+    };
+  }, [user?.avatar]);
+  const creditPointsValue = useMemo(() => {
+    const raw = user?.credit_points ?? user?.creditPoints ?? 0;
+    const numeric =
+      typeof raw === 'number'
+        ? raw
+        : typeof raw === 'string'
+          ? parseFloat(raw)
+          : Number(raw || 0);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }, [user?.creditPoints, user?.credit_points]);
+  const creditPointsDisplay = useMemo(
+    () =>
+      creditPointsValue.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }),
+    [creditPointsValue]
+  );
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const onBackPress = () => true;
       const sub = BackHandler.addEventListener(
         'hardwareBackPress',
@@ -105,6 +183,71 @@ export default function ProfileScreen() {
       return () => sub.remove();
     }, [])
   );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isGuest) {
+        return () => {};
+      }
+      let isActive = true;
+      setSyncing(true);
+      refreshProfile()
+        .catch((error) => {
+          if (!isActive) {
+            return;
+          }
+          console.error('Profile sync failed:', error);
+          Alert.alert(
+            'Profile Update Failed',
+            error?.message || 'Unable to sync your profile right now.'
+          );
+        })
+        .finally(() => {
+          if (isActive) {
+            setSyncing(false);
+          }
+        });
+      return () => {
+        isActive = false;
+      };
+    }, [isGuest, refreshProfile])
+  );
+
+  const handleRefresh = useCallback(async () => {
+    if (isGuest) {
+      Alert.alert(
+        'Guest Mode',
+        'Sign in or create an account to sync your profile and credit points.'
+      );
+      return;
+    }
+    setRefreshing(true);
+    try {
+      await refreshProfile();
+    } catch (error) {
+      console.error('Profile refresh failed:', error);
+      Alert.alert(
+        'Profile Update Failed',
+        error?.message || 'Unable to refresh your profile right now.'
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isGuest, refreshProfile]);
+
+  const handleCreditPress = useCallback(() => {
+    if (isGuest) {
+      Alert.alert(
+        'Earn Credit Points',
+        'Sign in to start earning credits from your purchases.'
+      );
+      return;
+    }
+    Alert.alert(
+      'Credit Points',
+      `You currently have ${creditPointsDisplay} points available. Use them at checkout to reduce your total.`
+    );
+  }, [creditPointsDisplay, isGuest]);
 
   const requestOrToggleCamera = () => {
     if (!cameraAllowed) {
@@ -142,10 +285,26 @@ export default function ProfileScreen() {
     }
   };
 
-  const confirmLogoutAndNavigate = () => {
+  const confirmLogoutAndNavigate = useCallback(async () => {
+    if (isLoggingOut.current) {
+      return;
+    }
     isLoggingOut.current = true;
-    router.replace('/login');
-  };
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Alert.alert(
+        'Logout Failed',
+        error?.message ||
+          'We could not reach the server. Returning to the login screen.'
+      );
+    } finally {
+      setShowLogoutConfirm(false);
+      router.replace('/login');
+      isLoggingOut.current = false;
+    }
+  }, [router, signOut]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#f9f9f9' }}>
@@ -194,6 +353,15 @@ export default function ProfileScreen() {
 
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#F07F13"
+            colors={['#F07F13']}
+            enabled={!isGuest}
+          />
+        }
       >
         {/* Avatar */}
         <View
@@ -212,26 +380,102 @@ export default function ProfileScreen() {
           }}
         >
           <Image
-            source={{
-              uri: 'https://media.istockphoto.com/id/2014684899/vector/placeholder-avatar-female-person-default-woman-avatar-image-gray-profile-anonymous-face.jpg?s=612x612&w=0&k=20&c=D-dk9ek0_jb19TiMVNVmlpvYVrQiFiJmgGmiLB5yE4w=',
+            source={avatarSource}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: '#F3F4F6',
             }}
-            style={{ width: 64, height: 64, borderRadius: 32 }}
           />
-          <View style={{ marginLeft: 16 }}>
+          <View style={{ marginLeft: 16, flex: 1 }}>
             <Text style={{ fontSize: 18, fontWeight: '600', color: '#333' }}>
-              Joseph Andrade
+              {displayName}
             </Text>
+            {primaryEmail ? (
+              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
+                {primaryEmail}
+              </Text>
+            ) : null}
+            {phoneNumber ? (
+              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
+                {phoneNumber}
+              </Text>
+            ) : null}
+            {roleChipLabel || statusChipLabel || syncing ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginTop: 8,
+                }}
+              >
+                {roleChipLabel ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: '#FEF3C7',
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: '#B45309',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {roleChipLabel}
+                    </Text>
+                  </View>
+                ) : null}
+                {statusChipLabel ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 999,
+                      backgroundColor: '#FFE4E6',
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: '#BE123C',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {statusChipLabel}
+                    </Text>
+                  </View>
+                ) : null}
+                {syncing || refreshing ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#F07F13"
+                    style={{
+                      marginLeft: roleChipLabel || statusChipLabel ? 4 : 0,
+                    }}
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </View>
 
         {/* Credit Points */}
         <TouchableOpacity
-          onPress={() => router.push('/Credits')}
+          onPress={handleCreditPress}
+          activeOpacity={0.9}
           style={{
             backgroundColor: '#F07F13',
             borderRadius: 16,
             padding: 16,
             marginBottom: -5,
+            opacity: isGuest ? 0.6 : 1,
           }}
         >
           <View
@@ -260,7 +504,7 @@ export default function ProfileScreen() {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 20 }}>
-                {creditPoints}
+                {creditPointsDisplay}
               </Text>
               <Text style={{ color: '#fff', fontSize: 14, marginLeft: 4 }}>
                 pts
@@ -274,7 +518,9 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Text style={{ color: '#fff', marginTop: 4, fontSize: 12 }}>
-            Use points at checkout to save on your next order.
+            {isGuest
+              ? 'Sign in to start earning rewards on your orders.'
+              : 'Use points at checkout to save on your next order.'}
           </Text>
         </TouchableOpacity>
 

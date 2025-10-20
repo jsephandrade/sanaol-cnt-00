@@ -39,13 +39,14 @@ const googleConfig = {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, signInAsGuest } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [errors, setErrors] = useState({});
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   // Google Auth
   const [request, , promptAsync] = Google.useAuthRequest(googleConfig);
@@ -140,6 +141,31 @@ export default function LoginScreen() {
       setGoogleLoading(false);
     }
   }, [promptAsync, request, router, signInWithGoogle]);
+
+  const handleGuestEntry = useCallback(async () => {
+    setGuestLoading(true);
+    try {
+      const result = await signInAsGuest();
+      if (!result?.success) {
+        Alert.alert(
+          'Unavailable',
+          result?.message || 'Unable to continue without an account.'
+        );
+        return;
+      }
+      Alert.alert('Guest Access', 'You are browsing as a guest user.', [
+        { text: 'Continue', onPress: () => router.replace('/(tabs)') },
+      ]);
+    } catch (error) {
+      console.error('Guest entry error:', error);
+      Alert.alert(
+        'Unavailable',
+        error?.message || 'Unable to continue without an account.'
+      );
+    } finally {
+      setGuestLoading(false);
+    }
+  }, [router, signInAsGuest]);
 
   // Load fonts
   let [fontsLoaded] = useFonts({
@@ -266,6 +292,21 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
+            {/* Guest Access */}
+            <TouchableOpacity
+              style={styles.guestButton}
+              onPress={handleGuestEntry}
+              disabled={guestLoading}
+            >
+              {guestLoading ? (
+                <ActivityIndicator size="small" color="#FF8C00" />
+              ) : (
+                <Text style={styles.guestText}>
+                  Continue without an account
+                </Text>
+              )}
+            </TouchableOpacity>
+
             {/* Links */}
             <TouchableOpacity onPress={() => router.push('/forgotpassword')}>
               <Text style={styles.linkText}>Forgot Password?</Text>
@@ -369,6 +410,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Roboto_700Bold',
     color: '#333',
+  },
+  guestButton: {
+    borderWidth: 1,
+    borderColor: '#FF8C00',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  guestText: {
+    fontSize: 16,
+    fontFamily: 'Roboto_700Bold',
+    color: '#FF8C00',
   },
   linkText: {
     color: '#FF8C00',

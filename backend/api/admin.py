@@ -25,7 +25,7 @@ class ApproveActionForm(forms.Form):
 
 @admin.register(AppUser)
 class AppUserAdmin(admin.ModelAdmin):
-    list_display = ("email", "name", "role", "status", "created_at", "last_login")
+    list_display = ("email", "name", "role", "status", "credit_points", "created_at", "last_login")
     list_filter = ("role", "status")
     search_fields = ("email", "name")
     ordering = ("-created_at",)

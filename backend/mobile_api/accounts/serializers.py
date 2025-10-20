@@ -15,6 +15,7 @@ class AppUserSerializer(serializers.ModelSerializer):
             "permissions",
             "phone",
             "avatar",
+            "credit_points",
             "last_login",
             "created_at",
             "updated_at",

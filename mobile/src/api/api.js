@@ -1,11 +1,23 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_ORIGIN = (
-  process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.12:8000'
-).replace(/\/$/, '');
-const REST_PREFIX = '/api/v1';
-const BASE_URL = `${API_ORIGIN}${REST_PREFIX}`;
+import { API_CONFIG, BASE_URL } from './config';
+import {
+  mockCreatePayment,
+  mockFetchInventory,
+  mockFetchOrders,
+  mockFetchPayments,
+  mockGetCurrentUser,
+  mockLogin,
+  mockLoginWithGoogle,
+  mockLogout,
+  mockRegisterAccount,
+  mockRequestPasswordReset,
+  mockUpdateInventoryItem,
+  mockUpdateOrderStatus,
+  mockUpdateProfile,
+  mockRefundPayment,
+} from './mockData';
 
 export const ACCESS_TOKEN_KEY = '@sanaol/auth/accessToken';
 export const REFRESH_TOKEN_KEY = '@sanaol/auth/refreshToken';
@@ -13,52 +25,65 @@ export const USER_CACHE_KEY = '@sanaol/auth/user';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: API_CONFIG.timeout,
   headers: { 'Content-Type': 'application/json' },
 });
 
 const authlessApi = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: API_CONFIG.timeout,
   headers: { 'Content-Type': 'application/json' },
 });
 
 let refreshPromise = null;
+let mockMode = API_CONFIG.useMocks;
 
-api.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    config.headers['X-Mobile-Client'] = 'expo';
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const apiEventListeners = new Set();
 
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (!error.response) {
-      return Promise.reject(error);
-    }
-    const { response, config } = error;
-    if (response.status === 401 && !config._retry) {
-      config._retry = true;
-      try {
-        const tokens = await refreshAccessToken();
-        if (tokens?.accessToken) {
-          config.headers.Authorization = `Bearer ${tokens.accessToken}`;
-          return api(config);
-        }
-      } catch (refreshErr) {
-        await clearStoredTokens();
+function emitApiEvent(event) {
+  apiEventListeners.forEach((listener) => {
+    try {
+      listener(event);
+    } catch (listenerError) {
+      const isDev =
+        typeof globalThis !== 'undefined' && Boolean(globalThis.__DEV__);
+      if (isDev) {
+        console.error('[api] event listener error', listenerError);
       }
     }
-    return Promise.reject(error);
+  });
+}
+
+export function subscribeToApiEvents(listener) {
+  apiEventListeners.add(listener);
+  return () => {
+    apiEventListeners.delete(listener);
+  };
+}
+
+export function isMockMode() {
+  return mockMode;
+}
+
+export function setMockMode(nextValue) {
+  mockMode = Boolean(nextValue);
+  emitApiEvent({ type: 'mock-mode-changed', mockMode });
+}
+
+function isNetworkError(error) {
+  if (!error) return false;
+  if (axios.isAxiosError(error)) {
+    if (!error.response) return true;
+    if (error.code === 'ECONNABORTED') return true;
+    if (
+      typeof error.message === 'string' &&
+      error.message.toLowerCase().includes('network')
+    ) {
+      return true;
+    }
   }
-);
+  return false;
+}
 
 function unwrapPayload(response) {
   const payload = response?.data;
@@ -110,6 +135,77 @@ function normalizeUser(source) {
   return source;
 }
 
+api.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    config.headers['X-Mobile-Client'] = 'expo';
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (mockMode) {
+      return Promise.reject(error);
+    }
+    if (!error.response) {
+      return Promise.reject(error);
+    }
+    const { response, config } = error;
+    if (response.status === 401 && !config._retry) {
+      config._retry = true;
+      try {
+        const tokens = await refreshAccessToken();
+        if (tokens?.accessToken) {
+          config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+          return api(config);
+        }
+      } catch (refreshErr) {
+        await clearStoredTokens();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+async function withMockFallback(key, requestFn, mockFn, options = {}) {
+  const preferMock = mockMode && typeof mockFn === 'function';
+
+  if (preferMock) {
+    emitApiEvent({ type: 'mock', key, forced: true });
+    return mockFn({ key, forced: true });
+  }
+
+  try {
+    const result = await requestFn();
+    emitApiEvent({ type: 'success', key });
+    return result;
+  } catch (error) {
+    const normalizedError = createApiError(error, options?.fallbackMessage);
+    const allowFallback =
+      typeof mockFn === 'function' &&
+      (mockMode || isNetworkError(error) || options?.allowFallbackOnError);
+
+    if (allowFallback) {
+      emitApiEvent({
+        type: 'fallback',
+        key,
+        error: normalizedError,
+        mockMode,
+      });
+      return mockFn({ key, error: normalizedError });
+    }
+
+    emitApiEvent({ type: 'error', key, error: normalizedError });
+    throw normalizedError;
+  }
+}
+
 export async function getStoredTokens() {
   const pairs = await AsyncStorage.multiGet([
     ACCESS_TOKEN_KEY,
@@ -137,6 +233,15 @@ export async function clearStoredTokens() {
 }
 
 async function refreshAccessToken() {
+  if (mockMode) {
+    const tokens = {
+      accessToken: 'mock-access-token',
+      refreshToken: 'mock-refresh-token',
+    };
+    await storeTokens(tokens);
+    return tokens;
+  }
+
   if (!refreshPromise) {
     refreshPromise = (async () => {
       const { refreshToken } = await getStoredTokens();
@@ -165,28 +270,36 @@ async function refreshAccessToken() {
 }
 
 export async function login({ email, password, remember = false }) {
-  try {
-    const response = await authlessApi.post('/auth/login', {
-      email,
-      password,
-      remember,
-    });
-    const data = unwrapPayload(response) || {};
-    const meta = extractMeta(response);
-    const tokens = {
-      accessToken: data.token || data.accessToken,
-      refreshToken: data.refreshToken,
-    };
-    if (tokens.accessToken && tokens.refreshToken) {
-      await storeTokens(tokens);
-    }
-    if (data.user) {
-      await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(data.user));
-    }
-    return { user: data.user, tokens, meta };
-  } catch (error) {
-    throw createApiError(error, 'Unable to login');
+  const result = await withMockFallback(
+    'auth.login',
+    async () => {
+      const response = await authlessApi.post('/auth/login', {
+        email,
+        password,
+        remember,
+      });
+      const data = unwrapPayload(response) || {};
+      const meta = extractMeta(response);
+      return {
+        user: normalizeUser(data.user),
+        tokens: {
+          accessToken: data.token || data.accessToken,
+          refreshToken: data.refreshToken,
+        },
+        meta,
+      };
+    },
+    () => mockLogin({ email, password }),
+    { fallbackMessage: 'Unable to login' }
+  );
+
+  if (result?.tokens) {
+    await storeTokens(result.tokens);
   }
+  if (result?.user) {
+    await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(result.user));
+  }
+  return result;
 }
 
 export async function loginWithGoogle({
@@ -205,172 +318,224 @@ export async function loginWithGoogle({
     throw new Error('Missing Google credential or authorization code');
   }
 
-  try {
-    const response = await authlessApi.post('/auth/google', payload);
-    const data = unwrapPayload(response) || {};
-    const meta = extractMeta(response);
-    const user = normalizeUser(data.user || null);
-    const tokens = {
-      accessToken: data.token || data.accessToken || null,
-      refreshToken: data.refreshToken || null,
-    };
-    if (tokens.accessToken) {
-      await storeTokens(tokens);
-      if (user) {
-        await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-      }
-    } else {
-      await clearStoredTokens();
-    }
-    return {
-      success: data.success ?? true,
-      pending: Boolean(data.pending),
-      user,
-      token: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      verifyToken: data.verifyToken || null,
-      meta,
-      message: data.message || meta?.message || null,
-    };
-  } catch (error) {
-    throw createApiError(error, 'Unable to login with Google');
+  const result = await withMockFallback(
+    'auth.google',
+    async () => {
+      const response = await authlessApi.post('/auth/google', payload);
+      const data = unwrapPayload(response) || {};
+      const meta = extractMeta(response);
+      const user = normalizeUser(data.user || null);
+      const tokens = {
+        accessToken: data.token || data.accessToken || null,
+        refreshToken: data.refreshToken || null,
+      };
+      return {
+        success: data.success ?? true,
+        pending: Boolean(data.pending),
+        user,
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        verifyToken: data.verifyToken || null,
+        meta,
+        message: data.message || meta?.message || null,
+      };
+    },
+    () => mockLoginWithGoogle({ email: payload.email }),
+    { fallbackMessage: 'Unable to login with Google' }
+  );
+
+  if (result?.token || result?.refreshToken) {
+    await storeTokens({
+      accessToken: result.token,
+      refreshToken: result.refreshToken,
+    });
+  } else {
+    await clearStoredTokens();
   }
+
+  if (result?.user) {
+    await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(result.user));
+  }
+
+  return result;
 }
 
 export async function logout() {
-  try {
-    const { refreshToken } = await getStoredTokens();
-    if (refreshToken) {
-      await authlessApi.post('/auth/logout', { refresh_token: refreshToken });
-    }
-  } catch (error) {
-    // Best-effort logout; ignore server errors
-  } finally {
-    await clearStoredTokens();
-  }
+  await withMockFallback(
+    'auth.logout',
+    async () => {
+      const { refreshToken } = await getStoredTokens();
+      if (refreshToken) {
+        await authlessApi.post('/auth/logout', { refresh_token: refreshToken });
+      }
+    },
+    () => mockLogout()
+  );
+
+  await clearStoredTokens();
 }
 
 export async function registerAccount(payload) {
-  try {
-    const response = await authlessApi.post('/auth/register', payload);
-    const meta = extractMeta(response);
-    return {
-      data: unwrapPayload(response),
-      meta,
-      success: meta?.success ?? true,
-    };
-  } catch (error) {
-    throw createApiError(error, 'Registration failed');
-  }
+  return withMockFallback(
+    'auth.register',
+    async () => {
+      const response = await authlessApi.post('/auth/register', payload);
+      const meta = extractMeta(response);
+      return {
+        data: unwrapPayload(response),
+        meta,
+        success: meta?.success ?? true,
+      };
+    },
+    () => mockRegisterAccount(payload),
+    { fallbackMessage: 'Registration failed' }
+  );
 }
 
 export async function requestPasswordReset(payload) {
-  try {
-    const response = await authlessApi.post(
-      '/auth/password-reset/request',
-      payload
-    );
-    return { data: unwrapPayload(response), meta: extractMeta(response) };
-  } catch (error) {
-    throw createApiError(error, 'Unable to send reset email');
-  }
+  return withMockFallback(
+    'auth.password-reset',
+    async () => {
+      const response = await authlessApi.post(
+        '/auth/password-reset/request',
+        payload
+      );
+      return { data: unwrapPayload(response), meta: extractMeta(response) };
+    },
+    () => mockRequestPasswordReset(payload),
+    { fallbackMessage: 'Unable to send reset email' }
+  );
 }
 
 export async function getCurrentUser({ forceRefresh = true } = {}) {
   if (!forceRefresh) {
     const cached = await AsyncStorage.getItem(USER_CACHE_KEY);
     if (cached) {
-      return JSON.parse(cached);
+      try {
+        return JSON.parse(cached);
+      } catch (error) {
+        // ignore bad cache and refetch
+      }
     }
   }
-  try {
-    const response = await api.get('/users/me');
-    const user = unwrapPayload(response);
-    if (user) {
-      await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-    }
-    return user;
-  } catch (error) {
-    throw createApiError(error, 'Unable to load profile');
+
+  const user = await withMockFallback(
+    'users.me',
+    async () => {
+      const response = await api.get('/users/me');
+      return normalizeUser(unwrapPayload(response));
+    },
+    () => mockGetCurrentUser(),
+    { fallbackMessage: 'Unable to load profile' }
+  );
+
+  if (user) {
+    await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
   }
+  return user;
 }
 
 export async function updateProfile(payload) {
-  try {
-    const response = await api.patch('/users/me', payload);
-    const user = unwrapPayload(response);
-    if (user) {
-      await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-    }
-    return user;
-  } catch (error) {
-    throw createApiError(error, 'Unable to update profile');
+  const user = await withMockFallback(
+    'users.update',
+    async () => {
+      const response = await api.patch('/users/me', payload);
+      return normalizeUser(unwrapPayload(response));
+    },
+    () => mockUpdateProfile(payload),
+    { fallbackMessage: 'Unable to update profile' }
+  );
+
+  if (user) {
+    await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
   }
+  return user;
 }
 
 export async function fetchInventory(params = {}) {
-  try {
-    const response = await api.get('/inventory/items', { params });
-    return unwrapPayload(response) || [];
-  } catch (error) {
-    throw createApiError(error, 'Unable to load inventory');
-  }
+  return withMockFallback(
+    'inventory.list',
+    async () => {
+      const response = await api.get('/inventory/items', { params });
+      return unwrapPayload(response) || [];
+    },
+    () => mockFetchInventory(params),
+    { fallbackMessage: 'Unable to load inventory' }
+  );
 }
 
 export async function updateInventoryItem(itemId, payload) {
-  try {
-    const response = await api.patch(`/inventory/items/${itemId}`, payload);
-    return unwrapPayload(response);
-  } catch (error) {
-    throw createApiError(error, 'Unable to update inventory item');
-  }
+  return withMockFallback(
+    'inventory.update',
+    async () => {
+      const response = await api.patch(`/inventory/items/${itemId}`, payload);
+      return unwrapPayload(response);
+    },
+    () => mockUpdateInventoryItem(itemId, payload),
+    { fallbackMessage: 'Unable to update inventory item' }
+  );
 }
 
 export async function fetchOrders(params = {}) {
-  try {
-    const response = await api.get('/orders', { params });
-    return unwrapPayload(response) || [];
-  } catch (error) {
-    throw createApiError(error, 'Unable to load orders');
-  }
+  return withMockFallback(
+    'orders.list',
+    async () => {
+      const response = await api.get('/orders', { params });
+      return unwrapPayload(response) || [];
+    },
+    () => mockFetchOrders(params),
+    { fallbackMessage: 'Unable to load orders' }
+  );
 }
 
 export async function updateOrderStatus(orderId, payload) {
-  try {
-    const response = await api.patch(`/orders/${orderId}`, payload);
-    return unwrapPayload(response);
-  } catch (error) {
-    throw createApiError(error, 'Unable to update order status');
-  }
+  return withMockFallback(
+    'orders.update',
+    async () => {
+      const response = await api.patch(`/orders/${orderId}`, payload);
+      return unwrapPayload(response);
+    },
+    () => mockUpdateOrderStatus(orderId, payload),
+    { fallbackMessage: 'Unable to update order status' }
+  );
 }
 
 export async function fetchPayments(params = {}) {
-  try {
-    const response = await api.get('/payments/transactions', { params });
-    return unwrapPayload(response) || [];
-  } catch (error) {
-    throw createApiError(error, 'Unable to load payments');
-  }
+  return withMockFallback(
+    'payments.list',
+    async () => {
+      const response = await api.get('/payments/transactions', { params });
+      return unwrapPayload(response) || [];
+    },
+    () => mockFetchPayments(params),
+    { fallbackMessage: 'Unable to load payments' }
+  );
 }
 
 export async function createPayment(payload) {
-  try {
-    const response = await api.post('/payments/transactions', payload);
-    return unwrapPayload(response);
-  } catch (error) {
-    throw createApiError(error, 'Unable to process payment');
-  }
+  return withMockFallback(
+    'payments.create',
+    async () => {
+      const response = await api.post('/payments/transactions', payload);
+      return unwrapPayload(response);
+    },
+    () => mockCreatePayment(payload),
+    { fallbackMessage: 'Unable to process payment' }
+  );
 }
 
 export async function refundPayment(paymentId) {
-  try {
-    const response = await api.post(
-      `/payments/transactions/${paymentId}/refund`
-    );
-    return unwrapPayload(response);
-  } catch (error) {
-    throw createApiError(error, 'Unable to process refund');
-  }
+  return withMockFallback(
+    'payments.refund',
+    async () => {
+      const response = await api.post(
+        `/payments/transactions/${paymentId}/refund`
+      );
+      return unwrapPayload(response);
+    },
+    () => mockRefundPayment(paymentId),
+    { fallbackMessage: 'Unable to process refund' }
+  );
 }
 
 export default api;
