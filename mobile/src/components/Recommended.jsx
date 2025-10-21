@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,34 +19,55 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-const recommendedData = [
+const formatCurrency = (value) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return '₱--';
+  }
+  return `₱${numeric.toFixed(2)}`;
+};
+
+const imageSource = (image) => {
+  if (!image) {
+    return require('../../assets/reco1.jpg');
+  }
+  if (typeof image === 'string') {
+    return { uri: image };
+  }
+  return image;
+};
+
+const FALLBACK_DATA = [
   {
-    id: '1',
+    id: 'fallback-1',
     image: require('../../assets/reco1.jpg'),
-    title: 'Spicy Chicken',
+    title: 'Freshly Crafted Meal',
     price: 150,
-    rating: 4.5,
-    reviews: 12,
+    rating: 4.6,
+    reviews: 18,
+    description: 'A chef-inspired favourite made daily.',
   },
   {
-    id: '2',
+    id: 'fallback-2',
     image: require('../../assets/reco2.jpg'),
-    title: 'Cheesy Burger',
+    title: 'Chef’s Special',
     price: 120,
-    rating: 4.2,
-    reviews: 8,
+    rating: 4.4,
+    reviews: 22,
+    description: 'Perfect blend of savoury flavours in every bite.',
   },
   {
-    id: '3',
+    id: 'fallback-3',
     image: require('../../assets/reco3.jpg'),
-    title: 'Fresh Salad',
-    price: 100,
+    title: 'Daily Delight',
+    price: 95,
     rating: 4.8,
-    reviews: 15,
+    reviews: 30,
+    description: 'Comfort food classic to brighten your day.',
   },
 ];
 
-export default function Recommended() {
+export default function Recommended({ items = [] }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [focusedItem, setFocusedItem] = useState(null);
 
@@ -58,11 +79,25 @@ export default function Recommended() {
 
   const [fontsLoaded] = useFonts({ Roboto_400Regular, Roboto_700Bold });
 
-  // Auto-slide carousel
+  const data = useMemo(() => {
+    if (!items?.length) {
+      return FALLBACK_DATA;
+    }
+    return items.map((item, index) => ({
+      id: item.id || `recommended-${index}`,
+      image: item.image || item.thumbnail || null,
+      title: item.name || item.title || 'Menu Item',
+      price: item.price ?? item.amount ?? 0,
+      rating: item.rating ?? 4.5,
+      reviews: item.reviews ?? item.reviewCount ?? 0,
+      description: item.description || '',
+    }));
+  }, [items]);
+
   useEffect(() => {
-    if (!focusedItem) {
+    if (!focusedItem && data.length > 0) {
       autoSlideRef.current = setInterval(() => {
-        let nextIndex = (activeIndex + 1) % recommendedData.length;
+        const nextIndex = (activeIndex + 1) % data.length;
         setActiveIndex(nextIndex);
         flatListRef.current?.scrollToIndex({
           index: nextIndex,
@@ -71,7 +106,7 @@ export default function Recommended() {
       }, 3000);
     }
     return () => clearInterval(autoSlideRef.current);
-  }, [activeIndex, focusedItem]);
+  }, [activeIndex, focusedItem, data.length]);
 
   if (!fontsLoaded) return null;
 
@@ -119,7 +154,7 @@ export default function Recommended() {
 
       <FlatList
         ref={flatListRef}
-        data={recommendedData}
+        data={data}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.id}
@@ -135,7 +170,7 @@ export default function Recommended() {
         renderItem={({ item }) => (
           <Pressable onLongPress={() => handleLongPress(item)}>
             <View style={styles.itemContainer}>
-              <Image source={item.image} style={styles.image} />
+              <Image source={imageSource(item.image)} style={styles.image} />
               <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.6)']}
                 style={styles.gradient}
@@ -146,7 +181,6 @@ export default function Recommended() {
         )}
       />
 
-      {/* Centered Popup */}
       {focusedItem && (
         <Modal transparent visible>
           <Pressable style={styles.overlay} onPress={handleClosePopup}>
@@ -159,13 +193,23 @@ export default function Recommended() {
                 },
               ]}
             >
-              <Image source={focusedItem.image} style={styles.popupImage} />
+              <Image
+                source={imageSource(focusedItem.image)}
+                style={styles.popupImage}
+              />
               <View style={styles.popupDetails}>
                 <Text style={styles.foodName}>{focusedItem.title}</Text>
-                <Text style={styles.foodPrice}>₱{focusedItem.price}</Text>
-                <Text style={styles.foodRating}>
-                  ⭐ {focusedItem.rating} ({focusedItem.reviews} reviews)
+                <Text style={styles.foodPrice}>
+                  {formatCurrency(focusedItem.price)}
                 </Text>
+                <Text style={styles.foodRating}>
+                  ★ {focusedItem.rating} ({focusedItem.reviews} reviews)
+                </Text>
+                {focusedItem.description ? (
+                  <Text style={styles.foodDescription}>
+                    {focusedItem.description}
+                  </Text>
+                ) : null}
               </View>
             </Animated.View>
           </Pressable>
@@ -207,7 +251,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto_700Bold',
     fontSize: 18,
   },
-
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -236,4 +279,10 @@ const styles = StyleSheet.create({
   foodName: { fontSize: 20, fontWeight: '700', marginBottom: 6 },
   foodPrice: { fontSize: 18, color: '#f59e0b', marginBottom: 4 },
   foodRating: { fontSize: 16, color: '#6b7280' },
+  foodDescription: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#4b5563',
+    textAlign: 'center',
+  },
 });
