@@ -10,6 +10,7 @@ from mobile_api.accounts.views import (
     RefreshTokenView,
     RegistrationView,
     SessionView,
+    AvatarUploadView,
 )
 from mobile_api.inventory.views import InventoryItemViewSet
 from mobile_api.orders.views import OrderViewSet
@@ -33,5 +34,6 @@ urlpatterns = [
     path("auth/biometric/login", BiometricSessionView.as_view(), name="mobile-auth-biometric-login"),
     path("auth/biometric/register", BiometricEnrollmentView.as_view(), name="mobile-auth-biometric-register"),
     path("users/me", MeView.as_view(), name="mobile-users-me"),
+    path("users/avatar", AvatarUploadView.as_view(), name="mobile-users-avatar"),
     path("", include(router.urls)),
 ]

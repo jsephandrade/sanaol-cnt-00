@@ -10,6 +10,7 @@ import {
   updateInventoryItem,
   updateOrderStatus,
   updateProfile,
+  uploadProfileAvatar,
 } from './api';
 import { useApiConfig } from '../context/ApiContext';
 
@@ -67,6 +68,15 @@ export function useCurrentUser(options = {}) {
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useApiMutation(updateProfile, {
+    onSuccess: (user) => {
+      queryClient.setQueryData(queryKeys.me, user);
+    },
+  });
+}
+
+export function useUploadAvatar() {
+  const queryClient = useQueryClient();
+  return useApiMutation(uploadProfileAvatar, {
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.me, user);
     },

@@ -17,6 +17,7 @@ import {
   mockUpdateOrderStatus,
   mockUpdateProfile,
   mockRefundPayment,
+  mockUploadAvatar,
 } from './mockData';
 
 export const ACCESS_TOKEN_KEY = '@sanaol/auth/accessToken';
@@ -444,6 +445,39 @@ export async function updateProfile(payload) {
     },
     () => mockUpdateProfile(payload),
     { fallbackMessage: 'Unable to update profile' }
+  );
+
+  if (user) {
+    await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  }
+  return user;
+}
+
+export async function uploadProfileAvatar({ uri, name, type } = {}) {
+  const user = await withMockFallback(
+    'users.avatar.upload',
+    async () => {
+      if (!uri) {
+        throw new Error('Image URI is required');
+      }
+      const formData = new FormData();
+      const fileName =
+        name ||
+        `avatar-${Date.now()}.${(type && type.split('/').pop()) || 'jpg'}`;
+      formData.append('avatar', {
+        uri,
+        name: fileName,
+        type: type || 'image/jpeg',
+      });
+      const response = await api.post('/users/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return normalizeUser(unwrapPayload(response));
+    },
+    () => mockUploadAvatar({ uri, name, type }),
+    { fallbackMessage: 'Unable to update profile photo' }
   );
 
   if (user) {

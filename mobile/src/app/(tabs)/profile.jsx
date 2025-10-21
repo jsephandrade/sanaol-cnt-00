@@ -1,214 +1,93 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  Switch,
-  Linking,
-  Alert,
-  BackHandler,
-  ImageBackground,
-  StyleSheet,
-  RefreshControl,
   ActivityIndicator,
+  Alert,
+  Image,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  MaterialCommunityIcons,
-  Feather,
-  Ionicons,
-  AntDesign,
-} from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from 'expo-router';
+
 import ConfirmLogoutModal from '../../components/ConfirmLogoutModal';
 import { useAuth } from '../../context/AuthContext';
+import { useUploadAvatar } from '../../api/hooks';
 
-const Row = ({
-  iconPack = 'Feather',
-  icon,
-  tint = '#8B8B8B',
-  title,
-  onPress,
-  valueRight,
-}) => {
-  const IconPack = { Feather, Ionicons, MaterialCommunityIcons, AntDesign }[
-    iconPack
-  ];
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginVertical: 4,
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            backgroundColor: '#F5F6FA',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: 12,
-          }}
-        >
-          <IconPack name={icon} size={20} color={tint} />
-        </View>
-        <Text style={{ fontSize: 16, fontWeight: '500', color: '#333' }}>
-          {title}
-        </Text>
+const OptionRow = ({ icon, label, onPress, trailing, tint = '#F07F13' }) => (
+  <TouchableOpacity style={styles.optionRow} onPress={onPress}>
+    <View style={styles.optionLeft}>
+      <View style={[styles.optionIcon, { backgroundColor: `${tint}14` }]}>
+        <Feather name={icon} size={18} color={tint} />
       </View>
-      {valueRight ?? <Feather name="chevron-right" size={20} color="#C6C6C6" />}
-    </TouchableOpacity>
-  );
-};
-
-const Section = ({ children }) => (
-  <View
-    style={{
-      marginTop: 16,
-      backgroundColor: '#f5f5f5',
-      borderRadius: 16,
-      overflow: 'hidden',
-    }}
-  >
-    {children}
-  </View>
+      <Text style={styles.optionLabel}>{label}</Text>
+    </View>
+    {trailing ?? <Feather name="chevron-right" size={18} color="#cbd5e1" />}
+  </TouchableOpacity>
 );
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, refreshProfile, signOut } = useAuth();
+  const { user, refreshProfile, signOut, setUser } = useAuth();
+  const { mutateAsync: uploadAvatar, isPending: avatarUploading } =
+    useUploadAvatar();
 
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [pushEnabled, setPushEnabled] = useState(true);
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
-  const [cameraAllowed, setCameraAllowed] = useState(false);
-  const [locationAllowed, setLocationAllowed] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const isLoggingOut = useRef(false);
 
-  const formatLabel = useCallback(
-    (value) =>
-      (value || '')
-        .toString()
-        .replace(/[_-]/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase()),
-    []
-  );
-
   const isGuest = Boolean(user?.is_guest);
-  const displayName = useMemo(() => {
-    if (!user) {
-      return 'Loading...';
-    }
-    if (user.name) {
-      return user.name;
-    }
-    const composed = [user.first_name, user.last_name]
-      .filter(Boolean)
-      .join(' ');
-    if (composed) {
-      return composed;
-    }
-    if (user.email) {
-      return user.email.split('@')[0];
-    }
-    return 'User';
-  }, [user]);
-  const primaryEmail = user?.email || (isGuest ? 'guest@local.dev' : '');
-  const roleChipLabel = useMemo(() => {
-    if (isGuest) {
-      return 'Guest';
-    }
-    return user?.role ? formatLabel(user.role) : null;
-  }, [formatLabel, isGuest, user?.role]);
-  const statusChipLabel = useMemo(() => {
-    if (isGuest) {
-      return null;
-    }
-    const status = user?.status;
-    if (!status || status.toLowerCase() === 'active') {
-      return null;
-    }
-    return formatLabel(status);
-  }, [formatLabel, isGuest, user?.status]);
-  const phoneNumber = user?.phone?.trim() ? user.phone.trim() : null;
-  const avatarSource = useMemo(() => {
-    if (user?.avatar) {
-      return { uri: user.avatar };
-    }
-    return {
-      uri: 'https://media.istockphoto.com/id/2014684899/vector/placeholder-avatar-female-person-default-woman-avatar-image-gray-profile-anonymous-face.jpg?s=612x612&w=0&k=20&c=D-dk9ek0_jb19TiMVNVmlpvYVrQiFiJmgGmiLB5yE4w=',
-    };
-  }, [user?.avatar]);
-  const creditPointsValue = useMemo(() => {
-    const raw = user?.credit_points ?? user?.creditPoints ?? 0;
-    const numeric =
-      typeof raw === 'number'
-        ? raw
-        : typeof raw === 'string'
-          ? parseFloat(raw)
-          : Number(raw || 0);
-    return Number.isFinite(numeric) ? numeric : 0;
-  }, [user?.creditPoints, user?.credit_points]);
-  const creditPointsDisplay = useMemo(
-    () =>
-      creditPointsValue.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-    [creditPointsValue]
-  );
+  const displayName = user?.name?.trim() || '';
+  const primaryEmail = user?.email?.trim() || '';
 
-  useFocusEffect(
-    useCallback(() => {
-      const onBackPress = () => true;
-      const sub = BackHandler.addEventListener(
-        'hardwareBackPress',
-        onBackPress
-      );
-      return () => sub.remove();
-    }, [])
-  );
+  const roleLabel = useMemo(() => {
+    if (!user?.role) return null;
+    return user.role
+      .toString()
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }, [user?.role]);
+
+  const statusLabel = useMemo(() => {
+    if (!user?.status) return null;
+    const normalized = user.status.toLowerCase();
+    if (normalized === 'active') return null;
+    return normalized
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }, [user?.status]);
 
   useFocusEffect(
     useCallback(() => {
       if (isGuest) {
         return () => {};
       }
-      let isActive = true;
+      let active = true;
       setSyncing(true);
       refreshProfile()
         .catch((error) => {
-          if (!isActive) {
+          if (!active) {
             return;
           }
-          console.error('Profile sync failed:', error);
           Alert.alert(
-            'Profile Update Failed',
-            error?.message || 'Unable to sync your profile right now.'
+            'Profile sync failed',
+            error?.message || 'Unable to refresh your profile right now.'
           );
         })
         .finally(() => {
-          if (isActive) {
+          if (active) {
             setSyncing(false);
           }
         });
       return () => {
-        isActive = false;
+        active = false;
       };
     }, [isGuest, refreshProfile])
   );
@@ -216,8 +95,8 @@ export default function ProfileScreen() {
   const handleRefresh = useCallback(async () => {
     if (isGuest) {
       Alert.alert(
-        'Guest Mode',
-        'Sign in or create an account to sync your profile and credit points.'
+        'Guest profile',
+        'Sign in to sync your profile and see account details.'
       );
       return;
     }
@@ -225,9 +104,8 @@ export default function ProfileScreen() {
     try {
       await refreshProfile();
     } catch (error) {
-      console.error('Profile refresh failed:', error);
       Alert.alert(
-        'Profile Update Failed',
+        'Profile sync failed',
         error?.message || 'Unable to refresh your profile right now.'
       );
     } finally {
@@ -235,55 +113,55 @@ export default function ProfileScreen() {
     }
   }, [isGuest, refreshProfile]);
 
-  const handleCreditPress = useCallback(() => {
+  const handleAvatarPress = useCallback(async () => {
     if (isGuest) {
+      Alert.alert('Guest profile', 'Sign in to upload a profile photo.');
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
       Alert.alert(
-        'Earn Credit Points',
-        'Sign in to start earning credits from your purchases.'
+        'Permission needed',
+        'Allow photo library access so we can update your profile picture.'
       );
       return;
     }
-    Alert.alert(
-      'Credit Points',
-      `You currently have ${creditPointsDisplay} points available. Use them at checkout to reduce your total.`
-    );
-  }, [creditPointsDisplay, isGuest]);
 
-  const requestOrToggleCamera = () => {
-    if (!cameraAllowed) {
-      Alert.alert('Camera Permission', 'Simulating permission prompt', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Allow', onPress: () => setCameraAllowed(true) },
-      ]);
-    } else {
-      Alert.alert('Revoke Permission?', 'Simulating revoking camera access', [
-        { text: 'Keep', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: () => setCameraAllowed(false),
-        },
-      ]);
-    }
-  };
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
 
-  const requestOrToggleLocation = () => {
-    if (!locationAllowed) {
-      Alert.alert('Location Permission', 'Simulating permission prompt', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Allow', onPress: () => setLocationAllowed(true) },
-      ]);
-    } else {
-      Alert.alert('Revoke Permission?', 'Simulating revoking location access', [
-        { text: 'Keep', style: 'cancel' },
-        {
-          text: 'Revoke',
-          style: 'destructive',
-          onPress: () => setLocationAllowed(false),
-        },
-      ]);
+    if (result.canceled || !result.assets?.length) {
+      return;
     }
-  };
+
+    const asset = result.assets[0];
+    if (!asset?.uri) {
+      Alert.alert('Upload failed', 'We could not read the selected image.');
+      return;
+    }
+
+    try {
+      const updatedUser = await uploadAvatar({
+        uri: asset.uri,
+        name: asset.fileName ?? `avatar-${Date.now()}.jpg`,
+        type: asset.mimeType ?? 'image/jpeg',
+      });
+      if (updatedUser) {
+        setUser?.(updatedUser);
+        Alert.alert('Profile photo updated', 'Your new photo is saved.');
+      }
+    } catch (error) {
+      Alert.alert(
+        'Upload failed',
+        error?.message || 'We could not update your profile picture.'
+      );
+    }
+  }, [isGuest, uploadAvatar, setUser]);
 
   const confirmLogoutAndNavigate = useCallback(async () => {
     if (isLoggingOut.current) {
@@ -292,460 +170,148 @@ export default function ProfileScreen() {
     isLoggingOut.current = true;
     try {
       await signOut();
+      router.replace('/login');
     } catch (error) {
-      console.error('Logout failed:', error);
       Alert.alert(
-        'Logout Failed',
-        error?.message ||
-          'We could not reach the server. Returning to the login screen.'
+        'Log out failed',
+        error?.message || 'Unable to end your session right now.'
       );
     } finally {
-      setShowLogoutConfirm(false);
-      router.replace('/login');
       isLoggingOut.current = false;
+      setShowLogoutConfirm(false);
     }
-  }, [router, signOut]);
+  }, [signOut, router]);
+
+  const avatarNode = user?.avatar ? (
+    <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+  ) : (
+    <View style={styles.avatarFallback}>
+      <Feather name="user" size={32} color="#F07F13" />
+    </View>
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#f9f9f9' }}>
-      {/* Header */}
-      <ImageBackground
-        source={require('../../../assets/drop_1.png')}
-        resizeMode="cover"
-        style={{
-          width: '100%',
-          paddingTop: insets.top + 50,
-          paddingBottom: 14,
-          paddingHorizontal: 14,
-          borderBottomLeftRadius: 20,
-          borderBottomRightRadius: 20,
-          overflow: 'hidden',
-        }}
-      >
-        <View
-          style={{
-            ...StyleSheet.absoluteFillObject,
-            backgroundColor: 'rgba(254,192,117,0.5)',
-          }}
-        />
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={26} color="black" />
-          </TouchableOpacity>
-          <Text
-            style={{
-              fontSize: 30,
-              fontFamily: 'Roboto_700Bold',
-              color: 'black',
-            }}
+    <View style={styles.screen}>
+      <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
+        <View style={styles.heroTopRow}>
+          <TouchableOpacity
+            style={styles.avatarButton}
+            onPress={handleAvatarPress}
+            activeOpacity={0.85}
           >
-            Profile
-          </Text>
-          <Ionicons name="person-outline" size={26} color="black" />
+            {avatarNode}
+            <View style={styles.avatarBadge}>
+              {avatarUploading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Feather name="edit-2" size={14} color="#fff" />
+              )}
+            </View>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            {displayName ? (
+              <Text style={styles.heroName}>{displayName}</Text>
+            ) : (
+              <Text style={styles.heroPrompt}>
+                Add your name to complete your profile.
+              </Text>
+            )}
+            {primaryEmail ? (
+              <Text style={styles.heroEmail}>{primaryEmail}</Text>
+            ) : null}
+            <View style={styles.heroChips}>
+              {roleLabel ? (
+                <View style={styles.heroChip}>
+                  <Text style={styles.heroChipText}>{roleLabel}</Text>
+                </View>
+              ) : null}
+              {statusLabel ? (
+                <View style={[styles.heroChip, styles.heroChipMuted]}>
+                  <Text style={styles.heroChipText}>{statusLabel}</Text>
+                </View>
+              ) : null}
+              {syncing ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#fff"
+                  style={{ marginLeft: 6 }}
+                />
+              ) : null}
+            </View>
+          </View>
         </View>
-      </ImageBackground>
+        {isGuest ? (
+          <View style={styles.heroNotice}>
+            <Feather name="info" size={16} color="#7c2d12" />
+            <Text style={styles.heroNoticeText}>
+              You are browsing as a guest. Sign in to access orders and loyalty
+              history.
+            </Text>
+          </View>
+        ) : null}
+      </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor="#F07F13"
             colors={['#F07F13']}
-            enabled={!isGuest}
           />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Avatar */}
-        <View
-          style={{
-            backgroundColor: '#fff',
-            borderRadius: 16,
-            padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginTop: 20,
-            marginBottom: 16,
-            shadowColor: '#000',
-            shadowOpacity: 0.05,
-            shadowRadius: 6,
-            elevation: 3,
-          }}
-        >
-          <Image
-            source={avatarSource}
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: '#F3F4F6',
-            }}
-          />
-          <View style={{ marginLeft: 16, flex: 1 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#333' }}>
-              {displayName}
-            </Text>
-            {primaryEmail ? (
-              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4 }}>
-                {primaryEmail}
-              </Text>
-            ) : null}
-            {phoneNumber ? (
-              <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
-                {phoneNumber}
-              </Text>
-            ) : null}
-            {roleChipLabel || statusChipLabel || syncing ? (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: 8,
-                }}
-              >
-                {roleChipLabel ? (
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 999,
-                      backgroundColor: '#FEF3C7',
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        color: '#B45309',
-                        fontWeight: '600',
-                      }}
-                    >
-                      {roleChipLabel}
-                    </Text>
-                  </View>
-                ) : null}
-                {statusChipLabel ? (
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 999,
-                      backgroundColor: '#FFE4E6',
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        color: '#BE123C',
-                        fontWeight: '600',
-                      }}
-                    >
-                      {statusChipLabel}
-                    </Text>
-                  </View>
-                ) : null}
-                {syncing || refreshing ? (
-                  <ActivityIndicator
-                    size="small"
-                    color="#F07F13"
-                    style={{
-                      marginLeft: roleChipLabel || statusChipLabel ? 4 : 0,
-                    }}
-                  />
-                ) : null}
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Credit Points */}
-        <TouchableOpacity
-          onPress={handleCreditPress}
-          activeOpacity={0.9}
-          style={{
-            backgroundColor: '#F07F13',
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: -5,
-            opacity: isGuest ? 0.6 : 1,
-          }}
-        >
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialCommunityIcons
-                name="star-circle"
-                size={28}
-                color="#fff"
-              />
-              <Text
-                style={{
-                  color: '#fff',
-                  fontWeight: '600',
-                  fontSize: 16,
-                  marginLeft: 8,
-                }}
-              >
-                Credit Points
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 20 }}>
-                {creditPointsDisplay}
-              </Text>
-              <Text style={{ color: '#fff', fontSize: 14, marginLeft: 4 }}>
-                pts
-              </Text>
-              <Feather
-                name="chevron-right"
-                size={18}
-                color="#fff"
-                style={{ marginLeft: 6 }}
-              />
-            </View>
-          </View>
-          <Text style={{ color: '#fff', marginTop: 4, fontSize: 12 }}>
-            {isGuest
-              ? 'Sign in to start earning rewards on your orders.'
-              : 'Use points at checkout to save on your next order.'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Sections */}
-        <Section>
-          <Row
-            iconPack="Feather"
+        <View style={styles.section}>
+          <OptionRow
             icon="user"
-            tint="#F07F13"
-            title="Personal Info"
+            label="Personal Information"
             onPress={() => router.push('/screens/PersonalInfo')}
           />
-          <Row
-            iconPack="Feather"
-            icon="message-circle"
-            tint="#6ED3C7"
-            title="Share Feedback"
-            onPress={() => router.push('/screens/Feedback')}
+          <OptionRow
+            icon="shopping-bag"
+            label="Order History"
+            onPress={() => router.push('/screens/OrderHistory')}
+            tint="#f97316"
           />
-        </Section>
+          <OptionRow
+            icon="credit-card"
+            label="Payment Methods"
+            onPress={() => router.push('/screens/PaymentMethods')}
+            tint="#d97706"
+          />
+        </View>
 
-        <Section>
-          <Row
-            iconPack="AntDesign"
-            icon="questioncircleo"
-            tint="#FF6F61"
-            title="FAQs"
+        <View style={styles.section}>
+          <OptionRow
+            icon="help-circle"
+            label="Help & Support"
             onPress={() => router.push('/screens/FAQs')}
+            tint="#475569"
           />
-
-          {/* Settings */}
-          <Row
-            iconPack="Feather"
-            icon="settings"
-            tint="#8B5CF6"
-            title="Settings"
-            onPress={() => setSettingsExpanded((prev) => !prev)}
-            valueRight={
-              <Feather
-                name={settingsExpanded ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#C6C6C6"
-              />
-            }
+          <OptionRow
+            icon="shield"
+            label="Account Settings"
+            onPress={() => router.push('/screens/Settings')}
+            tint="#0f172a"
           />
+        </View>
 
-          {settingsExpanded && (
-            <View style={{ marginTop: 8, paddingHorizontal: 8 }}>
-              {/* Notifications */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  marginVertical: 6,
-                }}
-              >
-                App Preferences
-              </Text>
-              <Row
-                iconPack="Feather"
-                icon="bell"
-                tint="#10B981"
-                title="Notifications"
-                onPress={() => setPushEnabled((prev) => !prev)}
-                valueRight={
-                  <Switch value={pushEnabled} onValueChange={setPushEnabled} />
-                }
-              />
-
-              {/* Permissions */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  marginVertical: 6,
-                }}
-              >
-                Permissions
-              </Text>
-              <Row
-                iconPack="Feather"
-                icon="camera"
-                tint="#F59E0B"
-                title="Camera Permission"
-                onPress={requestOrToggleCamera}
-                valueRight={
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View
-                      style={{
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                        marginRight: 6,
-                        backgroundColor: cameraAllowed ? '#DCFCE7' : '#FEE2E2',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: cameraAllowed ? '#166534' : '#991B1B',
-                          fontSize: 12,
-                        }}
-                      >
-                        {cameraAllowed ? 'Allowed' : 'Not allowed'}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={18} color="#C6C6C6" />
-                  </View>
-                }
-              />
-              <Row
-                iconPack="Feather"
-                icon="map-pin"
-                tint="#0EA5E9"
-                title="Location Permission"
-                onPress={requestOrToggleLocation}
-                valueRight={
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <View
-                      style={{
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        borderRadius: 6,
-                        marginRight: 6,
-                        backgroundColor: locationAllowed
-                          ? '#DCFCE7'
-                          : '#FEE2E2',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: locationAllowed ? '#166534' : '#991B1B',
-                          fontSize: 12,
-                        }}
-                      >
-                        {locationAllowed ? 'Allowed' : 'Not allowed'}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={18} color="#C6C6C6" />
-                  </View>
-                }
-              />
-
-              {/* Account & Security */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  marginVertical: 6,
-                }}
-              >
-                Account & Security
-              </Text>
-              <Row
-                iconPack="Feather"
-                icon="credit-card"
-                tint="#F59E0B"
-                title="Payment Methods"
-                onPress={() => router.push('/screens/PaymentMethods')}
-              />
-              <Row
-                iconPack="Feather"
-                icon="archive"
-                tint="#3B82F6"
-                title="Order History"
-                onPress={() => router.push('/screens/OrderHistory')}
-              />
-
-              {/* Optional Extras */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  marginVertical: 6,
-                }}
-              >
-                Extras
-              </Text>
-              <Row
-                iconPack="Feather"
-                icon="heart"
-                tint="#F472B6"
-                title="Dietary Preferences"
-                onPress={() => router.push('/screens/DietaryPreferences')}
-              />
-            </View>
-          )}
-        </Section>
-
-        <Section>
-          <Row
-            iconPack="Feather"
-            icon="info"
-            tint="#3B82F6"
-            title="About"
-            onPress={() =>
-              Linking.openURL('https://www.facebook.com/jseph.andrade')
-            }
-          />
-          <Row
-            iconPack="Feather"
-            icon="file-text"
-            tint="#9CA3AF"
-            title="Legal & Policies"
-            onPress={() =>
-              Linking.openURL('https://www.facebook.com/jseph.andrade')
-            }
-          />
-        </Section>
-
-        <Section>
-          <Row
-            iconPack="Feather"
+        <View style={styles.section}>
+          <OptionRow
             icon="log-out"
-            tint="#EF4444"
-            title="Log Out"
+            label="Log Out"
+            tint="#ef4444"
             onPress={() => setShowLogoutConfirm(true)}
+            trailing={
+              <Feather name="chevron-right" size={18} color="#ef4444" />
+            }
           />
-        </Section>
+        </View>
       </ScrollView>
 
-      {/* Logout Modal */}
       <ConfirmLogoutModal
         visible={showLogoutConfirm}
         onCancel={() => setShowLogoutConfirm(false)}
@@ -754,3 +320,110 @@ export default function ProfileScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#fff' },
+  hero: {
+    backgroundColor: '#F07F13',
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    shadowColor: 'rgba(240, 127, 19, 0.35)',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarButton: {
+    marginRight: 18,
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 26,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: '#fff',
+  },
+  avatarFallback: {
+    width: 88,
+    height: 88,
+    borderRadius: 26,
+    backgroundColor: '#fff7ed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(240,127,19,0.4)',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
+    backgroundColor: '#ea580c',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#fff7ed',
+  },
+  heroName: { color: '#fff', fontSize: 22, fontWeight: '700' },
+  heroPrompt: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  heroEmail: { color: 'rgba(255,255,255,0.85)', marginTop: 6, fontSize: 14 },
+  heroChips: { flexDirection: 'row', marginTop: 12, flexWrap: 'wrap' },
+  heroChip: {
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginRight: 8,
+    marginTop: 6,
+  },
+  heroChipMuted: { backgroundColor: 'rgba(30, 41, 59, 0.25)' },
+  heroChipText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  heroNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    padding: 12,
+    borderRadius: 14,
+    gap: 10,
+  },
+  heroNoticeText: { color: '#fff', fontSize: 13, flex: 1, lineHeight: 18 },
+  content: { flex: 1, paddingHorizontal: 16 },
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingVertical: 8,
+    marginTop: 24,
+    shadowColor: 'rgba(15, 23, 42, 0.08)',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  optionLeft: { flexDirection: 'row', alignItems: 'center' },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionLabel: { fontSize: 16, fontWeight: '600', color: '#1f2937' },
+});

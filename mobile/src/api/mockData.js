@@ -274,6 +274,14 @@ export async function mockUpdateProfile(payload) {
   return clone(user);
 }
 
+export async function mockUploadAvatar({ uri, url }) {
+  await delay();
+  const avatarSource = uri || url || mockDb.user.avatar || null;
+  const user = mutateUser({ avatar: avatarSource });
+  await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  return clone(user);
+}
+
 export async function mockFetchInventory() {
   await delay();
   return clone(mockDb.inventory);

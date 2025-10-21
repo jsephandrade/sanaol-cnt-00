@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import mimetypes
+import os
+from uuid import uuid4
+
+from django.core.files.storage import default_storage
+from django.conf import settings
 from rest_framework import permissions, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -110,7 +117,11 @@ class MeView(APIView):
 
     def patch(self, request, *args, **kwargs):
         user = self._get_user(request)
-        serializer = AppUserUpdateSerializer(data=request.data, partial=True)
+        serializer = AppUserUpdateSerializer(
+            data=request.data,
+            partial=True,
+            context={"request": request, "user": user},
+        )
         serializer.is_valid(raise_exception=True)
         dirty_fields = []
         for field, value in serializer.validated_data.items():
@@ -131,3 +142,46 @@ class MeView(APIView):
             except AppUser.DoesNotExist as exc:
                 raise permissions.PermissionDenied("User not found.") from exc
         raise permissions.PermissionDenied("User not authenticated.")
+
+
+class AvatarUploadView(MeView):
+    """Accept a multipart upload and update the user's avatar."""
+
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        user = self._get_user(request)
+        file_obj = request.FILES.get("avatar")
+        if not file_obj:
+            return Response(
+                {"meta": {"message": "Avatar file is required.", "success": False}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        original_name = getattr(file_obj, "name", "") or ""
+        _, ext = os.path.splitext(original_name)
+        if not ext:
+            guessed_ext = mimetypes.guess_extension(
+                getattr(file_obj, "content_type", "") or ""
+            )
+            ext = guessed_ext or ".jpg"
+
+        filename = f"avatars/{user.id}/{uuid4().hex}{ext.lower()}"
+        saved_path = default_storage.save(filename, file_obj)
+
+        try:
+            avatar_url = default_storage.url(saved_path)
+        except Exception:  # pragma: no cover - storage backends may vary
+            media_url = getattr(settings, "MEDIA_URL", "/media/")
+            avatar_url = f"{media_url.rstrip('/')}/{saved_path.lstrip('/')}"
+
+        if avatar_url.startswith("http"):
+            final_url = avatar_url
+        else:
+            final_url = request.build_absolute_uri(avatar_url)
+
+        user.avatar = final_url
+        user.save(update_fields=["avatar", "updated_at"])
+
+        serializer = AppUserSerializer(user)
+        return Response({"data": serializer.data}, status=status.HTTP_200_OK)

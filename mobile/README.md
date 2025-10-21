@@ -77,15 +77,10 @@ The following modules are implemented or planned in the UI. Use this matrix when
 4. **Ensure React Native Reanimated is configured**
    - Add `"react-native-reanimated/plugin"` as the last entry in `babel.config.js > plugins` (required for Moti and animations).
    - If it is already present, no change is needed.
-5. **Create the NativeWind global stylesheet**
-   - `metro.config.js` references `./global.css`, but the file is not in version control.
-   - Create `global.css` in the project root with:
-     ```css
-     @tailwind base;
-     @tailwind components;
-     @tailwind utilities;
-     ```
-6. **Configure environment values (see "Local Configuration" below).**
+5. **Review the NativeWind global stylesheet**
+   - `metro.config.js` references `./global.css`, which is already checked in with the Tailwind base/components/utilities directives.
+   - Extend this file if you need custom utilities.
+6. **Configure environment values** by copying `.env.example` to `.env` and updating the values (see "Local Configuration" below).
 7. **Verify the toolchain**
    ```bash
    npx expo doctor
@@ -129,7 +124,7 @@ The following modules are implemented or planned in the UI. Use this matrix when
 
 ### Styling
 
-- NativeWind is already wired through `tailwind.config.js` and `metro.config.js`. After creating `global.css`, you can add custom utility classes there as needed.
+- NativeWind is already wired through `tailwind.config.js` and `metro.config.js`. Update `global.css` to add or tweak utility classes as needed.
 
 ## Integration Points
 
@@ -170,18 +165,20 @@ mobile/
 - `npm run android` - Build and run the native Android app.
 - `npm run ios` - Build and run the native iOS app (macOS only).
 - `npm run web` - Run the project in a web browser.
+- `npm run lint` - Run ESLint across the `src` directory.
+- `npm run format` - Check Prettier formatting (Tailwind plugin included).
+- `npm run test` - Execute Jest/RTL test suite.
 
 ## Known Gaps & Follow-Up Tasks
 
 - `@react-navigation/native` and peers are not listed in `package.json`. Reinstall them (see step 3) and commit the updated manifest to avoid future install drift.
 - `react-native-reanimated` requires the Babel plugin; add it to prevent runtime warnings (`TypeError: undefined is not an object (evaluating 'Reanimated.default')`).
-- `global.css` is referenced but missing - see step 5.
 - Several source comments contain mojibake characters due to encoding; re-save files with UTF-8 to clean them up.
 - `src/utils/auth.js` still points to `https://reqres.in` as a mock API. Either update it to use your production backend or delete the helper to avoid confusion.
 
 ## Troubleshooting
 
-- **Metro cannot resolve `./global.css`:** Create the file as described in the setup section.
+- **Metro cannot resolve `./global.css`:** Ensure the file stays in the project root and rerun `expo start -c` if Metro cached an old bundle.
 - **Animations or Moti components crash:** Ensure the Reanimated Babel plugin is configured and rebuild the app (`expo start -c`).
 - **Network calls fail on device:** When testing over LAN, replace the local IP in `BASE_URL` with your machine's IP address reachable from the device, or use Expo tunnels (`npx expo start --tunnel`).
 - **Google Sign-In redirect loops:** Call `WebBrowser.maybeCompleteAuthSession()` (already included) and confirm your OAuth redirect URI matches the Expo project slug.
