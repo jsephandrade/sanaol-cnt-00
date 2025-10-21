@@ -11,6 +11,8 @@ import {
   mockLogin,
   mockLoginWithGoogle,
   mockLogout,
+  mockFetchMenuCategories,
+  mockFetchMenuItems,
   mockRegisterAccount,
   mockRequestPasswordReset,
   mockUpdateInventoryItem,
@@ -484,6 +486,34 @@ export async function uploadProfileAvatar({ uri, name, type } = {}) {
     await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
   }
   return user;
+}
+
+export async function fetchMenuCategories() {
+  return withMockFallback(
+    'menu.categories',
+    async () => {
+      const response = await api.get('/menu/categories');
+      return unwrapPayload(response) || [];
+    },
+    () => mockFetchMenuCategories(),
+    { fallbackMessage: 'Unable to load categories' }
+  );
+}
+
+export async function fetchMenuItems(params = {}) {
+  return withMockFallback(
+    'menu.items',
+    async () => {
+      const response = await api.get('/menu/items', { params });
+      return {
+        items: unwrapPayload(response) || [],
+        pagination: response?.data?.pagination || null,
+        meta: extractMeta(response),
+      };
+    },
+    () => mockFetchMenuItems(params),
+    { fallbackMessage: 'Unable to load menu items' }
+  );
 }
 
 export async function fetchInventory(params = {}) {

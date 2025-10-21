@@ -5,6 +5,8 @@ import {
   fetchInventory,
   fetchOrders,
   fetchPayments,
+  fetchMenuCategories,
+  fetchMenuItems,
   getCurrentUser,
   refundPayment,
   updateInventoryItem,
@@ -16,6 +18,10 @@ import { useApiConfig } from '../context/ApiContext';
 
 export const queryKeys = {
   me: ['auth', 'me'],
+  menu: {
+    categories: ['menu', 'categories'],
+    items: (params) => ['menu', 'items', params],
+  },
   inventory: {
     all: ['inventory'],
     list: (params) => ['inventory', 'list', params],
@@ -81,6 +87,25 @@ export function useUploadAvatar() {
       queryClient.setQueryData(queryKeys.me, user);
     },
   });
+}
+
+export function useMenuCategories(options = {}) {
+  return useApiQuery(queryKeys.menu.categories, () => fetchMenuCategories(), {
+    staleTime: 5 * 60 * 1000,
+    ...options,
+  });
+}
+
+export function useMenuItems(params = {}, options = {}) {
+  const queryParams = params || {};
+  return useApiQuery(
+    queryKeys.menu.items(queryParams),
+    () => fetchMenuItems(queryParams),
+    {
+      staleTime: 60 * 1000,
+      ...options,
+    }
+  );
 }
 
 export function useInventoryItems(params) {

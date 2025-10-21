@@ -356,3 +356,21 @@ export async function mockRefundPayment(paymentId) {
   };
   return clone(mockDb.payments[index]);
 }
+
+export async function mockFetchMenuCategories() {
+  await delay();
+  return [];
+}
+
+export async function mockFetchMenuItems(params = {}) {
+  await delay();
+  return {
+    items: [],
+    pagination: {
+      page: Number(params.page || 1),
+      limit: Number(params.limit || 20),
+      total: 0,
+      totalPages: 0,
+    },
+  };
+}
