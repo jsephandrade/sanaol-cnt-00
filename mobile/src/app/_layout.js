@@ -3,6 +3,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Platform } from 'react-native';
 
+import '../styles/nativewind';
+
 import { queryClient } from '../api/queryClient';
 import { ApiProvider } from '../context/ApiContext';
 import { AuthProvider } from '../context/AuthContext';
@@ -22,10 +24,10 @@ export default function RootLayout() {
             <NotificationProvider>
               <DietaryProvider>
                 <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="splash" />
-                  <Stack.Screen name="login" />
-                  <Stack.Screen name="register" />
-                  <Stack.Screen name="forgotpassword" />
+                  <Stack.Screen name="app-launch" />
+                  <Stack.Screen name="account-login" />
+                  <Stack.Screen name="account-registration" />
+                  <Stack.Screen name="account-password-reset" />
                   <Stack.Screen name="(tabs)" />
                 </Stack>
               </DietaryProvider>

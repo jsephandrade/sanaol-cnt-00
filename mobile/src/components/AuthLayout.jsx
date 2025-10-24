@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 /**
  * Shared layout for all authentication-related screens.
@@ -10,7 +11,7 @@ import { SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
  */
 export default function AuthLayout({ children }) {
   return (
-    <SafeAreaView className="flex-1 bg-peach-50">
+    <SafeAreaView className="bg-peach-50 flex-1">
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

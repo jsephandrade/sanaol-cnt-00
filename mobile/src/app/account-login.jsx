@@ -37,7 +37,7 @@ const googleConfig = {
   selectAccount: true,
 };
 
-export default function LoginScreen() {
+export default function AccountLoginScreen() {
   const router = useRouter();
   const { signIn, signInWithGoogle, signInAsGuest } = useAuth();
 
@@ -308,10 +308,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Links */}
-            <TouchableOpacity onPress={() => router.push('/forgotpassword')}>
+            <TouchableOpacity
+              onPress={() => router.push('/account-password-reset')}
+            >
               <Text style={styles.linkText}>Forgot Password?</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/register')}>
+            <TouchableOpacity
+              onPress={() => router.push('/account-registration')}
+            >
               <Text style={styles.linkText}>
                 Don’t have an account?{' '}
                 <Text style={{ fontFamily: 'Roboto_700Bold' }}>Sign Up</Text>

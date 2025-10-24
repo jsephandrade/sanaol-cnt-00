@@ -125,6 +125,91 @@ function createApiError(error, fallbackMessage = 'Request failed') {
   return error instanceof Error ? error : new Error(fallbackMessage);
 }
 
+function ensureAbsoluteUrl(path) {
+  if (!path) return null;
+  if (typeof path !== 'string') return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith('data:')) return path;
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${API_CONFIG.origin}${normalized}`;
+}
+
+function normalizeMenuCategory(source) {
+  if (!source) return null;
+  const createdAt = source.createdAt || source.created_at || null;
+  const updatedAt = source.updatedAt || source.updated_at || null;
+  return {
+    ...source,
+    id:
+      typeof source.id === 'string'
+        ? source.id
+        : source.id != null
+          ? String(source.id)
+          : '',
+    name: source.name || '',
+    description: source.description || '',
+    itemCount: Number.isFinite(Number(source.itemCount))
+      ? Number(source.itemCount)
+      : 0,
+    sortOrder: Number.isFinite(Number(source.sortOrder))
+      ? Number(source.sortOrder)
+      : 0,
+    createdAt,
+    updatedAt,
+  };
+}
+
+function normalizeMenuItem(source) {
+  if (!source) return null;
+  const categoryId =
+    source.categoryId ??
+    source.category_id ??
+    (Array.isArray(source.categoryIds) ? source.categoryIds[0] : null) ??
+    null;
+  const archivedAt = source.archivedAt || source.archived_at || null;
+  const createdAt = source.createdAt || source.created_at || null;
+  const updatedAt = source.updatedAt || source.updated_at || null;
+
+  const normalizedPrice = Number(source.price ?? source.amount ?? 0);
+
+  const normalized = {
+    ...source,
+    id:
+      typeof source.id === 'string'
+        ? source.id
+        : source.id != null
+          ? String(source.id)
+          : '',
+    name: source.name || source.title || 'Menu Item',
+    description: source.description || '',
+    category: source.category || '',
+    categoryId: categoryId ? String(categoryId) : null,
+    price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+    available: Boolean(
+      source.available ??
+        source.isAvailable ??
+        (source.archived != null ? !source.archived : true)
+    ),
+    archived: Boolean(source.archived ?? source.isArchived ?? false),
+    archivedAt,
+    image: ensureAbsoluteUrl(
+      source.image || source.imageUrl || source.image_url || source.thumbnail
+    ),
+    ingredients: Array.isArray(source.ingredients)
+      ? source.ingredients
+      : source.ingredients
+        ? [source.ingredients].flat()
+        : [],
+    preparationTime: Number(
+      source.preparationTime ?? source.preparation_time ?? 0
+    ),
+    createdAt,
+    updatedAt,
+  };
+
+  return normalized;
+}
+
 function normalizeUser(source) {
   if (!source) return null;
   const employeeId =
@@ -493,9 +578,13 @@ export async function fetchMenuCategories() {
     'menu.categories',
     async () => {
       const response = await api.get('/menu/categories');
-      return unwrapPayload(response) || [];
+      const payload = unwrapPayload(response) || [];
+      return Array.isArray(payload) ? payload.map(normalizeMenuCategory) : [];
     },
-    () => mockFetchMenuCategories(),
+    async () => {
+      const result = await mockFetchMenuCategories();
+      return Array.isArray(result) ? result.map(normalizeMenuCategory) : [];
+    },
     { fallbackMessage: 'Unable to load categories' }
   );
 }
@@ -505,13 +594,36 @@ export async function fetchMenuItems(params = {}) {
     'menu.items',
     async () => {
       const response = await api.get('/menu/items', { params });
+      const raw = unwrapPayload(response);
+      const items = Array.isArray(raw)
+        ? raw.map(normalizeMenuItem)
+        : Array.isArray(raw?.items)
+          ? raw.items.map(normalizeMenuItem)
+          : [];
       return {
-        items: unwrapPayload(response) || [],
+        items,
         pagination: response?.data?.pagination || null,
         meta: extractMeta(response),
       };
     },
-    () => mockFetchMenuItems(params),
+    async () => {
+      const result = await mockFetchMenuItems(params);
+      if (Array.isArray(result)) {
+        return {
+          items: result.map(normalizeMenuItem),
+          pagination: null,
+          meta: null,
+        };
+      }
+      const items = Array.isArray(result?.items)
+        ? result.items.map(normalizeMenuItem)
+        : [];
+      return {
+        items,
+        pagination: result?.pagination || null,
+        meta: result?.meta || null,
+      };
+    },
     { fallbackMessage: 'Unable to load menu items' }
   );
 }

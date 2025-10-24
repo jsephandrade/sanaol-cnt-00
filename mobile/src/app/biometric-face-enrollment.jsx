@@ -10,7 +10,7 @@ import {
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-export default function FaceScanScreen() {
+export default function BiometricFaceEnrollmentScreen() {
   const router = useRouter();
   const { autoPrompt } = useLocalSearchParams();
 

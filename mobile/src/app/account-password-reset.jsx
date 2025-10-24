@@ -21,7 +21,7 @@ import {
 
 import { requestPasswordReset } from '../api/api';
 
-export default function ForgotPasswordScreen() {
+export default function AccountPasswordResetScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -123,7 +123,7 @@ export default function ForgotPasswordScreen() {
               }}
             >
               <Text style={{ color: '#666' }}>Remembered your password? </Text>
-              <TouchableOpacity onPress={() => router.push('/login')}>
+              <TouchableOpacity onPress={() => router.push('/account-login')}>
                 <Text
                   style={{ color: '#FF8C00', fontFamily: 'Roboto_700Bold' }}
                 >

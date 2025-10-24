@@ -24,13 +24,42 @@ from .views_common import MENU_ITEMS, _paginate, _actor_from_request, _has_permi
 from .utils_audit import record_audit
 
 
-def _safe_menu_item(mi):
+def _resolve_category_id(category_value, category_map=None):
+    category = (category_value or "").strip()
+    if not category:
+        return None
+
+    key = category.lower()
+    if category_map and key in category_map:
+        identified = category_map[key]
+        return str(identified) if identified else None
+
+    if category_map is not None:
+        return None
+
     try:
+        from .models import MenuCategory  # local import to avoid circulars during migrations
+
+        found = (
+            MenuCategory.objects.filter(name__iexact=category)
+            .values_list("id", flat=True)
+            .first()
+        )
+        return str(found) if found else None
+    except Exception:
+        return None
+
+
+def _safe_menu_item(mi, category_map=None):
+    try:
+        category_name = getattr(mi, "category", "")
+        category_id = _resolve_category_id(category_name, category_map)
         return {
             "id": str(mi.id),
             "name": mi.name,
             "description": mi.description or "",
             "category": mi.category or "",
+            "categoryId": category_id,
             "price": float(mi.price or 0),
             "available": bool(mi.available),
             "archived": bool(getattr(mi, "archived", False)),
@@ -42,12 +71,15 @@ def _safe_menu_item(mi):
             "updatedAt": mi.updated_at.isoformat() if getattr(mi, "updated_at", None) else None,
         }
     except Exception:
+        category_name = getattr(mi, "category", "")
+        category_id = _resolve_category_id(category_name, category_map)
         # Fallback for in-memory dicts to keep compatibility if ever used
         return {
             "id": str(getattr(mi, "id", "")),
             "name": getattr(mi, "name", "Unnamed"),
             "description": getattr(mi, "description", ""),
             "category": getattr(mi, "category", ""),
+            "categoryId": category_id,
             "price": float(getattr(mi, "price", 0) or 0),
             "available": bool(getattr(mi, "available", True)),
             "archived": bool(getattr(mi, "archived", False)),
@@ -148,7 +180,7 @@ def _restore_menu_item_fallback(request, actor, item_dict):
 def menu_items(request):
     if request.method == "GET":
         try:
-            from .models import MenuItem
+            from .models import MenuItem, MenuCategory
             search = (request.GET.get("search") or request.GET.get("q") or "").strip()
             category = (request.GET.get("category") or "").strip()
             available = request.GET.get("available")
@@ -183,7 +215,19 @@ def menu_items(request):
             qs = qs.order_by(order)
             paginator = Paginator(qs, limit)
             page_obj = paginator.get_page(page)
-            items = [_safe_menu_item(it) for it in page_obj.object_list]
+            category_names = {
+                (getattr(it, "category", "") or "").strip()
+                for it in page_obj.object_list
+                if getattr(it, "category", "") and getattr(it, "category", "").strip()
+            }
+            category_map = {}
+            if category_names:
+                category_lookup = (
+                    MenuCategory.objects.filter(name__in=category_names)
+                    .values_list("name", "id")
+                )
+                category_map = {name.strip().lower(): str(cat_id) for name, cat_id in category_lookup}
+            items = [_safe_menu_item(it, category_map) for it in page_obj.object_list]
             pagination = {
                 "page": page_obj.number,
                 "limit": limit,
@@ -624,6 +668,8 @@ def menu_categories(request):
                     "description": cat.description or "",
                     "itemCount": count,
                     "sortOrder": cat.sort_order,
+                    "createdAt": cat.created_at.isoformat() if cat.created_at else None,
+                    "updatedAt": cat.updated_at.isoformat() if cat.updated_at else None,
                 })
             return JsonResponse({"success": True, "data": out})
         except Exception:
@@ -638,6 +684,9 @@ def menu_categories(request):
                         "id": (name or "").lower().replace(" ", "_") or "uncategorized",
                         "name": name or "Uncategorized",
                         "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
+                        "sortOrder": 0,
+                        "createdAt": None,
+                        "updatedAt": None,
                     })
                 return JsonResponse({"success": True, "data": out})
             except Exception:

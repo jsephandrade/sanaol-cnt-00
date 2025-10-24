@@ -91,7 +91,12 @@ export function useUploadAvatar() {
 
 export function useMenuCategories(options = {}) {
   return useApiQuery(queryKeys.menu.categories, () => fetchMenuCategories(), {
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: true,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     ...options,
   });
 }
@@ -102,7 +107,12 @@ export function useMenuItems(params = {}, options = {}) {
     queryKeys.menu.items(queryParams),
     () => fetchMenuItems(queryParams),
     {
-      staleTime: 60 * 1000,
+      staleTime: 15 * 1000,
+      refetchInterval: 30 * 1000,
+      refetchIntervalInBackground: true,
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: true,
+      refetchOnMount: 'always',
       ...options,
     }
   );

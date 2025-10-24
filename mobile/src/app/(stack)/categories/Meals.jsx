@@ -104,7 +104,7 @@ export default function Meals() {
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const handleCheckout = () => {
-    router.push('/cart');
+    router.push('/customer-cart');
   };
 
   const handleAddMoreItems = () => {

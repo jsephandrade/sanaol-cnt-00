@@ -21,7 +21,7 @@ import {
   Roboto_700Bold,
 } from '@expo-google-fonts/roboto';
 
-export default function CartScreen() {
+export default function CustomerCartScreen() {
   const router = useRouter();
   const { cart, removeFromCart, increaseQuantity, decreaseQuantity } =
     useCart();

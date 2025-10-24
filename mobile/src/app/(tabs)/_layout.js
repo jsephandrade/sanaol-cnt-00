@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="home-dashboard"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: 'orange',
@@ -13,7 +14,7 @@ export default function TabsLayout() {
     >
       {/* Home tab */}
       <Tabs.Screen
-        name="index"
+        name="home-dashboard"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => (
@@ -24,7 +25,7 @@ export default function TabsLayout() {
 
       {/* Cart tab */}
       <Tabs.Screen
-        name="cart"
+        name="customer-cart"
         options={{
           title: 'Cart',
           tabBarIcon: ({ color, size }) => (
@@ -35,7 +36,7 @@ export default function TabsLayout() {
 
       {/* Orders tab */}
       <Tabs.Screen
-        name="orders"
+        name="order-tracking"
         options={{
           title: 'Orders',
           tabBarIcon: ({ color, size }) => (
@@ -46,7 +47,7 @@ export default function TabsLayout() {
 
       {/* Profile tab */}
       <Tabs.Screen
-        name="profile"
+        name="account-profile"
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (

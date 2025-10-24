@@ -23,7 +23,7 @@ import {
 
 import { registerAccount } from '../api/api';
 
-export default function RegisterScreen() {
+export default function AccountRegistrationScreen() {
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -268,7 +268,7 @@ export default function RegisterScreen() {
             {/* Back to Login */}
             <View style={styles.loginRow}>
               <Text style={{ color: '#666' }}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/login')}>
+              <TouchableOpacity onPress={() => router.push('/account-login')}>
                 <Text style={styles.loginText}>Login</Text>
               </TouchableOpacity>
             </View>

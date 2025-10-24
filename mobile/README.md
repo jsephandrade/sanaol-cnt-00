@@ -11,6 +11,14 @@ Cross-platform Expo Router application for the Sanaol canteen. The app targets t
 - **APIs & Auth:** Axios, Expo Auth Session (Google), Expo Local Authentication, Expo Camera
 - **Animation & UI:** React Native Reanimated, Moti, Lucide React Native, Expo Linear Gradient
 
+## Styling Guidelines
+
+- `src/styles/nativewind.js` configures `NativeWindStyleSheet` and is imported once from `src/app/_layout.js`. Do not remove this import; NativeWind classes depend on it.
+- Tailwind tokens live in `tailwind.config.js`. Use the semantic color names (`bg-primary-500`, `text-neutral-700`, `bg-surface-muted`, etc.) instead of raw hex values. Extend the same file if new tokens are required.
+- Prefer `className` props over `StyleSheet.create`. When dynamic classes are needed, use the helper in `src/styles/cn.js` to compose conditional class strings.
+- Shared primitives (buttons, cards, list rows) should export Tailwind-ready APIs so downstream screens avoid duplicating styling logic.
+- Any legacy `StyleSheet` usage you touch during feature work should be migrated to NativeWind utilities.
+
 ## Role-Based Feature Access
 
 The following modules are implemented or planned in the UI. Use this matrix when enabling or hiding functionality per role:

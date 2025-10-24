@@ -91,7 +91,7 @@ export default function OrderHistoryScreen() {
 
   const repeatOrder = (orderItems) => {
     router.push({
-      pathname: '/cart',
+      pathname: '/customer-cart',
       params: {
         orderItems: JSON.stringify(orderItems),
         dietaryPreferences: JSON.stringify(preferences),

@@ -31,7 +31,7 @@ const OptionRow = ({ icon, label, onPress, trailing, tint = '#F07F13' }) => (
   </TouchableOpacity>
 );
 
-export default function ProfileScreen() {
+export default function AccountProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, refreshProfile, signOut, setUser } = useAuth();
@@ -170,7 +170,7 @@ export default function ProfileScreen() {
     isLoggingOut.current = true;
     try {
       await signOut();
-      router.replace('/login');
+      router.replace('/account-login');
     } catch (error) {
       Alert.alert(
         'Log out failed',

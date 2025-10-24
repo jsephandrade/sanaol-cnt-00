@@ -13,7 +13,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
-export default function SplashScreen() {
+export default function AppLaunchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isAuthenticated, initializing } = useAuth();
@@ -35,7 +35,7 @@ export default function SplashScreen() {
       duration: 500,
       useNativeDriver: true,
     }).start(() => {
-      router.replace(isAuthenticated ? '/(tabs)' : '/login');
+      router.replace(isAuthenticated ? '/(tabs)' : '/account-login');
     });
   }, [fadeOut, isAuthenticated, router]);
 

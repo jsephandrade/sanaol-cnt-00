@@ -17,7 +17,7 @@ import {
   Roboto_400Regular,
 } from '@expo-google-fonts/roboto';
 
-export default function OrdersScreen() {
+export default function OrderTrackingScreen() {
   const [fontsLoaded] = useFonts({
     Roboto_700Bold,
     Roboto_400Regular,

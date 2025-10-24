@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ImageBackground,
-  StyleSheet,
 } from 'react-native';
 import { Bell, Settings, Search } from 'lucide-react-native';
 import { useFonts, Roboto_700Bold } from '@expo-google-fonts/roboto';
@@ -21,26 +20,26 @@ export default function Header({ onToggleDropdown }) {
     <ImageBackground
       source={require('../../assets/drop_1.png')}
       resizeMode="cover"
-      style={styles.imageBackground}
+      className="w-full overflow-hidden rounded-b-3xl pb-3"
     >
-      <View style={styles.overlay} />
-      <View style={styles.container}>
+      <View className="absolute inset-0 bg-[rgba(254,192,117,0.5)]" />
+      <View className="pb-4.5 pt-7.5">
         {/* Top row */}
-        <View style={styles.topRow}>
-          <Text style={[styles.homeText, { fontFamily: 'Roboto_700Bold' }]}>
+        <View className="mx-3 mb-4.5 mt-4 flex-row items-center justify-between">
+          <Text className="font-heading text-[30px] text-neutral-900">
             Home
           </Text>
 
-          <View style={styles.iconsRow}>
+          <View className="flex-row items-center">
             {/* 🔔 Notifications */}
             <TouchableOpacity
-              style={styles.iconButton}
+              className="ml-4"
               onPress={() => onToggleDropdown('notifications')}
             >
               <Bell size={26} color="black" />
               {notifications.length > 0 && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.notificationText}>
+                <View className="absolute -right-1 -top-1 h-[18px] w-[18px] items-center justify-center rounded-full bg-red-500">
+                  <Text className="text-[10px] font-bold text-white">
                     {notifications.length}
                   </Text>
                 </View>
@@ -49,7 +48,7 @@ export default function Header({ onToggleDropdown }) {
 
             {/* ⚙️ Settings */}
             <TouchableOpacity
-              style={styles.iconButton}
+              className="ml-4"
               onPress={() => onToggleDropdown('settings')}
             >
               <Settings size={26} color="black" />
@@ -58,83 +57,15 @@ export default function Header({ onToggleDropdown }) {
         </View>
 
         {/* Search Bar */}
-        <View style={styles.searchBar}>
+        <View className="mx-[13px] flex-row items-center rounded-full bg-white px-4 py-1.5">
           <Search size={18} color="#6B7280" />
           <TextInput
             placeholder="Search Dish"
             placeholderTextColor="#9CA3AF"
-            style={styles.searchInput}
+            className="ml-2 flex-1 text-base text-neutral-700"
           />
         </View>
       </View>
     </ImageBackground>
   );
 }
-
-const styles = StyleSheet.create({
-  imageBackground: {
-    width: '100%',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    overflow: 'hidden',
-    paddingBottom: 12,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(254,192,117,0.5)',
-  },
-  container: {
-    paddingTop: 30,
-    paddingBottom: 18,
-  },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 12,
-    marginBottom: 18,
-    marginTop: 15,
-  },
-  homeText: {
-    fontSize: 30,
-    color: 'black',
-  },
-  iconsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconButton: {
-    marginLeft: 16,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: 'red',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 30,
-    paddingHorizontal: 16,
-    paddingVertical: 5,
-    marginHorizontal: 13,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 16,
-    color: '#374151',
-  },
-});
