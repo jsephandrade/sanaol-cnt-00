@@ -28,7 +28,7 @@ const ResetCodePage = () => {
   const [resendPending, setResendPending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const lastSubmittedRef = useRef('');
+  const autoSubmittedCodeRef = useRef('');
 
   useEffect(() => {
     const params = new URLSearchParams(search);
@@ -125,9 +125,7 @@ const ResetCodePage = () => {
       return;
     }
     if (code.length !== DIGIT_COUNT) return;
-    if (code === lastSubmittedRef.current) return;
     setPending(true);
-    lastSubmittedRef.current = code;
     try {
       const res = await authService.verifyPasswordReset(email, code);
       if (!res?.success || !res?.resetToken) {
@@ -140,18 +138,21 @@ const ResetCodePage = () => {
       navigate(`/set-new-password?token=${encodeURIComponent(res.resetToken)}`);
     } catch (err) {
       setError('Could not verify code.');
-      lastSubmittedRef.current = '';
     } finally {
       setPending(false);
     }
   }, [code, email, navigate, pending, resendPending]);
 
   useEffect(() => {
-    if (code.length !== DIGIT_COUNT) return undefined;
+    if (code.length !== DIGIT_COUNT) {
+      autoSubmittedCodeRef.current = '';
+      return undefined;
+    }
     if (pending || resendPending) return undefined;
-    if (code === lastSubmittedRef.current) return undefined;
+    if (autoSubmittedCodeRef.current === code) return undefined;
 
     const id = window.setTimeout(() => {
+      autoSubmittedCodeRef.current = code;
       verifyCode();
     }, 150);
 
@@ -161,7 +162,7 @@ const ResetCodePage = () => {
   const onResend = useCallback(async () => {
     setError('');
     setSuccess('');
-    lastSubmittedRef.current = '';
+    autoSubmittedCodeRef.current = '';
     if (!email) {
       setError(
         'We could not determine your email. Please restart the reset process.'
@@ -250,7 +251,7 @@ const ResetCodePage = () => {
         )}
       </form>
 
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs sm:text-sm">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm">
         <Link
           to="/login"
           className="text-primary underline underline-offset-2 font-semibold text-center sm:text-left"
