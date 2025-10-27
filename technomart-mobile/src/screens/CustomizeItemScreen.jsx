@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,21 +55,7 @@ export default function CustomizeItemScreen({ navigation, route }) {
       quantity,
     });
 
-    Alert.alert(
-      'Added to cart',
-      `${quantity}× ${item?.title || 'Campus Meal'} for ${peso(total)}`,
-      [
-        {
-          text: 'Keep browsing',
-          style: 'cancel',
-          onPress: () => navigation.goBack(),
-        },
-        {
-          text: 'View cart',
-          onPress: () => navigation.navigate('Cart'),
-        },
-      ]
-    );
+    navigation.navigate('Home');
   };
 
   return (
