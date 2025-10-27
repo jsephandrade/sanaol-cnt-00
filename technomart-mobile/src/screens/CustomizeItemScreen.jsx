@@ -19,7 +19,7 @@ const peso = (amount) =>
 export default function CustomizeItemScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const item = route?.params?.item;
-  const { addItem } = useCart();
+  const { addItem, totalItems } = useCart();
 
   const [selectedExtras, setSelectedExtras] = useState([]);
   const [notes, setNotes] = useState('');
@@ -208,50 +208,60 @@ export default function CustomizeItemScreen({ navigation, route }) {
             className="mt-3 rounded-2xl border border-[#F5DFD3] bg-white px-4 py-3 text-sm text-text"
           />
         </View>
-
-        <View className="mt-6 flex-row items-center justify-between rounded-2xl border border-[#F5DFD3] bg-white px-4 py-3">
-          <Text className="text-sm font-semibold text-text">Quantity</Text>
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="h-8 w-8 items-center justify-center rounded-full bg-[#FFE8D6]"
-              accessibilityRole="button"
-              accessibilityLabel="Decrease quantity">
-              <Feather name="minus" size={16} color="#F07F13" />
-            </TouchableOpacity>
-            <Text className="mx-3 text-sm font-semibold text-text">{quantity}</Text>
-            <TouchableOpacity
-              onPress={() => setQuantity((q) => q + 1)}
-              className="h-8 w-8 items-center justify-center rounded-full bg-peach-500"
-              accessibilityRole="button"
-              accessibilityLabel="Increase quantity">
-              <Feather name="plus" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
 
       <View
-        className="absolute bottom-5 left-5 right-5 rounded-[32px] bg-[#F07F13] px-6 py-5 shadow-xl"
+        className="absolute bottom-5 left-5 right-5 rounded-[28px] bg-white px-6 py-5 shadow-xl"
         style={{
           paddingBottom: Math.max(insets.bottom + 12, 20),
           shadowColor: '#F97316',
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.28,
-          shadowRadius: 18,
-          elevation: 12,
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.18,
+          shadowRadius: 16,
+          elevation: 10,
         }}>
-        <View className="items-center">
-          <Text className="text-xs uppercase tracking-[1.5px] text-white/70">Total</Text>
-          <Text className="mt-1 text-2xl font-semibold text-white">{peso(total)}</Text>
+        <View className="flex-row items-start justify-between">
+          <View>
+            <Text className="text-xs uppercase tracking-[1.5px] text-[#F97316]">Total</Text>
+            <Text className="mt-1 text-2xl font-semibold text-text">{peso(total)}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Cart')}
+            className="relative h-11 w-11 items-center justify-center rounded-full bg-[#FFF4EC]"
+            accessibilityRole="button"
+            accessibilityLabel="Open cart">
+            <Feather name="shopping-cart" size={22} color="#F07F13" />
+            <View className="absolute -right-1 -top-1 min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-peach-500 px-1">
+              <Text className="text-[10px] font-semibold text-white">{totalItems ?? 0}</Text>
+            </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          onPress={handleAddToCart}
-          className="mt-4 self-center rounded-full bg-white px-8 py-3 shadow-md shadow-black/10"
-          accessibilityRole="button"
-          accessibilityLabel="Add to cart">
-          <Text className="text-sm font-semibold text-peach-500">Add to cart</Text>
-        </TouchableOpacity>
+        <View className="mt-5 flex-row items-center space-x-3">
+          <View className="flex-row items-center rounded-full bg-[#FFF0E6] px-2 py-1">
+            <TouchableOpacity
+              onPress={() => setQuantity((q) => Math.max(1, q - 1))}
+              className="h-9 w-9 items-center justify-center rounded-full bg-white"
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity">
+              <Feather name="minus" size={18} color="#F07F13" />
+            </TouchableOpacity>
+            <Text className="mx-3 text-base font-semibold text-text">{quantity}</Text>
+            <TouchableOpacity
+              onPress={() => setQuantity((q) => q + 1)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-peach-500"
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity">
+              <Feather name="plus" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={handleAddToCart}
+            className="flex-1 flex-row items-center justify-center rounded-full bg-[#F07F13] px-4 py-3 shadow-md shadow-black/5"
+            accessibilityRole="button"
+            accessibilityLabel="Add to cart">
+            <Text className="text-sm font-semibold text-white">Add to cart</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
