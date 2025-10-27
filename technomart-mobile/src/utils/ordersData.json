@@ -1,0 +1,55 @@
+{
+  "currentOrder": {
+    "id": "TM-8724",
+    "restaurant": "Campus Canteen",
+    "etaMinutes": 10,
+    "placedAt": "Today • 12:12 PM",
+    "pickupSpot": "Campus Canteen • Window 4",
+    "instructions": "Show your TechnoMart ID at Window 4 once the screen shows READY. Keep the QR handy.",
+    "statusSteps": [
+      { "label": "Order placed", "time": "12:12 PM", "state": "completed" },
+      { "label": "Kitchen prepping", "time": "12:14 PM", "state": "current" },
+      { "label": "Ready for pickup", "time": "—", "state": "upcoming" },
+      { "label": "Picked up", "time": "—", "state": "upcoming" }
+    ],
+    "items": [
+      { "name": "Garlic Butter Wings", "quantity": 1, "price": 18 },
+      { "name": "Calamansi Cooler", "quantity": 1, "price": 6 }
+    ],
+    "deliveryFee": 0,
+    "platformFee": 1,
+    "tip": 0
+  },
+  "pastOrders": [
+    {
+      "id": "TM-8610",
+      "restaurant": "KainBros Rice Bowls",
+      "date": "Oct 24 • 7:35 PM",
+      "summary": "Beef tapa bowl, Iced latte",
+      "total": 29,
+      "status": "Picked up",
+      "rating": 4.9,
+      "imageUri": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800&auto=format&fit=crop"
+    },
+    {
+      "id": "TM-8598",
+      "restaurant": "Sazón Filipino Bites",
+      "date": "Oct 21 • 12:15 PM",
+      "summary": "Sisig wrap, Calamansi cooler",
+      "total": 22,
+      "status": "Collected",
+      "rating": 4.7,
+      "imageUri": "https://images.unsplash.com/photo-1498579150354-977475b7ea0b?q=80&w=800&auto=format&fit=crop"
+    },
+    {
+      "id": "TM-8570",
+      "restaurant": "Milk Tea Lab",
+      "date": "Oct 18 • 3:02 PM",
+      "summary": "Brown sugar pearl, Matcha latte",
+      "total": 18,
+      "status": "Picked up",
+      "rating": 5,
+      "imageUri": "https://images.unsplash.com/photo-1525351484163-7529414344d8?q=80&w=800&auto=format&fit=crop"
+    }
+  ]
+}
