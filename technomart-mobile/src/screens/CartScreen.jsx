@@ -201,7 +201,13 @@ export default function CartScreen({ navigation }) {
     return { ...slot, isPast: slotDate <= nowInManila };
   });
   const allSlotsPast = scheduleOptions.every((option) => option.isPast);
+  const selectedSlot = scheduleOptions.find((slot) => slot.key === selectedPickupTime);
 
+  const immediateEstimateLabel = 'Ready within 15 minutes';
+  const estimatedArrivalLabel =
+    pickupOption === 'now'
+      ? immediateEstimateLabel
+      : selectedSlot?.label || (allSlotsPast ? 'All slots booked today' : 'Select a pickup slot');
   const handleIncrement = (item) => updateItemQuantity(item.variantKey, item.quantity + 1);
   const handleDecrement = (item) => updateItemQuantity(item.variantKey, item.quantity - 1);
   const handleEdit = (item) => {
@@ -349,30 +355,49 @@ export default function CartScreen({ navigation }) {
                 className={`mt-1 text-xs ${
                   pickupOption === 'now' ? 'text-white/95' : 'text-[rgba(140,114,91,0.6)]'
                 }`}>
-                Ready within 15 minutes
+                {immediateEstimateLabel}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setPickupOption('later')}
+              disabled={allSlotsPast}
               accessibilityRole="button"
               accessibilityLabel="Select pickup for later"
+              accessibilityState={{ selected: pickupOption === 'later', disabled: allSlotsPast }}
               className={`ml-3 flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
                 pickupOption === 'later'
                   ? '-translate-y-[1.5px] border-[#EA580C] bg-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)]'
                   : ''
-              }`}>
+              }`}
+              style={allSlotsPast ? { opacity: 0.55 } : null}>
               <Text
                 className={`text-sm font-semibold ${
                   pickupOption === 'later' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
                 }`}>
                 Pickup for later
               </Text>
-              <Text
-                className={`mt-1 text-xs ${
-                  pickupOption === 'later' ? 'text-white/95' : 'text-[rgba(140,114,91,0.6)]'
-                }`}>
-                Schedule a convenient time
-              </Text>
+              <View className="mt-1 flex-row items-center">
+                {selectedSlot?.label && pickupOption === 'later' ? (
+                  <Feather
+                    name="clock"
+                    size={12}
+                    color={pickupOption === 'later' ? '#FFFFFF' : 'rgba(140,114,91,0.6)'}
+                    style={{ marginRight: 4 }}
+                  />
+                ) : null}
+                <Text
+                  className={`text-xs ${
+                    pickupOption === 'later'
+                      ? 'text-white/95'
+                      : allSlotsPast
+                        ? 'text-[#A1A1AA]'
+                        : 'text-[rgba(140,114,91,0.6)]'
+                  }`}
+                  style={allSlotsPast ? { fontStyle: 'italic' } : null}>
+                  {selectedSlot?.label ||
+                    (allSlotsPast ? 'All slots booked today' : 'Schedule a convenient time')}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -537,7 +562,20 @@ export default function CartScreen({ navigation }) {
             <Text className="text-xs uppercase tracking-[1.5px] text-[#F97316]">
               Estimated arrival
             </Text>
-            <Text className="text-xl font-semibold text-text">10 - 15 mins</Text>
+            <View className="mt-1 flex-row items-center">
+              {pickupOption === 'later' && selectedSlot?.label ? (
+                <Feather name="clock" size={16} color="#F97316" style={{ marginRight: 6 }} />
+              ) : null}
+              <Text
+                className="text-xl font-semibold text-text"
+                style={
+                  pickupOption === 'later' && !selectedSlot
+                    ? { fontStyle: 'italic', color: '#A16236' }
+                    : undefined
+                }>
+                {estimatedArrivalLabel}
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             onPress={onCheckout}
