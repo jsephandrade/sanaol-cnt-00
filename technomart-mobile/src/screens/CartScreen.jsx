@@ -469,12 +469,17 @@ export default function CartScreen({ navigation }) {
       </ScrollView>
 
       <View
-        className="absolute bottom-5 left-5 right-5 rounded-[30px] bg-[#F07F13] px-6 pt-[18px] shadow-[0px_12px_16px_rgba(249,115,22,0.30)]"
+        className="absolute bottom-5 left-5 right-5 rounded-[28px] bg-white px-6 py-5 shadow-xl"
         style={{
           paddingBottom: Math.max(insets.bottom + 12, 20),
+          shadowColor: '#F97316',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.18,
+          shadowRadius: 16,
+          elevation: 10,
         }}>
         {pickupOption === 'later' ? (
-          <View className="mb-4 rounded-[22px] border border-[#F5DFD3] bg-[#FFF4E8D9] px-4 py-3.5">
+          <View className="mb-4 rounded-[22px] border border-[#F5DFD3] bg-[#FFF4EC] px-4 py-3.5">
             <Text className="text-[12px] font-bold uppercase tracking-[1.1px] text-[#6B4F3A]">
               Select pickup time
             </Text>
@@ -527,21 +532,21 @@ export default function CartScreen({ navigation }) {
             ) : null}
           </View>
         ) : null}
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row items-start justify-between">
           <View>
-            <Text className="text-xs uppercase tracking-[1.5px] text-white/70">
+            <Text className="text-xs uppercase tracking-[1.5px] text-[#F97316]">
               Estimated arrival
             </Text>
-            <Text className="text-base font-semibold text-white">35 - 45 mins</Text>
+            <Text className="text-xl font-semibold text-text">10 - 15 mins</Text>
           </View>
           <TouchableOpacity
             onPress={onCheckout}
             disabled={!canCheckout}
-            className="rounded-full bg-white px-5 py-3"
+            className="flex-row items-center rounded-full bg-[#F07F13] px-5 py-3 shadow-md shadow-black/5"
             accessibilityRole="button"
             accessibilityLabel="Checkout"
             style={!canCheckout ? { opacity: 0.55 } : null}>
-            <Text className="text-sm font-semibold text-peach-500">Checkout ₱ {peso(total)}</Text>
+            <Text className="text-sm font-semibold text-white">Checkout {peso(total)}</Text>
           </TouchableOpacity>
         </View>
       </View>
