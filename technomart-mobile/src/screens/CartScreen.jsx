@@ -65,6 +65,11 @@ const PICKUP_TIME_SLOTS = (() => {
 const peso = (amount) =>
   `₱${Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 
+const fallbackNavigation = Object.freeze({
+  goBack: () => {},
+  navigate: () => {},
+});
+
 function CartItem({ item, onIncrement, onDecrement, onEdit }) {
   const unitPrice = item.basePrice + item.extrasTotal;
   const lineTotal = unitPrice * item.quantity;
@@ -150,6 +155,8 @@ export default function CartScreen({ navigation }) {
   const [timeTick, setTimeTick] = React.useState(() => Date.now());
   const { items, updateItemQuantity, removeItem, subtotal, totalItems, addItem } = useCart();
 
+  const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
+
   const hasItems = totalItems > 0;
   const total = subtotal;
   const canCheckout = hasItems && (pickupOption !== 'later' || Boolean(selectedPickupTime));
@@ -224,7 +231,7 @@ export default function CartScreen({ navigation }) {
       quantity: 1,
     };
     removeItem(item.variantKey);
-    navigation.navigate('CustomizeItem', variantCopy);
+    safeNavigation.navigate('CustomizeItem', variantCopy);
   };
 
   const handleAddOn = (addOn) => {
@@ -315,7 +322,7 @@ export default function CartScreen({ navigation }) {
         </View>
         <View className="flex-row items-center justify-between px-5">
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => safeNavigation.goBack()}
             className="h-10 w-10 items-center justify-center rounded-full bg-white/70"
             accessibilityRole="button"
             accessibilityLabel="Go back">
@@ -427,7 +434,7 @@ export default function CartScreen({ navigation }) {
                 Add your campus favorites from the home screen to get started.
               </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate('Home')}
+                onPress={() => safeNavigation.navigate('Home')}
                 className="mt-4 rounded-full bg-peach-500 px-5 py-3"
                 accessibilityRole="button"
                 accessibilityLabel="Browse menu">
