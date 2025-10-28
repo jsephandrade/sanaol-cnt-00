@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -70,7 +70,7 @@ function CartItem({ item, onIncrement, onDecrement, onEdit }) {
   const lineTotal = unitPrice * item.quantity;
 
   return (
-    <View style={styles.cartCard}>
+    <View className="mb-4 flex-row rounded-[28px] border border-[#F5DFD3] bg-white p-4 shadow-[0px_8px_12px_rgba(249,115,22,0.08)]">
       <Image
         source={{ uri: item.image }}
         className="h-20 w-20 rounded-2xl"
@@ -281,7 +281,8 @@ export default function CartScreen({ navigation }) {
         colors={['#FFE0C2', '#FFEBD8']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        className="rounded-b-[36px] pb-6"
+        style={{ paddingTop: insets.top + 12 }}>
         <View
           className="absolute inset-0"
           accessible={false}
@@ -333,25 +334,23 @@ export default function CartScreen({ navigation }) {
               onPress={() => setPickupOption('now')}
               accessibilityRole="button"
               accessibilityLabel="Select pickup now"
-              className="flex-1 rounded-2xl px-4 py-4"
-              style={[
-                styles.pickupButton,
-                pickupOption === 'now' ? styles.pickupButtonActive : styles.pickupButtonInactive,
-              ]}>
+              className={`flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
+                pickupOption === 'now'
+                  ? 'bg-[#EA580C] border-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)] -translate-y-[1.5px]'
+                  : ''
+              }`}>
               <Text
-                className="text-sm font-semibold"
-                style={
-                  pickupOption === 'now' ? styles.pickupButtonTextActive : styles.pickupButtonText
-                }>
+                className={`text-sm font-semibold ${
+                  pickupOption === 'now' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
+                }`}>
                 Pickup Now
               </Text>
               <Text
-                className="mt-1 text-xs"
-                style={
+                className={`mt-1 text-xs ${
                   pickupOption === 'now'
-                    ? styles.pickupButtonSubTextActive
-                    : styles.pickupButtonSubText
-                }>
+                    ? 'text-white/95'
+                    : 'text-[rgba(140,114,91,0.6)]'
+                }`}>
                 Ready within 15 minutes
               </Text>
             </TouchableOpacity>
@@ -359,25 +358,23 @@ export default function CartScreen({ navigation }) {
               onPress={() => setPickupOption('later')}
               accessibilityRole="button"
               accessibilityLabel="Select pickup for later"
-              className="ml-3 flex-1 rounded-2xl px-4 py-4"
-              style={[
-                styles.pickupButton,
-                pickupOption === 'later' ? styles.pickupButtonActive : styles.pickupButtonInactive,
-              ]}>
+              className={`ml-3 flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
+                pickupOption === 'later'
+                  ? 'bg-[#EA580C] border-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)] -translate-y-[1.5px]'
+                  : ''
+              }`}>
               <Text
-                className="text-sm font-semibold"
-                style={
-                  pickupOption === 'later' ? styles.pickupButtonTextActive : styles.pickupButtonText
-                }>
+                className={`text-sm font-semibold ${
+                  pickupOption === 'later' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
+                }`}>
                 Pickup for later
               </Text>
               <Text
-                className="mt-1 text-xs"
-                style={
+                className={`mt-1 text-xs ${
                   pickupOption === 'later'
-                    ? styles.pickupButtonSubTextActive
-                    : styles.pickupButtonSubText
-                }>
+                    ? 'text-white/95'
+                    : 'text-[rgba(140,114,91,0.6)]'
+                }`}>
                 Schedule a convenient time
               </Text>
             </TouchableOpacity>
@@ -402,7 +399,7 @@ export default function CartScreen({ navigation }) {
               />
             ))
           ) : (
-            <View style={styles.emptyState}>
+            <View className="items-center justify-center rounded-[28px] border border-[#F5DFD3] bg-white px-6 py-12 shadow-[0px_6px_12px_rgba(249,115,22,0.06)]">
               <MaterialCommunityIcons name="food-variant-off" size={48} color="#D1D5DB" />
               <Text className="mt-4 text-base font-semibold text-text">Your cart is empty</Text>
               <Text className="mt-1 text-center text-sm text-sub">
@@ -420,12 +417,12 @@ export default function CartScreen({ navigation }) {
         </View>
 
         <View className="px-5">
-          <View style={styles.summaryCard}>
+          <View className="mt-2 rounded-[28px] border border-[#F5DFD3] bg-white p-5 shadow-[0px_6px_10px_rgba(249,115,22,0.06)]">
             <View className="flex-row items-center justify-between">
               <Text className="text-sm font-semibold text-text">Subtotal</Text>
               <Text className="text-sm font-semibold text-text">{peso(subtotal)}</Text>
             </View>
-            <View style={styles.divider} />
+            <View className="my-3 h-px bg-[#F2D4C4]" />
             <View className="flex-row items-center justify-between">
               <View>
                 <Text className="text-base font-semibold text-text">Total</Text>
@@ -454,7 +451,7 @@ export default function CartScreen({ navigation }) {
             {RECOMMENDED_ADDONS.map((addOn) => (
               <TouchableOpacity
                 key={addOn.id}
-                style={styles.addOnCard}
+                className="mr-4 w-[150px] rounded-[24px] border border-[#F5DFD3] bg-white p-3.5 shadow-[0px_6px_12px_rgba(249,115,22,0.06)]"
                 onPress={() => handleAddOn(addOn)}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${addOn.title}`}>
@@ -476,45 +473,55 @@ export default function CartScreen({ navigation }) {
       </ScrollView>
 
       <View
-        style={[
-          styles.checkoutBar,
-          {
-            paddingBottom: Math.max(insets.bottom + 12, 20),
-          },
-        ]}>
+        className="absolute bottom-5 left-5 right-5 rounded-[30px] bg-[#F07F13] px-6 pt-[18px] shadow-[0px_12px_16px_rgba(249,115,22,0.30)]"
+        style={{
+          paddingBottom: Math.max(insets.bottom + 12, 20),
+        }}>
         {pickupOption === 'later' ? (
-          <View style={styles.scheduleSection}>
-            <Text style={styles.scheduleTitle}>Select pickup time</Text>
+          <View className="mb-4 rounded-[22px] border border-[#F5DFD3] bg-[#FFF4E8D9] px-4 py-3.5">
+            <Text className="text-[12px] font-bold uppercase tracking-[1.1px] text-[#6B4F3A]">
+              Select pickup time
+            </Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               decelerationRate="fast"
               snapToAlignment="center"
               snapToInterval={108}
-              contentContainerStyle={styles.timeSlotList}>
+              contentContainerClassName="mt-2.5 flex-row items-center px-1.5 pr-4 py-1.5">
               {scheduleOptions.map((option) => {
                 const isSelected = selectedPickupTime === option.key;
                 const isDisabled = option.isPast;
+
+                const baseSlotClasses =
+                  'mr-3 min-w-[88px] items-center justify-center rounded-2xl border border-[#F5DFD3] px-4 py-2.5';
+                const stateClasses = [
+                  'bg-[rgba(255,255,255,0.95)]',
+                  isSelected
+                    ? 'bg-[#EA580C] border-[#EA580C] shadow-[0px_4px_8px_rgba(249,115,22,0.25)]'
+                    : '',
+                  isDisabled ? 'bg-[#E5E7EB8C] border-[#E5E7EB]' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
 
                 return (
                   <TouchableOpacity
                     key={option.key}
                     onPress={() => setSelectedPickupTime(option.key)}
                     disabled={isDisabled}
-                    style={[
-                      styles.timeSlot,
-                      isSelected ? styles.timeSlotActive : null,
-                      isDisabled ? styles.timeSlotDisabled : null,
-                    ]}
+                    className={`${baseSlotClasses} ${stateClasses}`}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isSelected, disabled: isDisabled }}
                     accessibilityLabel={`Pickup at ${option.label}`}>
                     <Text
-                      style={[
-                        styles.timeSlotText,
-                        isSelected ? styles.timeSlotTextActive : null,
-                        isDisabled ? styles.timeSlotTextDisabled : null,
-                      ]}>
+                      className={`text-[13px] font-semibold ${
+                        isSelected
+                          ? 'text-white'
+                          : isDisabled
+                          ? 'text-[#A1A1AA]'
+                          : 'text-[#7C5E43]'
+                      }`}>
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -522,13 +529,13 @@ export default function CartScreen({ navigation }) {
               })}
             </ScrollView>
             {allSlotsPast ? (
-              <Text style={styles.noSlotsText}>
+              <Text className="mt-2 text-[12px] text-[#7C5E43]">
                 All pickup windows for today have passed. Please check back tomorrow.
               </Text>
             ) : null}
           </View>
         ) : null}
-        <View style={styles.checkoutContent}>
+        <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-xs uppercase tracking-[1.5px] text-white/70">
               Estimated arrival
@@ -550,193 +557,3 @@ export default function CartScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
-    paddingBottom: 24,
-  },
-  pickupButton: {
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-  },
-  pickupButtonInactive: {
-    backgroundColor: 'rgba(255, 244, 232, 0.78)',
-    borderColor: '#F5DFD3',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  pickupButtonActive: {
-    backgroundColor: '#EA580C',
-    borderColor: '#EA580C',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 4,
-    transform: [{ translateY: -1.5 }],
-  },
-  pickupButtonText: {
-    color: 'rgba(107, 79, 58, 0.6)',
-    fontWeight: '600',
-  },
-  pickupButtonTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  pickupButtonSubText: {
-    color: 'rgba(140, 114, 91, 0.6)',
-  },
-  pickupButtonSubTextActive: {
-    color: 'rgba(255, 255, 255, 0.95)',
-  },
-  cartCard: {
-    flexDirection: 'row',
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 28,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 20,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F2D4C4',
-    marginVertical: 12,
-  },
-  addOnCard: {
-    width: 150,
-    padding: 14,
-    borderRadius: 24,
-    marginRight: 16,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  scheduleSection: {
-    width: '100%',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    backgroundColor: 'rgba(255, 244, 232, 0.85)',
-    marginBottom: 16,
-  },
-  scheduleTitle: {
-    color: '#6B4F3A',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-  },
-  timeSlotList: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 6,
-    paddingRight: 16,
-    paddingVertical: 6,
-    marginTop: 10,
-  },
-  timeSlot: {
-    minWidth: 88,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    marginRight: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  timeSlotActive: {
-    backgroundColor: '#EA580C',
-    borderColor: '#EA580C',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  timeSlotDisabled: {
-    backgroundColor: 'rgba(229, 231, 235, 0.55)',
-    borderColor: '#E5E7EB',
-  },
-  timeSlotText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7C5E43',
-  },
-  timeSlotTextActive: {
-    color: '#FFFFFF',
-  },
-  timeSlotTextDisabled: {
-    color: '#A1A1AA',
-  },
-  noSlotsText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#7C5E43',
-  },
-  checkoutContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  checkoutBar: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    bottom: 20,
-    borderRadius: 30,
-    paddingHorizontal: 24,
-    paddingTop: 18,
-    backgroundColor: '#F07F13',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
-    alignItems: 'stretch',
-    justifyContent: 'flex-start',
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: 24,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: '#F5DFD3',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
-});
