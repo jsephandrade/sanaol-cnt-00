@@ -60,7 +60,7 @@ function Banner({ tone = 'info', message }) {
 
 export default function PaymentScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { totalItems } = useCart();
+  const { totalItems, orderType } = useCart();
   const {
     paymentMethod,
     selectPaymentMethod,
@@ -165,6 +165,26 @@ export default function PaymentScreen({ navigation }) {
     isOnline,
   ]);
 
+  const pickupSummaryLabel = React.useMemo(() => {
+    if (orderType === 'later') {
+      return 'Pickup for later';
+    }
+    if (orderType === 'now') {
+      return 'Pickup now';
+    }
+    return 'Pickup preference not set';
+  }, [orderType]);
+
+  const pickupSummaryDescription = React.useMemo(() => {
+    if (orderType === 'later') {
+      return 'You scheduled your order for a later pickup time.';
+    }
+    if (orderType === 'now') {
+      return 'Your order will be prepared as soon as possible for pickup.';
+    }
+    return 'Choose your pickup option on the cart screen before completing payment.';
+  }, [orderType]);
+
   return (
     <View className="flex-1 bg-cream">
       <LinearGradient
@@ -193,6 +213,12 @@ export default function PaymentScreen({ navigation }) {
         showsVerticalScrollIndicator={false}>
         <View className="px-5 pt-6">
           <Banner tone={errorMessage ? 'error' : 'info'} message={errorMessage || infoMessage} />
+
+          <View className="mb-4 rounded-[28px] border border-[#F5DFD3] bg-[#FFF8F2] p-5 shadow-[0px_6px_12px_rgba(249,115,22,0.05)]">
+            <Text className="text-xs uppercase tracking-[1.5px] text-[#A16236]">Pickup preference</Text>
+            <Text className="mt-2 text-base font-semibold text-text">{pickupSummaryLabel}</Text>
+            <Text className="mt-1 text-sm text-sub">{pickupSummaryDescription}</Text>
+          </View>
 
           <View className="rounded-[28px] border border-[#F5DFD3] bg-white p-5 shadow-[0px_6px_12px_rgba(249,115,22,0.06)]">
             <Text className="text-xs uppercase tracking-[1.5px] text-[#A16236]">

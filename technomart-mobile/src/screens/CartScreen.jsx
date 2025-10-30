@@ -154,14 +154,29 @@ function CartItem({ item, onIncrement, onDecrement, onEdit }) {
 
 export default function CartScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [pickupOption, setPickupOption] = React.useState('now');
   const [selectedPickupTime, setSelectedPickupTime] = React.useState(null);
   const [timeTick, setTimeTick] = React.useState(() => Date.now());
-  const { items, updateItemQuantity, removeItem, subtotal, totalItems, addItem } = useCart();
+  const {
+    items,
+    updateItemQuantity,
+    removeItem,
+    subtotal,
+    totalItems,
+    addItem,
+    orderType,
+    updateOrderType,
+  } = useCart();
   const { beginCheckout } = useCheckout();
+
+  React.useEffect(() => {
+    if (!orderType) {
+      updateOrderType('now');
+    }
+  }, [orderType, updateOrderType]);
 
   const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
 
+  const pickupOption = orderType ?? 'now';
   const hasItems = totalItems > 0;
   const total = subtotal;
   const canCheckout = hasItems && (pickupOption !== 'later' || Boolean(selectedPickupTime));
@@ -350,7 +365,7 @@ export default function CartScreen({ navigation }) {
           <Text className="text-xs uppercase tracking-[1.5px] text-[#A16236]">Pickup options</Text>
           <View className="mt-3 flex-row">
             <TouchableOpacity
-              onPress={() => setPickupOption('now')}
+              onPress={() => updateOrderType('now')}
               accessibilityRole="button"
               accessibilityLabel="Select pickup now"
               className={`flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
@@ -372,7 +387,7 @@ export default function CartScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setPickupOption('later')}
+              onPress={() => updateOrderType('later')}
               accessibilityRole="button"
               accessibilityLabel="Select pickup for later"
               accessibilityState={{ selected: pickupOption === 'later' }}
