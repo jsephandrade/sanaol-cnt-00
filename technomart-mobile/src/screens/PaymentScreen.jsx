@@ -1,11 +1,21 @@
 import React from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Network from 'expo-network';
 import { useCheckout } from '../context/CheckoutContext';
 import { useCart } from '../context/CartContext';
+import { trackCheckoutEvent } from '../utils/trackCheckoutEvent';
 
 const PAYMENT_OPTIONS = [
   {
@@ -52,9 +62,14 @@ function Banner({ tone = 'info', message }) {
   );
 }
 
-export default function PaymentScreen({ navigation }) {
+const ORDER_TYPE_LABELS = {
+  'dine-in': 'Dine-in',
+  takeout: 'Takeout',
+};
+
+export default function PaymentScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const { totalItems, orderType } = useCart();
+  const { totalItems, orderType: cartOrderType } = useCart();
   const { paymentMethod, selectPaymentMethod, markPaymentStatus } = useCheckout();
   const [processing, setProcessing] = React.useState(false);
   const [infoMessage, setInfoMessage] = React.useState(
@@ -62,12 +77,39 @@ export default function PaymentScreen({ navigation }) {
   );
   const [errorMessage, setErrorMessage] = React.useState(null);
   const [isOnline, setIsOnline] = React.useState(true);
+  const routeOrderType = route?.params?.orderType;
+  const activeOrderType = routeOrderType ?? cartOrderType ?? null;
+
+  const showNavigationError = React.useCallback(() => {
+    if (Platform.OS === 'android') {
+      ToastAndroid.show('Unable to continue. Please try again.', ToastAndroid.SHORT);
+    } else {
+      Alert.alert('Unable to continue', 'Please try again.');
+    }
+  }, []);
+
+  const safeNavigate = React.useCallback(
+    (...args) => {
+      try {
+        navigation.navigate(...args);
+      } catch (error) {
+        console.error('PaymentScreen navigation error', error);
+        showNavigationError();
+      }
+    },
+    [navigation, showNavigationError]
+  );
 
   React.useEffect(() => {
-    if (!totalItems || !orderType) {
-      navigation.goBack();
+    if (!totalItems) {
+      navigation.goBack?.();
+      return;
     }
-  }, [totalItems, orderType, navigation]);
+    if (!activeOrderType) {
+      console.warn('PaymentScreen: Missing order type. Returning to cart to prompt selection.');
+      navigation.goBack?.();
+    }
+  }, [totalItems, activeOrderType, navigation]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -118,36 +160,54 @@ export default function PaymentScreen({ navigation }) {
       return;
     }
 
+    if (!activeOrderType) {
+      console.warn('PaymentScreen: Attempted to continue without an order type.');
+      showNavigationError();
+      return;
+    }
+
     setProcessing(true);
     setErrorMessage(null);
+    trackCheckoutEvent('checkout_continue_to_review', {
+      orderType: activeOrderType,
+      paymentMethod,
+    });
 
     if (paymentMethod === 'cash') {
-      markPaymentStatus('pending');
+      markPaymentStatus('pending', { orderType: activeOrderType });
       setProcessing(false);
-      navigation.navigate('OrderReview');
+      safeNavigate('OrderReview', { orderType: activeOrderType });
       return;
     }
 
     if (!isOnline) {
-      markPaymentStatus('selecting');
+      markPaymentStatus('selecting', { orderType: activeOrderType });
       setErrorMessage('You appear to be offline. Connect to continue with GCash.');
       setProcessing(false);
       return;
     }
 
-    markPaymentStatus('authorizing');
+    markPaymentStatus('authorizing', { orderType: activeOrderType });
 
     try {
       const reference = await sandboxAuthorization();
-      markPaymentStatus('authorized', { provider: 'gcash', reference });
-      navigation.navigate('OrderReview');
+      markPaymentStatus('authorized', { provider: 'gcash', reference, orderType: activeOrderType });
+      safeNavigate('OrderReview', { orderType: activeOrderType });
     } catch (error) {
-      markPaymentStatus('failed');
+      markPaymentStatus('failed', { orderType: activeOrderType });
       setErrorMessage(error?.message || 'GCash payment was cancelled. Try again.');
     } finally {
       setProcessing(false);
     }
-  }, [paymentMethod, processing, markPaymentStatus, navigation, isOnline]);
+  }, [
+    paymentMethod,
+    processing,
+    markPaymentStatus,
+    isOnline,
+    activeOrderType,
+    safeNavigate,
+    showNavigationError,
+  ]);
 
   return (
     <View className="flex-1 bg-cream">
@@ -168,6 +228,15 @@ export default function PaymentScreen({ navigation }) {
           <Text className="text-lg font-semibold text-[#6B4F3A]">Payment</Text>
           <View className="h-10 w-10" />
         </View>
+        {activeOrderType ? (
+          <View className="px-5">
+            <View className="mt-4 self-start rounded-full bg-white/80 px-3 py-1">
+              <Text className="text-[12px] font-semibold uppercase tracking-[1.2px] text-[#6B4F3A]">
+                {ORDER_TYPE_LABELS[activeOrderType] ?? activeOrderType}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </LinearGradient>
 
       <ScrollView
@@ -266,7 +335,7 @@ export default function PaymentScreen({ navigation }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => navigation.navigate('PaymentPolicies')}
+          onPress={() => safeNavigate('PaymentPolicies')}
           className="mt-4 items-center"
           accessibilityRole="link"
           accessibilityLabel="View payment policies">
