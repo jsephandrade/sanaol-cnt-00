@@ -209,12 +209,7 @@ export default function SignUpScreen({ navigation }) {
 
     if (firstError || lastError || roleError || emailError || passwordError || confirmError) {
       const firstVisibleError =
-        firstError ||
-        lastError ||
-        roleError ||
-        emailError ||
-        passwordError ||
-        confirmError;
+        firstError || lastError || roleError || emailError || passwordError || confirmError;
       setSafeError(firstVisibleError);
       AccessibilityInfo.announceForAccessibility?.(firstVisibleError);
       return;
@@ -452,8 +447,7 @@ export default function SignUpScreen({ navigation }) {
                         key={option}
                         className={[
                           'flex-1 flex-row items-center rounded-lg border px-3 py-3',
-                          'bg-white',
-                          selected ? 'border-peach-500' : 'border-gray-200',
+                          selected ? 'border-peach-500 bg-peach-500' : 'border-gray-200 bg-white',
                           loading ? 'opacity-60' : '',
                         ].join(' ')}
                         onPress={() => handleRoleSelect(option)}
@@ -465,10 +459,16 @@ export default function SignUpScreen({ navigation }) {
                         <View
                           className={[
                             'mr-2 h-4 w-4 rounded-full border',
-                            selected ? 'border-peach-500 bg-peach-500' : 'border-gray-300',
+                            selected ? 'border-white bg-white' : 'border-gray-300 bg-transparent',
                           ].join(' ')}
                         />
-                        <Text className="text-sm font-medium text-text">{option}</Text>
+                        <Text
+                          className={[
+                            'text-sm font-medium',
+                            selected ? 'text-white' : 'text-text',
+                          ].join(' ')}>
+                          {option}
+                        </Text>
                       </TouchableOpacity>
                     );
                   })}
