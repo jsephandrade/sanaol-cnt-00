@@ -4,6 +4,7 @@ const CartContext = createContext(undefined);
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
+  const [orderType, setOrderType] = useState(null);
 
   const addItem = useCallback(({ item, extras = [], notes = '', quantity = 1 }) => {
     if (!item) return;
@@ -66,7 +67,14 @@ export function CartProvider({ children }) {
     setItems((prev) => prev.filter((item) => item.variantKey !== variantKey));
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
+  const updateOrderType = useCallback((nextValue) => {
+    setOrderType((prev) => (typeof nextValue === 'function' ? nextValue(prev) : nextValue));
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setItems([]);
+    setOrderType(null);
+  }, []);
 
   const subtotal = useMemo(
     () => items.reduce((sum, item) => sum + (item.basePrice + item.extrasTotal) * item.quantity, 0),
@@ -78,14 +86,26 @@ export function CartProvider({ children }) {
   const value = useMemo(
     () => ({
       items,
+      orderType,
       addItem,
       updateItemQuantity,
       removeItem,
       clearCart,
+      updateOrderType,
       subtotal,
       totalItems,
     }),
-    [items, addItem, updateItemQuantity, removeItem, clearCart, subtotal, totalItems]
+    [
+      items,
+      orderType,
+      addItem,
+      updateItemQuantity,
+      removeItem,
+      clearCart,
+      updateOrderType,
+      subtotal,
+      totalItems,
+    ]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

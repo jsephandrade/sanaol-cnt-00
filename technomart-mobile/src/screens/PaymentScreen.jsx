@@ -60,7 +60,7 @@ function Banner({ tone = 'info', message }) {
 
 export default function PaymentScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { totalItems } = useCart();
+  const { totalItems, orderType } = useCart();
   const {
     paymentMethod,
     selectPaymentMethod,
@@ -74,10 +74,10 @@ export default function PaymentScreen({ navigation }) {
   const [isOnline, setIsOnline] = React.useState(true);
 
   React.useEffect(() => {
-    if (!totalItems) {
+    if (!totalItems || !orderType) {
       navigation.goBack();
     }
-  }, [totalItems, navigation]);
+  }, [totalItems, orderType, navigation]);
 
   React.useEffect(() => {
     let isMounted = true;
