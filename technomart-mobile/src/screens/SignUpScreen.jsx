@@ -29,6 +29,7 @@ export default function SignUpScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [role, setRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -42,6 +43,7 @@ export default function SignUpScreen({ navigation }) {
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [confirmTouched, setConfirmTouched] = useState(false);
+  const [roleTouched, setRoleTouched] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
 
   // --- Refs for focus flow ---
@@ -88,10 +90,19 @@ export default function SignUpScreen({ navigation }) {
     return '';
   }, [trimmedConfirm, trimmedPassword]);
 
+  const allowedRoles = useMemo(() => ['Customer', 'Faculty Member'], []);
+
+  const roleError = useMemo(() => {
+    if (!role) return 'Please select your role';
+    if (!allowedRoles.includes(role)) return 'Please select a valid role';
+    return '';
+  }, [role, allowedRoles]);
+
   // Only show after touch or submit
   const showFirstError = firstTouched || formSubmitted ? firstError : '';
   const showLastError = lastTouched || formSubmitted ? lastError : '';
   const showEmailError = emailTouched || formSubmitted ? emailError : '';
+  const showRoleError = roleTouched || formSubmitted ? roleError : '';
   const showPasswordError = passwordTouched || formSubmitted ? passwordError : '';
   const showConfirmError = confirmTouched || formSubmitted ? confirmError : '';
 
@@ -101,6 +112,7 @@ export default function SignUpScreen({ navigation }) {
     showFirstError ||
     showLastError ||
     showEmailError ||
+    showRoleError ||
     showPasswordError ||
     showConfirmError;
 
@@ -127,18 +139,20 @@ export default function SignUpScreen({ navigation }) {
   const setSafeEmail = useMemo(() => setSafeState(setEmail), [setSafeState]);
   const setSafePassword = useMemo(() => setSafeState(setPassword), [setSafeState]);
   const setSafeConfirm = useMemo(() => setSafeState(setConfirm), [setSafeState]);
+  const setSafeRole = useMemo(() => setSafeState(setRole), [setSafeState]);
   const setSafeFirstTouched = useMemo(() => setSafeState(setFirstTouched), [setSafeState]);
   const setSafeLastTouched = useMemo(() => setSafeState(setLastTouched), [setSafeState]);
   const setSafeEmailTouched = useMemo(() => setSafeState(setEmailTouched), [setSafeState]);
   const setSafePasswordTouched = useMemo(() => setSafeState(setPasswordTouched), [setSafeState]);
   const setSafeConfirmTouched = useMemo(() => setSafeState(setConfirmTouched), [setSafeState]);
+  const setSafeRoleTouched = useMemo(() => setSafeState(setRoleTouched), [setSafeState]);
   const setSafeFormSubmitted = useMemo(() => setSafeState(setFormSubmitted), [setSafeState]);
 
   // Clear top-level error as user edits
   useEffect(() => {
     if (errorMessage) setSafeError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstName, lastName, email, password, confirm]);
+  }, [firstName, lastName, email, password, confirm, role]);
 
   // Change handlers mark as touched
   const handleFirstChange = useCallback(
@@ -181,13 +195,26 @@ export default function SignUpScreen({ navigation }) {
     [confirmTouched, setSafeConfirmTouched, setSafeConfirm]
   );
 
+  const handleRoleSelect = useCallback(
+    (selectedRole) => {
+      if (!roleTouched) setSafeRoleTouched(true);
+      setSafeRole(selectedRole);
+    },
+    [roleTouched, setSafeRoleTouched, setSafeRole]
+  );
+
   // --- Submit handler (NO API; just navigate on valid form) ---
   const handleRegister = useCallback(async () => {
     setSafeFormSubmitted(true);
 
-    if (firstError || lastError || emailError || passwordError || confirmError) {
+    if (firstError || lastError || roleError || emailError || passwordError || confirmError) {
       const firstVisibleError =
-        firstError || lastError || emailError || passwordError || confirmError;
+        firstError ||
+        lastError ||
+        roleError ||
+        emailError ||
+        passwordError ||
+        confirmError;
       setSafeError(firstVisibleError);
       AccessibilityInfo.announceForAccessibility?.(firstVisibleError);
       return;
@@ -207,11 +234,13 @@ export default function SignUpScreen({ navigation }) {
       setSafeEmail('');
       setSafePassword('');
       setSafeConfirm('');
+      setSafeRole('');
       setSafeFirstTouched(false);
       setSafeLastTouched(false);
       setSafeEmailTouched(false);
       setSafePasswordTouched(false);
       setSafeConfirmTouched(false);
+      setSafeRoleTouched(false);
       setSafeFormSubmitted(false);
 
       navigation.navigate('AccountCreated', { email: trimmedEmail });
@@ -224,6 +253,7 @@ export default function SignUpScreen({ navigation }) {
     emailError,
     passwordError,
     confirmError,
+    roleError,
     loading,
     trimmedEmail,
     setSafeError,
@@ -233,11 +263,13 @@ export default function SignUpScreen({ navigation }) {
     setSafeEmail,
     setSafePassword,
     setSafeConfirm,
+    setSafeRole,
     setSafeFirstTouched,
     setSafeLastTouched,
     setSafeEmailTouched,
     setSafePasswordTouched,
     setSafeConfirmTouched,
+    setSafeRoleTouched,
     setSafeFormSubmitted,
     navigation,
   ]);
@@ -405,6 +437,47 @@ export default function SignUpScreen({ navigation }) {
                     accessibilityHint="Enter your email address"
                   />
                 </View>
+
+                {/* Role Selection */}
+                <Text className="mb-2 mt-3 text-sm text-sub">Select Role</Text>
+                <View
+                  className="flex-row"
+                  style={{ columnGap: 8 }}
+                  accessibilityRole="radiogroup"
+                  accessibilityLabel="Select your role">
+                  {allowedRoles.map((option) => {
+                    const selected = role === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        className={[
+                          'flex-1 flex-row items-center rounded-lg border px-3 py-3',
+                          'bg-white',
+                          selected ? 'border-peach-500' : 'border-gray-200',
+                          loading ? 'opacity-60' : '',
+                        ].join(' ')}
+                        onPress={() => handleRoleSelect(option)}
+                        disabled={loading}
+                        accessibilityRole="radio"
+                        accessibilityState={{ disabled: loading, selected }}
+                        accessibilityLabel={option}
+                        accessibilityHint="Select your account role">
+                        <View
+                          className={[
+                            'mr-2 h-4 w-4 rounded-full border',
+                            selected ? 'border-peach-500 bg-peach-500' : 'border-gray-300',
+                          ].join(' ')}
+                        />
+                        <Text className="text-sm font-medium text-text">{option}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {showRoleError ? (
+                  <Text className="mt-1 text-xs text-red-500" accessibilityRole="alert">
+                    {showRoleError}
+                  </Text>
+                ) : null}
 
                 {/* Password */}
                 <Text className="mb-1 mt-3 text-sm text-sub">Create Password</Text>
