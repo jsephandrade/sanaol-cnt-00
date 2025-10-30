@@ -1,10 +1,23 @@
 ﻿import React from 'react';
-import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+  useColorScheme,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useCheckout } from '../context/CheckoutContext';
+import { trackCheckoutEvent } from '../utils/trackCheckoutEvent';
 
 const RECOMMENDED_ADDONS = [
   {
@@ -20,6 +33,21 @@ const RECOMMENDED_ADDONS = [
     price: 85,
     image:
       'https://images.unsplash.com/photo-1509474520651-53cf07c07d2d?q=80&w=800&auto=format&fit=crop',
+  },
+];
+
+const ORDER_TYPE_OPTIONS = [
+  {
+    key: 'dine-in',
+    title: 'Dine-in',
+    description: 'Enjoy your meal at the TechnoMart Café lounge.',
+    accessibilityLabel: 'Choose dine-in',
+  },
+  {
+    key: 'takeout',
+    title: 'Takeout',
+    description: 'Pick up at the counter and head to class.',
+    accessibilityLabel: 'Choose takeout',
   },
 ];
 
@@ -154,11 +182,29 @@ function CartItem({ item, onIncrement, onDecrement, onEdit }) {
 
 export default function CartScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
   const [pickupOption, setPickupOption] = React.useState('now');
   const [selectedPickupTime, setSelectedPickupTime] = React.useState(null);
   const [timeTick, setTimeTick] = React.useState(() => Date.now());
-  const { items, updateItemQuantity, removeItem, subtotal, totalItems, addItem } = useCart();
+  const {
+    items,
+    updateItemQuantity,
+    removeItem,
+    subtotal,
+    totalItems,
+    addItem,
+    orderType,
+    setOrderType,
+  } = useCart();
   const { beginCheckout } = useCheckout();
+  const [isOrderTypeModalVisible, setIsOrderTypeModalVisible] = React.useState(false);
+  const [selectedOrderType, setSelectedOrderType] = React.useState(null);
+  const isDarkMode = colorScheme === 'dark';
+  const sheetBackgroundColor = isDarkMode ? '#1F1F1F' : '#FFFFFF';
+  const sheetTitleColor = isDarkMode ? '#F9FAFB' : '#6B4F3A';
+  const sheetSubtitleColor = isDarkMode ? '#D4D4D8' : '#8C725B';
+  const sheetBorderColor = isDarkMode ? '#3F3F46' : '#F5DFD3';
+  const sheetAccentColor = '#F97316';
 
   const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
 
@@ -254,6 +300,11 @@ export default function CartScreen({ navigation }) {
     Alert.alert('Added to cart', `${addOn.title} was added to your cart.`);
   };
 
+  const openOrderTypeModal = React.useCallback(() => {
+    setSelectedOrderType(orderType ?? null);
+    setIsOrderTypeModalVisible(true);
+  }, [orderType]);
+
   const onCheckout = () => {
     if (!hasItems) {
       Alert.alert('Cart is empty', 'Add items before proceeding to checkout.');
@@ -266,9 +317,48 @@ export default function CartScreen({ navigation }) {
       );
       return;
     }
-    beginCheckout();
-    safeNavigation.navigate('Payment');
+    openOrderTypeModal();
   };
+
+  React.useEffect(() => {
+    if (isOrderTypeModalVisible) {
+      trackCheckoutEvent('checkout_option_viewed');
+    }
+  }, [isOrderTypeModalVisible]);
+
+  const handleSelectOrderType = React.useCallback((type) => {
+    setSelectedOrderType((prev) => {
+      if (prev === type) {
+        return prev;
+      }
+      trackCheckoutEvent('checkout_option_selected', { orderType: type });
+      return type;
+    });
+  }, []);
+
+  const closeOrderTypeModal = React.useCallback(() => {
+    setIsOrderTypeModalVisible(false);
+  }, []);
+
+  const handleContinueToPayment = React.useCallback(() => {
+    if (!selectedOrderType) {
+      return;
+    }
+    trackCheckoutEvent('checkout_continue_to_payment', { orderType: selectedOrderType });
+    setOrderType(selectedOrderType);
+    closeOrderTypeModal();
+    try {
+      beginCheckout();
+      safeNavigation.navigate('Payment', { orderType: selectedOrderType });
+    } catch (error) {
+      console.error('Failed to continue to payment', error);
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Unable to continue to payment. Please try again.', ToastAndroid.SHORT);
+      } else {
+        Alert.alert('Unable to continue', 'Please try again.');
+      }
+    }
+  }, [beginCheckout, closeOrderTypeModal, safeNavigation, selectedOrderType, setOrderType]);
 
   return (
     <View className="flex-1 bg-cream">
@@ -600,6 +690,154 @@ export default function CartScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+      <Modal
+        animationType="slide"
+        transparent
+        visible={isOrderTypeModalVisible}
+        onRequestClose={closeOrderTypeModal}
+        statusBarTranslucent>
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close order type selection"
+            onPress={closeOrderTypeModal}
+            style={{ flex: 1, backgroundColor: 'rgba(17,17,17,0.45)' }}
+          />
+          <View
+            style={{
+              backgroundColor: sheetBackgroundColor,
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: insets.bottom + 24,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              borderColor: sheetBorderColor,
+              borderWidth: isDarkMode ? 1 : 0,
+            }}>
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: sheetTitleColor,
+                }}>
+                Choose how you'd like to receive your order
+              </Text>
+              <Text
+                style={{
+                  marginTop: 6,
+                  fontSize: 14,
+                  color: sheetSubtitleColor,
+                }}>
+                Pick an option to continue to payment. You can change this later from the cart.
+              </Text>
+            </View>
+            {ORDER_TYPE_OPTIONS.map((option) => {
+              const isSelected = selectedOrderType === option.key;
+              return (
+                <Pressable
+                  key={option.key}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  accessibilityLabel={option.accessibilityLabel}
+                  onPress={() => handleSelectOrderType(option.key)}
+                  style={{
+                    borderRadius: 24,
+                    borderWidth: 2,
+                    borderColor: isSelected ? sheetAccentColor : sheetBorderColor,
+                    backgroundColor: isDarkMode ? '#27272A' : '#FFF6EE',
+                    padding: 18,
+                    marginBottom: 14,
+                  }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: isSelected ? '700' : '600',
+                          color: sheetTitleColor,
+                        }}>
+                        {option.title}
+                      </Text>
+                      <Text
+                        style={{
+                          marginTop: 6,
+                          fontSize: 13,
+                          color: sheetSubtitleColor,
+                        }}>
+                        {option.description}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        height: 22,
+                        width: 22,
+                        borderRadius: 11,
+                        borderWidth: 2,
+                        borderColor: isSelected ? sheetAccentColor : sheetBorderColor,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: isSelected ? sheetAccentColor : 'transparent',
+                      }}
+                      accessible={false}
+                    >
+                      {isSelected ? (
+                        <View
+                          style={{
+                            height: 10,
+                            width: 10,
+                            borderRadius: 5,
+                            backgroundColor: '#FFFFFF',
+                          }}
+                        />
+                      ) : null}
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+            <View style={{ flexDirection: 'row', marginTop: 8, alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={handleContinueToPayment}
+                disabled={!selectedOrderType}
+                accessibilityRole="button"
+                accessibilityLabel="Continue to payment"
+                style={{
+                  flex: 1,
+                  backgroundColor: selectedOrderType ? sheetAccentColor : `${sheetAccentColor}55`,
+                  paddingVertical: 14,
+                  borderRadius: 999,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                  }}>
+                  Continue
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={closeOrderTypeModal}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel order type selection"
+                style={{ marginLeft: 16 }}
+              >
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    color: sheetAccentColor,
+                  }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
