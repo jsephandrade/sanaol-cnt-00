@@ -18,6 +18,9 @@ import CartScreen from '../screens/CartScreen';
 import SearchScreen from '../screens/SearchScreen';
 import MenuListScreen from '../screens/MenuListScreen';
 import CustomizeItemScreen from '../screens/CustomizeItemScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+import OrderReviewScreen from '../screens/OrderReviewScreen';
+import PaymentPoliciesScreen from '../screens/PaymentPoliciesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +41,9 @@ export default function RootNavigator() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Alerts" component={AlertsScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Payment" component={PaymentScreen} />
+      <Stack.Screen name="PaymentPolicies" component={PaymentPoliciesScreen} />
+      <Stack.Screen name="OrderReview" component={OrderReviewScreen} />
       <Stack.Screen name="Search" component={SearchScreen} />
       <Stack.Screen name="MenuList" component={MenuListScreen} />
       <Stack.Screen name="CustomizeItem" component={CustomizeItemScreen} />

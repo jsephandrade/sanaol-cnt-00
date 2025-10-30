@@ -8,6 +8,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import './global.css'; // Ensure global styles are imported
 import { CartProvider } from './src/context/CartContext';
 import { OrdersProvider } from './src/context/OrdersContext';
+import { CheckoutProvider } from './src/context/CheckoutContext';
 
 export default function App() {
   return (
@@ -20,11 +21,13 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <CartProvider>
-          <OrdersProvider>
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          </OrdersProvider>
+          <CheckoutProvider>
+            <OrdersProvider>
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
+            </OrdersProvider>
+          </CheckoutProvider>
         </CartProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

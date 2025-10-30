@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
+import { useCheckout } from '../context/CheckoutContext';
 
 const RECOMMENDED_ADDONS = [
   {
@@ -157,6 +158,7 @@ export default function CartScreen({ navigation }) {
   const [selectedPickupTime, setSelectedPickupTime] = React.useState(null);
   const [timeTick, setTimeTick] = React.useState(() => Date.now());
   const { items, updateItemQuantity, removeItem, subtotal, totalItems, addItem } = useCart();
+  const { beginCheckout } = useCheckout();
 
   const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
 
@@ -264,7 +266,8 @@ export default function CartScreen({ navigation }) {
       );
       return;
     }
-    Alert.alert('Checkout', 'Proceeding to payment soon.');
+    beginCheckout();
+    safeNavigation.navigate('Payment');
   };
 
   return (
