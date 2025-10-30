@@ -721,7 +721,7 @@ export default function CartScreen({ navigation }) {
                   fontWeight: '700',
                   color: sheetTitleColor,
                 }}>
-                Choose how you'd like to receive your order
+                Choose how you like to receive your order
               </Text>
               <Text
                 style={{
@@ -749,7 +749,12 @@ export default function CartScreen({ navigation }) {
                     padding: 18,
                     marginBottom: 14,
                   }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
                     <View style={{ flex: 1, paddingRight: 12 }}>
                       <Text
                         style={{
@@ -779,8 +784,7 @@ export default function CartScreen({ navigation }) {
                         justifyContent: 'center',
                         backgroundColor: isSelected ? sheetAccentColor : 'transparent',
                       }}
-                      accessible={false}
-                    >
+                      accessible={false}>
                       {isSelected ? (
                         <View
                           style={{
@@ -808,8 +812,7 @@ export default function CartScreen({ navigation }) {
                   paddingVertical: 14,
                   borderRadius: 999,
                   alignItems: 'center',
-                }}
-              >
+                }}>
                 <Text
                   style={{
                     fontSize: 15,
@@ -823,8 +826,7 @@ export default function CartScreen({ navigation }) {
                 onPress={closeOrderTypeModal}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel order type selection"
-                style={{ marginLeft: 16 }}
-              >
+                style={{ marginLeft: 16 }}>
                 <Text
                   style={{
                     fontSize: 15,
