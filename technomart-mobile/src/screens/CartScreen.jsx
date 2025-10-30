@@ -194,7 +194,7 @@ export default function CartScreen({ navigation }) {
     totalItems,
     addItem,
     orderType,
-    setOrderType,
+    updateOrderType,
   } = useCart();
   const { beginCheckout } = useCheckout();
   const [isOrderTypeModalVisible, setIsOrderTypeModalVisible] = React.useState(false);
@@ -345,7 +345,7 @@ export default function CartScreen({ navigation }) {
       return;
     }
     trackCheckoutEvent('checkout_continue_to_payment', { orderType: selectedOrderType });
-    setOrderType(selectedOrderType);
+    updateOrderType(selectedOrderType);
     closeOrderTypeModal();
     try {
       beginCheckout();
@@ -358,7 +358,7 @@ export default function CartScreen({ navigation }) {
         Alert.alert('Unable to continue', 'Please try again.');
       }
     }
-  }, [beginCheckout, closeOrderTypeModal, safeNavigation, selectedOrderType, setOrderType]);
+  }, [beginCheckout, closeOrderTypeModal, safeNavigation, selectedOrderType, updateOrderType]);
 
   return (
     <View className="flex-1 bg-cream">

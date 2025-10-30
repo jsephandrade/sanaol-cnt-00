@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -60,24 +54,20 @@ function Banner({ tone = 'info', message }) {
 
 export default function PaymentScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { totalItems } = useCart();
-  const {
-    paymentMethod,
-    selectPaymentMethod,
-    markPaymentStatus,
-  } = useCheckout();
+  const { totalItems, orderType } = useCart();
+  const { paymentMethod, selectPaymentMethod, markPaymentStatus } = useCheckout();
   const [processing, setProcessing] = React.useState(false);
   const [infoMessage, setInfoMessage] = React.useState(
-    paymentMethod === 'gcash' ? SANDBOX_MESSAGE : null,
+    paymentMethod === 'gcash' ? SANDBOX_MESSAGE : null
   );
   const [errorMessage, setErrorMessage] = React.useState(null);
   const [isOnline, setIsOnline] = React.useState(true);
 
   React.useEffect(() => {
-    if (!totalItems) {
+    if (!totalItems || !orderType) {
       navigation.goBack();
     }
-  }, [totalItems, navigation]);
+  }, [totalItems, orderType, navigation]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -120,7 +110,7 @@ export default function PaymentScreen({ navigation }) {
       selectPaymentMethod(method);
       setErrorMessage(null);
     },
-    [selectPaymentMethod],
+    [selectPaymentMethod]
   );
 
   const handleContinue = React.useCallback(async () => {
@@ -157,13 +147,7 @@ export default function PaymentScreen({ navigation }) {
     } finally {
       setProcessing(false);
     }
-  }, [
-    paymentMethod,
-    processing,
-    markPaymentStatus,
-    navigation,
-    isOnline,
-  ]);
+  }, [paymentMethod, processing, markPaymentStatus, navigation, isOnline]);
 
   return (
     <View className="flex-1 bg-cream">
