@@ -34,8 +34,11 @@ const getNowInManila = () => {
     const localeString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
     return new Date(localeString);
   } catch (error) {
-    console.warn('Falling back to device time, unable to resolve Asia/Manila timezone.', error);
-    return new Date();
+    console.warn('Falling back to manual offset, unable to resolve Asia/Manila timezone.', error);
+    const now = new Date();
+    const utcTimestamp = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
+    const manilaOffsetMs = 8 * 60 * 60 * 1000;
+    return new Date(utcTimestamp + manilaOffsetMs);
   }
 };
 
@@ -367,16 +370,15 @@ export default function CartScreen({ navigation }) {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setPickupOption('later')}
-              disabled={allSlotsPast}
               accessibilityRole="button"
               accessibilityLabel="Select pickup for later"
-              accessibilityState={{ selected: pickupOption === 'later', disabled: allSlotsPast }}
+              accessibilityState={{ selected: pickupOption === 'later' }}
               className={`ml-3 flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
                 pickupOption === 'later'
                   ? '-translate-y-[1.5px] border-[#EA580C] bg-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)]'
                   : ''
               }`}
-              style={allSlotsPast ? { opacity: 0.55 } : null}>
+              style={allSlotsPast && pickupOption !== 'later' ? { opacity: 0.6 } : null}>
               <Text
                 className={`text-sm font-semibold ${
                   pickupOption === 'later' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
