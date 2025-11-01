@@ -39,15 +39,23 @@ const RECOMMENDED_ADDONS = [
 const ORDER_TYPE_OPTIONS = [
   {
     key: 'dine-in',
-    title: 'Dine-in',
-    description: 'Enjoy your meal at the TechnoMart Café lounge.',
+    title: 'DINE-IN',
+    description: 'Enjoy your meal at the CTU canteen.',
     accessibilityLabel: 'Choose dine-in',
+    accentColor: '#E75B4B',
+    idleBorderColor: '#F4BDB2',
+    circleBackground: '#FFF2EB',
+    iconName: 'silverware-fork-knife',
   },
   {
     key: 'takeout',
-    title: 'Takeout',
+    title: 'TAKEOUT',
     description: 'Pick up at the counter and head to class.',
     accessibilityLabel: 'Choose takeout',
+    accentColor: '#E75B4B',
+    idleBorderColor: '#F4BDB2',
+    circleBackground: '#FFF2EB',
+    iconName: 'food-takeout-box-outline',
   },
 ];
 
@@ -157,8 +165,8 @@ export default function CartScreen({ navigation }) {
   const sheetBackgroundColor = isDarkMode ? '#1F1F1F' : '#FFFFFF';
   const sheetTitleColor = isDarkMode ? '#F9FAFB' : '#6B4F3A';
   const sheetSubtitleColor = isDarkMode ? '#D4D4D8' : '#8C725B';
-  const sheetBorderColor = isDarkMode ? '#3F3F46' : '#F5DFD3';
   const sheetAccentColor = '#F97316';
+  const safeBottomInset = Math.max(insets.bottom, 0);
 
   const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
 
@@ -253,6 +261,89 @@ export default function CartScreen({ navigation }) {
     }
   }, [beginCheckout, closeOrderTypeModal, safeNavigation, selectedOrderType, updateOrderType]);
 
+  const renderOrderTypeOption = React.useCallback(
+    (option) => {
+      if (!option) {
+        return null;
+      }
+      const isSelected = selectedOrderType === option.key;
+      const circleBorderColor = isSelected ? option.accentColor : option.idleBorderColor;
+      const outerBackground = isDarkMode ? '#2E2A27' : option.circleBackground;
+      const innerBackground = isSelected ? option.accentColor : isDarkMode ? '#3F3F46' : '#FFFFFF';
+      return (
+        <Pressable
+          key={option.key}
+          onPress={() => handleSelectOrderType(option.key)}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected }}
+          accessibilityLabel={option.accessibilityLabel}
+          style={{
+            alignItems: 'center',
+            width: '100%',
+          }}>
+          <View
+            style={{
+              height: 138,
+              width: 138,
+              borderRadius: 69,
+              borderWidth: 4,
+              borderColor: circleBorderColor,
+              backgroundColor: outerBackground,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: option.accentColor,
+              shadowOpacity: isSelected ? 0.28 : 0.18,
+              shadowOffset: { width: 0, height: 10 },
+              shadowRadius: isSelected ? 20 : 14,
+              elevation: isSelected ? 12 : 6,
+            }}>
+            <View
+              style={{
+                height: 82,
+                width: 82,
+                borderRadius: 41,
+                backgroundColor: innerBackground,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              <MaterialCommunityIcons
+                name={option.iconName}
+                size={40}
+                color={isSelected ? '#FFFFFF' : option.accentColor}
+              />
+            </View>
+          </View>
+          <Text
+            style={{
+              marginTop: 20,
+              fontSize: 18,
+              fontWeight: '800',
+              letterSpacing: 1.2,
+              color: '#FFFFFF',
+              textAlign: 'center',
+              maxWidth: 190,
+            }}>
+            {option.title}
+          </Text>
+          <Text
+            style={{
+              marginTop: 6,
+              fontSize: 12,
+              color: '#FFFFFF',
+              textAlign: 'center',
+              maxWidth: 180,
+              paddingHorizontal: 6,
+            }}>
+            {option.description}
+          </Text>
+        </Pressable>
+      );
+    },
+    [handleSelectOrderType, isDarkMode, selectedOrderType, sheetSubtitleColor, sheetTitleColor]
+  );
+
+  const [dineInOption, takeoutOption] = ORDER_TYPE_OPTIONS;
+
   return (
     <View className="flex-1 bg-cream">
       <View
@@ -332,7 +423,7 @@ export default function CartScreen({ navigation }) {
 
       <ScrollView
         contentContainerStyle={{
-          paddingBottom: insets.bottom + 160,
+          paddingBottom: (insets.bottom || 0) + 260,
         }}
         showsVerticalScrollIndicator={false}>
         <View className="mt-5 px-5">
@@ -420,184 +511,168 @@ export default function CartScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <LinearGradient
-        colors={['#F97316', '#FB923C']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        className="absolute bottom-5 left-5 right-5 rounded-[32px] px-6 py-5"
-        style={{
-          paddingBottom: Math.max(insets.bottom + 18, 26),
-          shadowColor: '#F97316',
-          shadowOffset: { width: 0, height: 12 },
-          shadowOpacity: 0.28,
-          shadowRadius: 20,
-          elevation: 12,
-        }}>
-        <View className="flex-row items-start justify-between">
-          <View className="flex-1 pr-4">
-            <Text className="text-[11px] uppercase tracking-[1.2px] text-white/75">
-              Estimated arrival
-            </Text>
-            <Text className="mt-2 text-xl font-semibold text-white">{estimatedArrivalLabel}</Text>
-            <View className="mt-3 flex-row items-center">
-              <Feather name="clock" size={14} color="#FFE8D6" />
-              <Text className="ml-2 text-xs text-white/80">
-                We will notify you when everything is warm and ready.
+      {hasItems ? (
+        <LinearGradient
+          colors={['#F97316', '#FB923C']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="absolute left-5 right-5 rounded-[28px] px-6 py-5"
+          style={{
+            bottom: 20 + safeBottomInset,
+            borderRadius: 28,
+            paddingBottom: 26,
+            shadowColor: '#F97316',
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.28,
+            shadowRadius: 20,
+            elevation: 12,
+          }}>
+          <View className="flex-row items-start justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-[11px] uppercase tracking-[1.2px] text-white/75">
+                Estimated arrival
               </Text>
+              <Text className="mt-2 text-xl font-semibold text-white">{estimatedArrivalLabel}</Text>
+              <View className="mt-3 flex-row items-center">
+                <Feather name="clock" size={14} color="#FFE8D6" />
+                <Text className="ml-2 text-xs text-white/80">
+                  We will notify you when everything is warm and ready.
+                </Text>
+              </View>
+            </View>
+            <View className="items-end">
+              <Text className="text-[11px] uppercase tracking-[1.1px] text-white/75">
+                Total due
+              </Text>
+              <Text className="mt-1 text-lg font-semibold text-white">{peso(total)}</Text>
+              <TouchableOpacity
+                onPress={onCheckout}
+                disabled={!canCheckout}
+                className="mt-4 rounded-full bg-white px-5 py-3 shadow-md shadow-black/10"
+                accessibilityRole="button"
+                accessibilityLabel="Checkout"
+                style={!canCheckout ? { opacity: 0.55 } : null}>
+                <Text className="text-sm font-semibold text-[#F97316]">Checkout {peso(total)}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-          <View className="items-end">
-            <Text className="text-[11px] uppercase tracking-[1.1px] text-white/75">Total due</Text>
-            <Text className="mt-1 text-lg font-semibold text-white">{peso(total)}</Text>
-            <TouchableOpacity
-              onPress={onCheckout}
-              disabled={!canCheckout}
-              className="mt-4 rounded-full bg-white px-5 py-3 shadow-md shadow-black/10"
-              accessibilityRole="button"
-              accessibilityLabel="Checkout"
-              style={!canCheckout ? { opacity: 0.55 } : null}>
-              <Text className="text-sm font-semibold text-[#F97316]">Checkout {peso(total)}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
+        </LinearGradient>
+      ) : null}
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent
         visible={isOrderTypeModalVisible}
         onRequestClose={closeOrderTypeModal}
         statusBarTranslucent>
-        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(17,17,17,0.6)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingBottom: Math.max(insets.bottom, 24),
+          }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close order type selection"
             onPress={closeOrderTypeModal}
-            style={{ flex: 1, backgroundColor: 'rgba(17,17,17,0.45)' }}
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
           />
-          <View
-            style={{
-              backgroundColor: sheetBackgroundColor,
-              paddingHorizontal: 24,
-              paddingTop: 24,
-              paddingBottom: insets.bottom + 24,
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              borderColor: sheetBorderColor,
-              borderWidth: isDarkMode ? 1 : 0,
-            }}>
-            <View style={{ marginBottom: 20 }}>
+          <View style={{ width: '100%', maxWidth: 420, alignItems: 'center' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                paddingHorizontal: 12,
+                marginBottom: 32,
+              }}>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                {renderOrderTypeOption(dineInOption)}
+              </View>
+              <Text
+                style={{
+                  marginHorizontal: 18,
+                  alignSelf: 'center',
+                  fontSize: 16,
+                  fontWeight: '700',
+                  letterSpacing: 1.3,
+                  color: sheetSubtitleColor,
+                }}>
+                or
+              </Text>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                {renderOrderTypeOption(takeoutOption)}
+              </View>
+            </View>
+            <View
+              style={{
+                width: '100%',
+                backgroundColor: sheetBackgroundColor,
+                borderRadius: 32,
+                paddingHorizontal: 24,
+                paddingTop: 32,
+                paddingBottom: Math.max(insets.bottom + 12, 28),
+                alignItems: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 16 },
+                shadowOpacity: isDarkMode ? 0.45 : 0.18,
+                shadowRadius: 28,
+                elevation: 18,
+              }}>
               <Text
                 style={{
                   fontSize: 20,
                   fontWeight: '700',
                   color: sheetTitleColor,
+                  textAlign: 'center',
                 }}>
                 Choose how you like to receive your order
               </Text>
               <Text
                 style={{
-                  marginTop: 6,
+                  marginTop: 8,
                   fontSize: 14,
                   color: sheetSubtitleColor,
+                  textAlign: 'center',
                 }}>
-                Pick an option to continue to payment. You can change this later from the cart.
+                Tap an option above to continue. You can change this later from the cart.
               </Text>
-            </View>
-            {ORDER_TYPE_OPTIONS.map((option) => {
-              const isSelected = selectedOrderType === option.key;
-              return (
-                <Pressable
-                  key={option.key}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                  accessibilityLabel={option.accessibilityLabel}
-                  onPress={() => handleSelectOrderType(option.key)}
-                  style={{
-                    borderRadius: 24,
-                    borderWidth: 2,
-                    borderColor: isSelected ? sheetAccentColor : sheetBorderColor,
-                    backgroundColor: isDarkMode ? '#27272A' : '#FFF6EE',
-                    padding: 18,
-                    marginBottom: 14,
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}>
-                    <View style={{ flex: 1, paddingRight: 12 }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: isSelected ? '700' : '600',
-                          color: sheetTitleColor,
-                        }}>
-                        {option.title}
-                      </Text>
-                      <Text
-                        style={{
-                          marginTop: 6,
-                          fontSize: 13,
-                          color: sheetSubtitleColor,
-                        }}>
-                        {option.description}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        height: 22,
-                        width: 22,
-                        borderRadius: 11,
-                        borderWidth: 2,
-                        borderColor: isSelected ? sheetAccentColor : sheetBorderColor,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: isSelected ? sheetAccentColor : 'transparent',
-                      }}
-                      accessible={false}>
-                      {isSelected ? (
-                        <View
-                          style={{
-                            height: 10,
-                            width: 10,
-                            borderRadius: 5,
-                            backgroundColor: '#FFFFFF',
-                          }}
-                        />
-                      ) : null}
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-            <View style={{ flexDirection: 'row', marginTop: 8, alignItems: 'center' }}>
               <TouchableOpacity
                 onPress={handleContinueToPayment}
                 disabled={!selectedOrderType}
                 accessibilityRole="button"
-                accessibilityLabel="Continue to payment"
-                style={{
-                  flex: 1,
-                  backgroundColor: selectedOrderType ? sheetAccentColor : `${sheetAccentColor}55`,
-                  paddingVertical: 14,
-                  borderRadius: 999,
-                  alignItems: 'center',
-                }}>
-                <Text
+                accessibilityLabel="Proceed to payment"
+                style={{ width: '100%', marginTop: 28 }}>
+                <LinearGradient
+                  colors={selectedOrderType ? ['#F97316', '#F63D0C'] : ['#F4C6A6', '#F4C6A6']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: '#FFFFFF',
+                    borderRadius: 999,
+                    paddingVertical: 16,
+                    alignItems: 'center',
+                    opacity: selectedOrderType ? 1 : 0.6,
                   }}>
-                  Continue
-                </Text>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: selectedOrderType ? '#FFFFFF' : '#B45309',
+                      letterSpacing: 1.05,
+                      textTransform: 'uppercase',
+                    }}>
+                    Proceed to Pay
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity
+              <Pressable
                 onPress={closeOrderTypeModal}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel order type selection"
-                style={{ marginLeft: 16 }}>
+                style={{ marginTop: 18 }}>
                 <Text
                   style={{
                     fontSize: 15,
@@ -606,7 +681,7 @@ export default function CartScreen({ navigation }) {
                   }}>
                   Cancel
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
         </View>

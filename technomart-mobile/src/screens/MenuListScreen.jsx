@@ -9,6 +9,13 @@ const SEGMENTS = [
   { key: 'menu', label: 'Menu Items' },
 ];
 
+const CATEGORY_LABELS = {
+  hotMeals: 'Hot Meals',
+  snacks: 'Snacks',
+  drinks: 'Drinks',
+  desserts: 'Desserts',
+};
+
 export default function MenuListScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const initialView = route?.params?.initialView;
@@ -16,6 +23,17 @@ export default function MenuListScreen({ navigation, route }) {
   const [activeSegment, setActiveSegment] = useState(
     initialView === 'menu' ? 'menu' : 'recommended'
   );
+  const inferredCategoryLabel = useMemo(() => {
+    if (!filterKey) return null;
+    if (CATEGORY_LABELS[filterKey]) return CATEGORY_LABELS[filterKey];
+    const spaced = filterKey.replace(/([A-Z])/g, ' $1').trim();
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }, [filterKey]);
+  const headerTitle = useMemo(() => {
+    if (route?.params?.title) return route.params.title;
+    if (inferredCategoryLabel) return inferredCategoryLabel;
+    return 'Campus Menu';
+  }, [inferredCategoryLabel, route?.params?.title]);
 
   useEffect(() => {
     if (filterKey) {
@@ -35,6 +53,7 @@ export default function MenuListScreen({ navigation, route }) {
 
   return (
     <View className="flex-1 bg-cream">
+      {/* Background icons */}
       <View
         className="absolute inset-0"
         accessible={false}
@@ -59,7 +78,9 @@ export default function MenuListScreen({ navigation, route }) {
           style={{ position: 'absolute', bottom: 120, left: 70, opacity: 0.08 }}
         />
       </View>
-      <View className="rounded-b-[32px] bg-[#FFE0C2] pb-5" style={{ paddingTop: insets.top + 12 }}>
+
+      {/* Header */}
+      <View className="rounded-b-[36px] bg-[#FFE0C2] pb-5" style={{ paddingTop: insets.top + 12 }}>
         <View
           className="absolute inset-0"
           accessible={false}
@@ -83,6 +104,7 @@ export default function MenuListScreen({ navigation, route }) {
             style={{ position: 'absolute', top: 150, left: 60, opacity: 0.14 }}
           />
         </View>
+
         <View className="flex-row items-center justify-between px-5">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -91,25 +113,29 @@ export default function MenuListScreen({ navigation, route }) {
             accessibilityLabel="Go back">
             <Feather name="chevron-left" size={20} color="#6B4F3A" />
           </TouchableOpacity>
-          <Text className="text-lg font-semibold text-[#6B4F3A]">Campus Menu</Text>
+          <Text className="text-lg font-semibold text-[#6B4F3A]">{headerTitle}</Text>
           <View className="h-10 w-10" />
         </View>
 
-        <View className="mx-5 mt-5 flex-row rounded-full bg-white/70 px-1 py-1">
+        {/* Segmented Control (FIXED VERSION) */}
+        <View
+          className="mx-5 mt-5 flex-row overflow-hidden rounded-[28px] border border-[#F5DFD3] bg-white p-1 shadow-[0px_6px_10px_rgba(249,115,22,0.06)]"
+          style={{ borderRadius: 28 }}>
           {SEGMENTS.map((segment) => {
             const isActive = activeSegment === segment.key;
             return (
               <TouchableOpacity
                 key={segment.key}
                 onPress={() => setActiveSegment(segment.key)}
-                className="flex-1"
+                className="flex-1 overflow-hidden rounded-[26px]"
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
                 accessibilityLabel={segment.label}>
                 <View
-                  className={`items-center justify-center rounded-full py-3 ${
-                    isActive ? 'bg-[#FFE8D6]' : ''
-                  }`}>
+                  className={`items-center justify-center py-3 ${
+                    isActive ? 'bg-[#FFE8D6]' : 'bg-transparent'
+                  }`}
+                  style={{ borderRadius: 26 }}>
                   <Text
                     className={`text-sm font-semibold ${
                       isActive ? 'text-[#F07F13]' : 'text-[#6B4F3A]'
@@ -123,6 +149,7 @@ export default function MenuListScreen({ navigation, route }) {
         </View>
       </View>
 
+      {/* Content */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
@@ -133,7 +160,7 @@ export default function MenuListScreen({ navigation, route }) {
 
         <View className="mt-4">
           {items.length === 0 ? (
-            <View className="items-center justify-center py-32">
+            <View className="items-center justify-center rounded-[26px] border border-[#F5DFD3] bg-white px-6 py-24 shadow-[0px_6px_10px_rgba(249,115,22,0.06)]">
               <MaterialCommunityIcons name="food-off-outline" size={48} color="#D1D5DB" />
               <Text className="mt-4 text-base font-semibold text-text">
                 Nothing matched this category

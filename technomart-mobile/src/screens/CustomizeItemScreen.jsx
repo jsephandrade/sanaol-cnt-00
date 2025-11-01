@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,17 +20,63 @@ export default function CustomizeItemScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const item = route?.params?.item;
   const { addItem, totalItems } = useCart();
+  const safeBottomInset = Math.max(insets.bottom, 0);
 
-  const [selectedExtras, setSelectedExtras] = useState([]);
+  const availableExtras = useMemo(() => {
+    const extrasSource = item?.extras;
+
+    if (Array.isArray(extrasSource) && extrasSource.length) {
+      return extrasSource
+        .filter(Boolean)
+        .map((extra, index) => {
+          const rawPrice =
+            typeof extra?.price === 'number' ? extra.price : Number(extra?.price ?? 0);
+
+          return {
+            key: extra?.key ?? extra?.id ?? `extra-${index}`,
+            label: extra?.label ?? extra?.name ?? `Extra ${index + 1}`,
+            price: Number.isFinite(rawPrice) ? rawPrice : 0,
+          };
+        })
+        .filter((extra) => extra.key);
+    }
+
+    if (extrasSource && typeof extrasSource === 'object') {
+      return Object.entries(extrasSource)
+        .map(([key, value]) => {
+          const rawPrice =
+            typeof value?.price === 'number' ? value.price : Number(value?.price ?? 0);
+
+          return {
+            key,
+            label: value?.label ?? value?.name ?? key,
+            price: Number.isFinite(rawPrice) ? rawPrice : 0,
+          };
+        })
+        .filter((extra) => extra.key);
+    }
+
+    return EXTRA_OPTIONS;
+  }, [item?.extras]);
+
+  const [selectedExtraKey, setSelectedExtraKey] = useState(null);
   const [notes, setNotes] = useState('');
   const [quantity, setQuantity] = useState(1);
 
-  const toggleExtra = (extra) => {
-    setSelectedExtras((prev) =>
-      prev.find((e) => e.key === extra.key)
-        ? prev.filter((e) => e.key !== extra.key)
-        : [...prev, extra]
-    );
+  useEffect(() => {
+    if (!selectedExtraKey) return;
+    if (!availableExtras.some((extra) => extra.key === selectedExtraKey)) {
+      setSelectedExtraKey(null);
+    }
+  }, [availableExtras, selectedExtraKey]);
+
+  const selectedExtras = useMemo(() => {
+    const match = availableExtras.find((extra) => extra.key === selectedExtraKey);
+    return match ? [match] : [];
+  }, [availableExtras, selectedExtraKey]);
+
+  const toggleExtra = (extraKey) => {
+    setSelectedExtraKey((prev) => (prev === extraKey ? null : extraKey));
   };
 
   const total = useMemo(() => {
@@ -38,6 +84,9 @@ export default function CustomizeItemScreen({ navigation, route }) {
     const extras = selectedExtras.reduce((sum, extra) => sum + extra.price, 0);
     return (basePrice + extras) * quantity;
   }, [item?.price, quantity, selectedExtras]);
+
+  const normalizedTotalItems = Number.isFinite(totalItems) ? totalItems : 0;
+  const totalItemsLabel = normalizedTotalItems > 99 ? '99+' : String(normalizedTotalItems);
 
   const handleAddToCart = () => {
     const trimmedNotes = notes.trim();
@@ -133,52 +182,79 @@ export default function CustomizeItemScreen({ navigation, route }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 160 }}
+        contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 260 }}
         className="px-5 pt-5">
         <View>
           <Text className="text-sm font-semibold text-text">Add extras</Text>
           <View className="mt-3">
-            {EXTRA_OPTIONS.map((extra) => {
-              const isActive = !!selectedExtras.find((e) => e.key === extra.key);
-              return (
-                <TouchableOpacity
-                  key={extra.key}
-                  onPress={() => toggleExtra(extra)}
-                  className={`mb-3 flex-row items-center rounded-[20px] border border-[#F5DFD3] bg-white px-4 py-3 shadow ${
-                    isActive ? 'border-[#EA580C] bg-[#EA580C]' : ''
-                  }`}
-                  style={{
-                    elevation: isActive ? 5 : 2,
-                    shadowColor: '#F97316',
-                    shadowOpacity: isActive ? 0.22 : 0.05,
-                    shadowRadius: isActive ? 14 : 8,
-                    shadowOffset: { width: 0, height: 4 },
-                    transform: isActive ? [{ translateY: -2 }] : undefined,
-                  }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isActive }}
-                  accessibilityLabel={extra.label}>
-                  <View
-                    className={`h-6 w-6 items-center justify-center rounded-full border ${
-                      isActive ? 'border-white bg-white' : 'border-[#D6D3D1] bg-white'
-                    }`}>
-                    {isActive ? <Feather name="check" size={14} color="#EA580C" /> : null}
-                  </View>
-                  <Text
-                    className={`ml-3 flex-1 text-sm font-semibold ${
-                      isActive ? 'text-white' : 'text-[#5D3E29]'
-                    }`}>
-                    {extra.label}
-                  </Text>
-                  <Text
-                    className={`text-sm font-semibold ${
-                      isActive ? 'text-white' : 'text-[#F07F13]'
-                    }`}>
-                    +₱{extra.price}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {availableExtras.length ? (
+              availableExtras.map((extra) => {
+                const isActive = selectedExtraKey === extra.key;
+                const content = (
+                  <>
+                    <View
+                      className={`h-6 w-6 items-center justify-center rounded-full border ${
+                        isActive ? 'bg-white/15' : 'bg-white'
+                      }`}
+                      style={{
+                        borderColor: isActive ? 'rgba(255,255,255,0.65)' : 'rgba(249,115,22,0.28)',
+                      }}>
+                      {isActive ? <Feather name="check" size={14} color="#FFFFFF" /> : null}
+                    </View>
+                    <Text
+                      className={`ml-3 flex-1 text-sm font-semibold ${
+                        isActive ? 'text-white' : 'text-[#5D3E29]'
+                      }`}>
+                      {extra.label}
+                    </Text>
+                    <Text
+                      className={`text-sm font-semibold ${
+                        isActive ? 'text-white' : 'text-[#F97316]'
+                      }`}>
+                      {`+${peso(extra.price)}`}
+                    </Text>
+                  </>
+                );
+
+                return (
+                  <TouchableOpacity
+                    key={extra.key}
+                    onPress={() => toggleExtra(extra.key)}
+                    activeOpacity={0.92}
+                    className="mb-3 rounded-[20px]"
+                    style={{
+                      borderRadius: 20,
+                      elevation: isActive ? 6 : 2,
+                      shadowColor: '#F97316',
+                      shadowOpacity: isActive ? 0.25 : 0.08,
+                      shadowRadius: isActive ? 16 : 8,
+                      shadowOffset: { width: 0, height: 4 },
+                      transform: [{ translateY: 0 }],
+                      overflow: 'hidden',
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isActive }}
+                    accessibilityLabel={extra.label}>
+                    {isActive ? (
+                      <LinearGradient
+                        colors={['#F97316', '#FB923C']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        className="flex-row items-center px-4 py-3"
+                        style={{ borderRadius: 20 }}>
+                        {content}
+                      </LinearGradient>
+                    ) : (
+                      <View className="flex-row items-center rounded-[20px] border border-[#F5DFD3] bg-white px-4 py-3">
+                        {content}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <Text className="text-xs text-[#8F6B56]">Extras are currently unavailable.</Text>
+            )}
           </View>
         </View>
 
@@ -196,42 +272,61 @@ export default function CustomizeItemScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      <View
-        className="absolute bottom-5 left-5 right-5 rounded-[28px] bg-white px-6 py-5 shadow-xl"
+      <LinearGradient
+        colors={['#F97316', '#FB923C']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        className="absolute left-5 right-5 rounded-[20px] px-6 py-5"
         style={{
-          paddingBottom: Math.max(insets.bottom + 12, 20),
+          bottom: 20 + safeBottomInset,
+          borderRadius: 20,
+          paddingBottom: 26,
           shadowColor: '#F97316',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.18,
-          shadowRadius: 16,
-          elevation: 10,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.28,
+          shadowRadius: 20,
+          elevation: 12,
         }}>
         <View className="flex-row items-start justify-between">
-          <View>
-            <Text className="text-xs uppercase tracking-[1.5px] text-[#F97316]">Total</Text>
-            <Text className="mt-1 text-2xl font-semibold text-text">{peso(total)}</Text>
+          <View className="flex-1 pr-3">
+            <Text className="text-[11px] uppercase tracking-[1.2px] text-white/75">Total</Text>
+            <Text className="mt-2 text-2xl font-semibold text-white">{peso(total)}</Text>
+            <Text className="mt-2 text-[11px] text-white/75">
+              Includes extras and quantity ({quantity}x)
+            </Text>
           </View>
           <TouchableOpacity
             onPress={() => navigation.navigate('Cart')}
-            className="relative h-11 w-11 items-center justify-center rounded-full bg-[#FFF4EC]"
+            className="relative h-11 w-11 items-center justify-center rounded-full bg-white"
             accessibilityRole="button"
-            accessibilityLabel="Open cart">
-            <Feather name="shopping-cart" size={22} color="#F07F13" />
-            <View className="absolute -right-1 -top-1 min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-peach-500 px-1">
-              <Text className="text-[10px] font-semibold text-white">{totalItems ?? 0}</Text>
+            accessibilityLabel="Open cart"
+            style={{
+              shadowColor: '#000000',
+              shadowOpacity: 0.12,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 6,
+            }}>
+            <Feather name="shopping-cart" size={22} color="#F97316" />
+            <View
+              className="absolute -right-1 -top-1 items-center justify-center rounded-full bg-[#DC2626]"
+              style={{ minWidth: 18, aspectRatio: 1 }}>
+              <Text className="text-[10px] font-semibold text-white">{totalItemsLabel}</Text>
             </View>
           </TouchableOpacity>
         </View>
         <View className="mt-5 flex-row items-center space-x-3">
-          <View className="flex-row items-center rounded-full bg-[#FFF0E6] px-2 py-1">
+          <View
+            className="flex-row items-center rounded-full bg-white/15 px-2 py-1"
+            style={{ borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' }}>
             <TouchableOpacity
               onPress={() => setQuantity((q) => Math.max(1, q - 1))}
               className="h-9 w-9 items-center justify-center rounded-full bg-white"
               accessibilityRole="button"
               accessibilityLabel="Decrease quantity">
-              <Feather name="minus" size={18} color="#F07F13" />
+              <Feather name="minus" size={18} color="#F97316" />
             </TouchableOpacity>
-            <Text className="mx-3 text-base font-semibold text-text">{quantity}</Text>
+            <Text className="mx-3 text-base font-semibold text-white">{quantity}</Text>
             <TouchableOpacity
               onPress={() => setQuantity((q) => q + 1)}
               className="h-9 w-9 items-center justify-center rounded-full bg-peach-500"
@@ -242,13 +337,14 @@ export default function CustomizeItemScreen({ navigation, route }) {
           </View>
           <TouchableOpacity
             onPress={handleAddToCart}
-            className="flex-1 flex-row items-center justify-center rounded-full bg-[#F07F13] px-4 py-3 shadow-md shadow-black/5"
+            className="flex-1 items-center justify-center rounded-full bg-white px-4 py-3 shadow-md shadow-black/10"
             accessibilityRole="button"
-            accessibilityLabel="Add to cart">
-            <Text className="text-sm font-semibold text-white">Add to cart</Text>
+            accessibilityLabel="Add to cart"
+            style={{ elevation: 4 }}>
+            <Text className="text-sm font-semibold text-[#F97316]">Add to cart</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }

@@ -18,12 +18,16 @@ export default function BottomNavigation({
   disableAll = false,
 }) {
   const insets = useSafeAreaInsets();
+  const safeBottomInset = Math.max(insets.bottom, 0);
+  const containerBottom = 20 + safeBottomInset;
 
   return (
     <View
-      className="absolute bottom-5 left-5 right-5 flex-row justify-between rounded-[28px] bg-white px-[18px] pt-3 shadow-xl"
+      className="absolute left-5 right-5 flex-row justify-between rounded-[28px] bg-white px-[18px] shadow-xl"
       style={{
-        paddingBottom: Math.max(insets.bottom, 12),
+        bottom: containerBottom,
+        paddingBottom: 12,
+        paddingTop: 12,
         elevation: 12,
         shadowColor: '#0F172A',
       }}
