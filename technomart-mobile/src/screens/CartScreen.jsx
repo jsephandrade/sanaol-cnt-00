@@ -51,49 +51,6 @@ const ORDER_TYPE_OPTIONS = [
   },
 ];
 
-const formatTimeLabel = (hour, minute) => {
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const adjustedHour = hour % 12 || 12;
-  const minuteLabel = minute.toString().padStart(2, '0');
-  return `${adjustedHour}:${minuteLabel} ${period}`;
-};
-
-const getNowInManila = () => {
-  try {
-    const localeString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
-    return new Date(localeString);
-  } catch (error) {
-    console.warn('Falling back to manual offset, unable to resolve Asia/Manila timezone.', error);
-    const now = new Date();
-    const utcTimestamp = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
-    const manilaOffsetMs = 8 * 60 * 60 * 1000;
-    return new Date(utcTimestamp + manilaOffsetMs);
-  }
-};
-
-const PICKUP_TIME_SLOTS = (() => {
-  const slots = [];
-  let hour = 10;
-  let minute = 0;
-
-  while (hour < 14 || (hour === 14 && minute === 0)) {
-    slots.push({
-      key: `${hour}-${minute}`,
-      hour,
-      minute,
-      label: formatTimeLabel(hour, minute),
-    });
-
-    minute += 30;
-    if (minute >= 60) {
-      minute = 0;
-      hour += 1;
-    }
-  }
-
-  return slots;
-})();
-
 const peso = (amount) =>
   `₱${Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
 
@@ -183,9 +140,6 @@ function CartItem({ item, onIncrement, onDecrement, onEdit }) {
 export default function CartScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
-  const [pickupOption, setPickupOption] = React.useState('now');
-  const [selectedPickupTime, setSelectedPickupTime] = React.useState(null);
-  const [timeTick, setTimeTick] = React.useState(() => Date.now());
   const {
     items,
     updateItemQuantity,
@@ -210,62 +164,8 @@ export default function CartScreen({ navigation }) {
 
   const hasItems = totalItems > 0;
   const total = subtotal;
-  const canCheckout = hasItems && (pickupOption !== 'later' || Boolean(selectedPickupTime));
-
-  React.useEffect(() => {
-    if (pickupOption === 'later') {
-      const now = getNowInManila();
-      const firstAvailable = PICKUP_TIME_SLOTS.find((slot) => {
-        const slotDate = new Date(now);
-        slotDate.setHours(slot.hour, slot.minute, 0, 0);
-        return slotDate > now;
-      });
-
-      setSelectedPickupTime((prev) => {
-        if (prev) {
-          const currentSlot = PICKUP_TIME_SLOTS.find((slot) => slot.key === prev);
-          if (currentSlot) {
-            const slotDate = new Date(now);
-            slotDate.setHours(currentSlot.hour, currentSlot.minute, 0, 0);
-            if (slotDate > now) {
-              return prev;
-            }
-          }
-        }
-        return firstAvailable?.key ?? null;
-      });
-    } else {
-      setSelectedPickupTime(null);
-    }
-  }, [pickupOption, timeTick]);
-
-  React.useEffect(() => {
-    if (pickupOption !== 'later') {
-      return undefined;
-    }
-
-    setTimeTick(Date.now());
-    const interval = setInterval(() => {
-      setTimeTick(Date.now());
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [pickupOption]);
-
-  const nowInManila = React.useMemo(() => getNowInManila(), [pickupOption, timeTick]);
-  const scheduleOptions = PICKUP_TIME_SLOTS.map((slot) => {
-    const slotDate = new Date(nowInManila);
-    slotDate.setHours(slot.hour, slot.minute, 0, 0);
-    return { ...slot, isPast: slotDate <= nowInManila };
-  });
-  const allSlotsPast = scheduleOptions.every((option) => option.isPast);
-  const selectedSlot = scheduleOptions.find((slot) => slot.key === selectedPickupTime);
-
-  const immediateEstimateLabel = 'Ready within 15 minutes';
-  const estimatedArrivalLabel =
-    pickupOption === 'now'
-      ? immediateEstimateLabel
-      : selectedSlot?.label || (allSlotsPast ? 'All slots booked today' : 'Select a pickup slot');
+  const canCheckout = hasItems;
+  const estimatedArrivalLabel = 'Ready within 15 minutes';
   const handleIncrement = (item) => updateItemQuantity(item.variantKey, item.quantity + 1);
   const handleDecrement = (item) => updateItemQuantity(item.variantKey, item.quantity - 1);
   const handleEdit = (item) => {
@@ -308,13 +208,6 @@ export default function CartScreen({ navigation }) {
   const onCheckout = () => {
     if (!hasItems) {
       Alert.alert('Cart is empty', 'Add items before proceeding to checkout.');
-      return;
-    }
-    if (pickupOption === 'later' && !selectedPickupTime) {
-      Alert.alert(
-        'No pickup slots available',
-        'All scheduled pickup times for today have passed. Please choose Pickup Now or check again tomorrow.'
-      );
       return;
     }
     openOrderTypeModal();
@@ -435,74 +328,6 @@ export default function CartScreen({ navigation }) {
             <Feather name="help-circle" size={20} color="#6B4F3A" />
           </TouchableOpacity>
         </View>
-
-        <View className="mx-5 mt-5 rounded-3xl bg-white/80 px-5 py-4">
-          <Text className="text-xs uppercase tracking-[1.5px] text-[#A16236]">Pickup options</Text>
-          <View className="mt-3 flex-row">
-            <TouchableOpacity
-              onPress={() => setPickupOption('now')}
-              accessibilityRole="button"
-              accessibilityLabel="Select pickup now"
-              className={`flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
-                pickupOption === 'now'
-                  ? '-translate-y-[1.5px] border-[#EA580C] bg-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)]'
-                  : ''
-              }`}>
-              <Text
-                className={`text-sm font-semibold ${
-                  pickupOption === 'now' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
-                }`}>
-                Pickup Now
-              </Text>
-              <Text
-                className={`mt-1 text-xs ${
-                  pickupOption === 'now' ? 'text-white/95' : 'text-[rgba(140,114,91,0.6)]'
-                }`}>
-                {immediateEstimateLabel}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setPickupOption('later')}
-              accessibilityRole="button"
-              accessibilityLabel="Select pickup for later"
-              accessibilityState={{ selected: pickupOption === 'later' }}
-              className={`ml-3 flex-1 rounded-2xl border border-[#F5DFD3] bg-[#FFF4E8C7] px-4 py-4 ${
-                pickupOption === 'later'
-                  ? '-translate-y-[1.5px] border-[#EA580C] bg-[#EA580C] shadow-[0px_8px_12px_rgba(249,115,22,0.18)]'
-                  : ''
-              }`}
-              style={allSlotsPast && pickupOption !== 'later' ? { opacity: 0.6 } : null}>
-              <Text
-                className={`text-sm font-semibold ${
-                  pickupOption === 'later' ? 'text-white' : 'text-[rgba(107,79,58,0.6)]'
-                }`}>
-                Pickup for later
-              </Text>
-              <View className="mt-1 flex-row items-center">
-                {selectedSlot?.label && pickupOption === 'later' ? (
-                  <Feather
-                    name="clock"
-                    size={12}
-                    color={pickupOption === 'later' ? '#FFFFFF' : 'rgba(140,114,91,0.6)'}
-                    style={{ marginRight: 4 }}
-                  />
-                ) : null}
-                <Text
-                  className={`text-xs ${
-                    pickupOption === 'later'
-                      ? 'text-white/95'
-                      : allSlotsPast
-                        ? 'text-[#A1A1AA]'
-                        : 'text-[rgba(140,114,91,0.6)]'
-                  }`}
-                  style={allSlotsPast ? { fontStyle: 'italic' } : null}>
-                  {selectedSlot?.label ||
-                    (allSlotsPast ? 'All slots booked today' : 'Schedule a convenient time')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
       </LinearGradient>
 
       <ScrollView
@@ -595,101 +420,47 @@ export default function CartScreen({ navigation }) {
         </View>
       </ScrollView>
 
-      <View
-        className="absolute bottom-5 left-5 right-5 rounded-[28px] bg-white px-6 py-5 shadow-xl"
+      <LinearGradient
+        colors={['#F97316', '#FB923C']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        className="absolute bottom-5 left-5 right-5 rounded-[32px] px-6 py-5"
         style={{
-          paddingBottom: Math.max(insets.bottom + 12, 20),
+          paddingBottom: Math.max(insets.bottom + 18, 26),
           shadowColor: '#F97316',
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.18,
-          shadowRadius: 16,
-          elevation: 10,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.28,
+          shadowRadius: 20,
+          elevation: 12,
         }}>
-        {pickupOption === 'later' ? (
-          <View className="mb-4 rounded-[22px] border border-[#F5DFD3] bg-[#FFF4EC] px-4 py-3.5">
-            <Text className="text-[12px] font-bold uppercase tracking-[1.1px] text-[#6B4F3A]">
-              Select pickup time
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              decelerationRate="fast"
-              snapToAlignment="center"
-              snapToInterval={108}
-              contentContainerClassName="mt-2.5 flex-row items-center px-1.5 pr-4 py-1.5">
-              {scheduleOptions.map((option) => {
-                const isSelected = selectedPickupTime === option.key;
-                const isDisabled = option.isPast;
-
-                const baseSlotClasses =
-                  'mr-3 min-w-[88px] items-center justify-center rounded-2xl border border-[#F5DFD3] px-4 py-2.5';
-                const stateClasses = [
-                  'bg-[rgba(255,255,255,0.95)]',
-                  isSelected
-                    ? 'bg-[#EA580C] border-[#EA580C] shadow-[0px_4px_8px_rgba(249,115,22,0.25)]'
-                    : '',
-                  isDisabled ? 'bg-[#E5E7EB8C] border-[#E5E7EB]' : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ');
-
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    onPress={() => setSelectedPickupTime(option.key)}
-                    disabled={isDisabled}
-                    className={`${baseSlotClasses} ${stateClasses}`}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected, disabled: isDisabled }}
-                    accessibilityLabel={`Pickup at ${option.label}`}>
-                    <Text
-                      className={`text-[13px] font-semibold ${
-                        isSelected ? 'text-white' : isDisabled ? 'text-[#A1A1AA]' : 'text-[#7C5E43]'
-                      }`}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-            {allSlotsPast ? (
-              <Text className="mt-2 text-[12px] text-[#7C5E43]">
-                All pickup windows for today have passed. Please check back tomorrow.
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
         <View className="flex-row items-start justify-between">
-          <View>
-            <Text className="text-xs uppercase tracking-[1.5px] text-[#F97316]">
+          <View className="flex-1 pr-4">
+            <Text className="text-[11px] uppercase tracking-[1.2px] text-white/75">
               Estimated arrival
             </Text>
-            <View className="mt-1 flex-row items-center">
-              {pickupOption === 'later' && selectedSlot?.label ? (
-                <Feather name="clock" size={16} color="#F97316" style={{ marginRight: 6 }} />
-              ) : null}
-              <Text
-                className="text-xl font-semibold text-text"
-                style={
-                  pickupOption === 'later' && !selectedSlot
-                    ? { fontStyle: 'italic', color: '#A16236' }
-                    : undefined
-                }>
-                {estimatedArrivalLabel}
+            <Text className="mt-2 text-xl font-semibold text-white">{estimatedArrivalLabel}</Text>
+            <View className="mt-3 flex-row items-center">
+              <Feather name="clock" size={14} color="#FFE8D6" />
+              <Text className="ml-2 text-xs text-white/80">
+                We will notify you when everything is warm and ready.
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={onCheckout}
-            disabled={!canCheckout}
-            className="flex-row items-center rounded-full bg-[#F07F13] px-5 py-3 shadow-md shadow-black/5"
-            accessibilityRole="button"
-            accessibilityLabel="Checkout"
-            style={!canCheckout ? { opacity: 0.55 } : null}>
-            <Text className="text-sm font-semibold text-white">Checkout {peso(total)}</Text>
-          </TouchableOpacity>
+          <View className="items-end">
+            <Text className="text-[11px] uppercase tracking-[1.1px] text-white/75">Total due</Text>
+            <Text className="mt-1 text-lg font-semibold text-white">{peso(total)}</Text>
+            <TouchableOpacity
+              onPress={onCheckout}
+              disabled={!canCheckout}
+              className="mt-4 rounded-full bg-white px-5 py-3 shadow-md shadow-black/10"
+              accessibilityRole="button"
+              accessibilityLabel="Checkout"
+              style={!canCheckout ? { opacity: 0.55 } : null}>
+              <Text className="text-sm font-semibold text-[#F97316]">Checkout {peso(total)}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
       <Modal
         animationType="slide"
         transparent
