@@ -88,7 +88,7 @@ export default function SearchScreen({ navigation }) {
           filtered.map((item) => (
             <TouchableOpacity
               key={`${item.id}-search`}
-              className="mb-3 flex-row items-center rounded-[24px] border border-[#F5DFD3] bg-white p-[14px] shadow"
+              className="mb-3 flex-row items-center rounded-[24px] border border-[#F5DFD3] bg-[#FFF4E6] p-[14px] shadow"
               style={{
                 elevation: 2,
                 shadowColor: '#F97316',
@@ -119,7 +119,7 @@ export default function SearchScreen({ navigation }) {
                   </Text>
                 </View>
               </View>
-              <Text className="text-sm font-semibold text-peach-500">₱{item.price}</Text>
+              <Text className="text-lg font-bold text-peach-500">₱{item.price}</Text>
             </TouchableOpacity>
           ))
         )}

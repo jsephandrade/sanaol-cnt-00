@@ -10,7 +10,6 @@ import {
   Linking,
   Alert,
   BackHandler,
-  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,17 +36,16 @@ const Row = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between px-4 py-4"
+      className="flex-row items-center justify-between px-5 py-4"
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel || title}>
       <View className="flex-row items-center">
         <View
-          className="mr-3 h-9 w-9 items-center justify-center rounded-xl"
-          style={{ backgroundColor: '#F5F6FA' }}
+          className="mr-3 h-9 w-9 items-center justify-center rounded-2xl border border-[#F5DFD3] bg-[#FFF4E6]"
           accessible={false}>
           <IconPack name={icon} size={18} color={tint} />
         </View>
-        <Text className="text-[15px] text-text">{title}</Text>
+        <Text className="text-sm font-semibold text-text">{title}</Text>
       </View>
 
       {valueRight ?? <Feather name="chevron-right" size={18} color="#C6C6C6" />}
@@ -55,7 +53,11 @@ const Row = ({
   );
 };
 
-const Section = ({ children }) => <View className="mt-4 rounded-2xl bg-[#f5f5f5]">{children}</View>;
+const Section = ({ children }) => (
+  <View className="mt-4 overflow-hidden rounded-[26px] border border-[#F5DFD3] bg-white shadow-[0px_6px_12px_rgba(249,115,22,0.08)]">
+    {children}
+  </View>
+);
 
 export default function ProfileScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -72,6 +74,14 @@ export default function ProfileScreen({ navigation, route }) {
   const [settingsExpanded, setSettingsExpanded] = React.useState(true);
   const [theme, setTheme] = React.useState('System'); // "System" | "Light" | "Dark"
   const [cameraAllowed, setCameraAllowed] = React.useState(false);
+  const cameraPermissionBadge = React.useMemo(
+    () => ({
+      background: cameraAllowed ? '#DCFCE7' : '#FEE2E2',
+      text: cameraAllowed ? '#166534' : '#991B1B',
+      label: cameraAllowed ? 'Allowed' : 'Not allowed',
+    }),
+    [cameraAllowed]
+  );
 
   // NEW: show/hide confirm modal
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
@@ -191,7 +201,7 @@ export default function ProfileScreen({ navigation, route }) {
 
   return (
     <View
-      className="flex-1 bg-white"
+      className="flex-1 bg-white/85"
       style={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom }}>
       {/* Decorative background icons (like in SignUpScreen) */}
       <View
@@ -219,27 +229,28 @@ export default function ProfileScreen({ navigation, route }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: insets.bottom + 140 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: insets.bottom + 140 }}
         showsVerticalScrollIndicator={false}>
         {/* Profile hero */}
         <LinearGradient
           colors={['#FFE6D4', '#FFF7EE']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.profileHero}>
+          className="mt-5 rounded-[32px] border border-[#F5DFD3] p-5 shadow-[0px_10px_18px_rgba(249,115,22,0.12)]"
+          style={{ elevation: 4 }}>
           <View className="flex-row items-center">
             <TouchableOpacity
               onPress={handlePickAvatar}
-              style={styles.avatarWrapper}
+              className="relative h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] bg-white"
               accessibilityRole="button"
               accessibilityLabel="Update profile photo">
               <Image
                 source={{ uri: avatarUri }}
-                style={styles.avatarImage}
+                className="h-full w-full"
                 resizeMode="cover"
                 accessibilityIgnoresInvertColors
               />
-              <View style={styles.avatarBadge}>
+              <View className="absolute bottom-[6px] right-[6px] h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-[#F07F13]">
                 <Feather name="camera" size={14} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
@@ -251,12 +262,11 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
               <TouchableOpacity
                 onPress={() => navigation.navigate?.('PersonalInfo')}
-                style={styles.heroActionButton}
-                className="mt-3 flex-row items-center self-start"
+                className="mt-3 flex-row items-center self-start rounded-full bg-white/60 px-[14px] py-[6px]"
                 accessibilityRole="button"
                 accessibilityLabel="Edit personal information">
                 <Feather name="edit-2" size={14} color="#452B1A" />
-                <Text style={styles.heroActionText}>Edit profile</Text>
+                <Text className="ml-[6px] text-xs font-semibold text-[#452B1A]">Edit profile</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -264,24 +274,31 @@ export default function ProfileScreen({ navigation, route }) {
 
         {/* Credit Points */}
         <TouchableOpacity
-          className="mt-4 rounded-2xl px-5 py-4 pb-5 pt-5"
-          style={{ backgroundColor: '#F07F13' }}
+          className="mt-4"
           accessibilityRole="button"
           accessibilityLabel="Credit points"
           onPress={() => navigation.navigate?.('Credits')}>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <MaterialCommunityIcons name="star-circle" size={24} color="#FFF" />
-              <Text className="ml-2 text-base font-semibold text-white">Credit Points</Text>
+          <LinearGradient
+            colors={['#F97316', '#FB923C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="rounded-[28px] border border-[#F5DFD3] px-5 py-5 shadow-[0px_10px_18px_rgba(249,115,22,0.18)]"
+            style={{ borderRadius: 28, elevation: 6 }}>
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <MaterialCommunityIcons name="star-circle" size={24} color="#FFFFFF" />
+                <Text className="ml-2 text-base font-semibold text-white">Credit Points</Text>
+              </View>
+              <View className="flex-row items-baseline">
+                <Text className="text-3xl font-extrabold text-white">{creditPoints}</Text>
+                <Text className="ml-1 text-white/90">pts</Text>
+                <Feather name="chevron-right" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
+              </View>
             </View>
-            <View className="flex-row items-baseline">
-              <Text className="text-2xl font-extrabold text-white">{creditPoints}</Text>
-              <Text className="ml-1 text-white/90">pts</Text>
-              <Feather name="chevron-right" size={18} color="#FFF" style={{ marginLeft: 6 }} />
-            </View>
-          </View>
-          <Text className="mt-1 text-[12px] text-white/85">Use points at checkout to save on</Text>
-          <Text className="text-[12px] text-white/85">your next order.</Text>
+            <Text className="mt-2 text-[12px] text-white/85">
+              Use points at checkout to save on your next order.
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* Personal / Feedback */}
@@ -293,7 +310,7 @@ export default function ProfileScreen({ navigation, route }) {
             title="Personal Info"
             onPress={() => navigation.navigate?.('PersonalInfo')}
           />
-          <View className="mx-4 h-[1px] bg-gray-200" />
+          <View className="mx-5 h-px bg-[#F6DCC8]" />
           <Row
             iconPack="Feather"
             icon="message-circle"
@@ -312,7 +329,7 @@ export default function ProfileScreen({ navigation, route }) {
             title="FAQs"
             onPress={() => navigation.navigate?.('FAQs')}
           />
-          <View className="mx-4 h-[1px] bg-gray-200" />
+          <View className="mx-5 h-px bg-[#F6DCC8]" />
 
           {/* Settings (inline, expandable) */}
           <Row
@@ -333,7 +350,7 @@ export default function ProfileScreen({ navigation, route }) {
           {settingsExpanded && (
             <View className="pb-2">
               {/* Appearance */}
-              <View className="mx-4 h-[1px] bg-gray-200" />
+              <View className="mx-5 h-px bg-[#F6DCC8]" />
               <Row
                 iconPack="Feather"
                 icon="moon"
@@ -341,14 +358,14 @@ export default function ProfileScreen({ navigation, route }) {
                 title="Appearance"
                 onPress={cycleTheme}
                 valueRight={
-                  <View className="rounded-md px-2 py-1" style={{ backgroundColor: '#EDE9FE' }}>
-                    <Text className="text-xs text-[#5B21B6]">{theme}</Text>
+                  <View className="rounded-full bg-[#EDE9FE] px-3 py-1">
+                    <Text className="text-xs font-semibold text-[#5B21B6]">{theme}</Text>
                   </View>
                 }
               />
 
               {/* Notifications */}
-              <View className="mx-4 h-[1px] bg-gray-200" />
+              <View className="mx-5 h-px bg-[#F6DCC8]" />
               <Row
                 iconPack="Feather"
                 icon="bell"
@@ -365,7 +382,7 @@ export default function ProfileScreen({ navigation, route }) {
               />
 
               {/* Camera Permission */}
-              <View className="mx-4 h-[1px] bg-gray-200" />
+              <View className="mx-5 h-px bg-[#F6DCC8]" />
               <Row
                 iconPack="Feather"
                 icon="camera"
@@ -375,12 +392,12 @@ export default function ProfileScreen({ navigation, route }) {
                 valueRight={
                   <View className="flex-row items-center">
                     <View
-                      className="mr-2 rounded-md px-2 py-[2px]"
-                      style={{ backgroundColor: cameraAllowed ? '#DCFCE7' : '#FEE2E2' }}>
+                      className="mr-2 rounded-full px-3 py-[2px]"
+                      style={{ backgroundColor: cameraPermissionBadge.background }}>
                       <Text
-                        className="text-xs"
-                        style={{ color: cameraAllowed ? '#166534' : '#991B1B' }}>
-                        {cameraAllowed ? 'Allowed' : 'Not allowed'}
+                        className="text-xs font-semibold"
+                        style={{ color: cameraPermissionBadge.text }}>
+                        {cameraPermissionBadge.label}
                       </Text>
                     </View>
                     <Feather name="chevron-right" size={18} color="#C6C6C6" />
@@ -401,7 +418,7 @@ export default function ProfileScreen({ navigation, route }) {
             onPress={() => Linking.openURL('https://www.facebook.com/jseph.andrade')}
           />
 
-          <View className="mx-4 h-[1px] bg-gray-200" />
+          <View className="mx-5 h-px bg-[#F6DCC8]" />
           <Row
             iconPack="Feather"
             icon="file-text"
@@ -442,55 +459,3 @@ export default function ProfileScreen({ navigation, route }) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  profileHero: {
-    marginTop: 20,
-    borderRadius: 32,
-    padding: 20,
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    elevation: 4,
-  },
-  avatarWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    overflow: 'hidden',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: 6,
-    right: 6,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F07F13',
-    borderWidth: 3,
-    borderColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroActionButton: {
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-  },
-  heroActionText: {
-    color: '#452B1A',
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
-});

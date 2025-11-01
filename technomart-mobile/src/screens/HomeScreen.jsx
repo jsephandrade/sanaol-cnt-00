@@ -29,8 +29,8 @@ export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { totalItems } = useCart();
   const cartHasItems = totalItems > 0;
-  const handleMenu = () => {
-    navigation.navigate('Profile');
+  const handleFeedback = () => {
+    navigation.navigate('Feedback');
   };
 
   const handleTabPress = (key) => {
@@ -97,11 +97,11 @@ export default function HomeScreen({ navigation }) {
                 </View>
                 <View className="flex-row items-center">
                   <TouchableOpacity
-                    onPress={handleMenu}
+                    onPress={handleFeedback}
                     className="h-12 w-12 items-center justify-center rounded-full bg-white/70"
                     accessibilityRole="button"
-                    accessibilityLabel="Open menu">
-                    <Feather name="menu" size={22} color="#6B4F3A" />
+                    accessibilityLabel="Share feedback">
+                    <Feather name="message-circle" size={22} color="#6B4F3A" />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -114,11 +114,11 @@ export default function HomeScreen({ navigation }) {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('Profile')}
+                    onPress={() => navigation.navigate('FAQs')}
                     className="h-12 w-12 items-center justify-center rounded-full bg-white/70"
                     accessibilityRole="button"
-                    accessibilityLabel="Open profile">
-                    <Feather name="user" size={22} color="#6B4F3A" />
+                    accessibilityLabel="Open help">
+                    <Feather name="help-circle" size={22} color="#6B4F3A" />
                   </TouchableOpacity>
                 </View>
 
@@ -187,7 +187,7 @@ export default function HomeScreen({ navigation }) {
               {RECOMMENDED_ITEMS.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  className="mr-4 w-[172px] rounded-[26px] border border-[#F5DFD3] bg-white p-[14px] shadow-lg"
+                  className="mr-4 w-[172px] rounded-[26px] border border-[#F5DFD3] bg-[#FFF4E6] p-[14px] shadow-lg"
                   style={{ elevation: 2, shadowColor: '#F97316' }}
                   onPress={() => navigation.navigate('CustomizeItem', { item })}
                   accessibilityRole="button"
@@ -206,7 +206,7 @@ export default function HomeScreen({ navigation }) {
                       {item.rating.toFixed(1)} ({item.reviews})
                     </Text>
                   </View>
-                  <Text className="mt-2 text-sm font-semibold text-peach-500">₱{item.price}</Text>
+                  <Text className="mt-2 text-lg font-bold text-peach-500">₱{item.price}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -224,7 +224,7 @@ export default function HomeScreen({ navigation }) {
             {MENU_ITEMS.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                className="mb-3 flex-row items-center rounded-[26px] border border-[#F5DFD3] bg-white p-[14px] shadow"
+                className="mb-3 flex-row items-center rounded-[26px] border border-[#F5DFD3] bg-[#FFF4E6] p-[14px] shadow"
                 style={{ elevation: 1, shadowColor: '#F97316' }}
                 onPress={() => navigation.navigate('CustomizeItem', { item })}
                 accessibilityRole="button"
@@ -244,7 +244,7 @@ export default function HomeScreen({ navigation }) {
                     </Text>
                   </View>
                 </View>
-                <Text className="text-base font-semibold text-peach-500">₱{item.price}</Text>
+                <Text className="text-lg font-bold text-peach-500">₱{item.price}</Text>
               </TouchableOpacity>
             ))}
           </View>

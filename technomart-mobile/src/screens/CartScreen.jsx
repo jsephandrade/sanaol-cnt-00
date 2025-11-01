@@ -1,10 +1,7 @@
 ﻿import React from 'react';
 import {
   Alert,
-  Image,
-  Modal,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   ToastAndroid,
@@ -18,134 +15,72 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCart } from '../context/CartContext';
 import { useCheckout } from '../context/CheckoutContext';
 import { trackCheckoutEvent } from '../utils/trackCheckoutEvent';
+import {
+  ORDER_TYPE_OPTIONS,
+  RECOMMENDED_ADDONS,
+  PICKUP_TIME_SLOTS_TEMPLATE,
+} from '../constants/cart';
+import CartItemCard from '../components/cart/CartItemCard';
+import CartEmptyState from '../components/cart/CartEmptyState';
+import CartSummaryCard from '../components/cart/CartSummaryCard';
+import CartAddOnsCarousel from '../components/cart/CartAddOnsCarousel';
+import EstimatedArrivalCard from '../components/cart/EstimatedArrivalCard';
+import OrderTypeModal from '../components/cart/OrderTypeModal';
+import { useCartCredits } from '../hooks/useCartCredits';
 
-const RECOMMENDED_ADDONS = [
-  {
-    id: 'rec-1',
-    title: 'Peach Lychee Tea',
-    price: 65,
-    image:
-      'https://images.unsplash.com/photo-1484659619207-9165d119dafe?q=80&w=800&auto=format&fit=crop',
-  },
-  {
-    id: 'rec-2',
-    title: 'Mini Churros',
-    price: 85,
-    image:
-      'https://images.unsplash.com/photo-1509474520651-53cf07c07d2d?q=80&w=800&auto=format&fit=crop',
-  },
-];
+const SLOT_INTERVAL_MINUTES = 15;
 
-const ORDER_TYPE_OPTIONS = [
+const PICKUP_MODE_OPTIONS = [
   {
-    key: 'dine-in',
-    title: 'DINE-IN',
-    description: 'Enjoy your meal at the CTU canteen.',
-    accessibilityLabel: 'Choose dine-in',
-    accentColor: '#E75B4B',
-    idleBorderColor: '#F4BDB2',
-    circleBackground: '#FFF2EB',
-    iconName: 'silverware-fork-knife',
+    key: 'now',
+    title: 'Pickup now',
+    subtitle: 'Ready in ~15 min',
   },
   {
-    key: 'takeout',
-    title: 'TAKEOUT',
-    description: 'Pick up at the counter and head to class.',
-    accessibilityLabel: 'Choose takeout',
-    accentColor: '#E75B4B',
-    idleBorderColor: '#F4BDB2',
-    circleBackground: '#FFF2EB',
-    iconName: 'food-takeout-box-outline',
+    key: 'later',
+    title: 'Order for later',
+    subtitle: 'Choose a time slot',
   },
 ];
 
-const peso = (amount) =>
-  `₱${Number(amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`;
+const formatSlotTime = (date) => {
+  const pad = String(date.getMinutes()).padStart(2, '0');
+  let hours = date.getHours();
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${hours}:${pad} ${suffix}`;
+};
 
-const fallbackNavigation = Object.freeze({
-  goBack: () => {},
-  navigate: () => {},
-});
+const buildPickupSlots = () => {
+  const now = new Date();
+  const base = new Date(now.getTime());
+  const remainder = base.getMinutes() % SLOT_INTERVAL_MINUTES;
+  if (remainder !== 0) {
+    base.setMinutes(base.getMinutes() + (SLOT_INTERVAL_MINUTES - remainder), 0, 0);
+  } else {
+    base.setSeconds(0, 0);
+    base.setMilliseconds(0);
+  }
 
-function CartItem({ item, onIncrement, onDecrement, onEdit }) {
-  const unitPrice = item.basePrice + item.extrasTotal;
-  const lineTotal = unitPrice * item.quantity;
+  return PICKUP_TIME_SLOTS_TEMPLATE.map((template, index) => {
+    const start = new Date(base.getTime() + template.offsetMinutes * 60000);
+    const end = new Date(start.getTime() + SLOT_INTERVAL_MINUTES * 60000);
+    return {
+      id: template.id,
+      label: `${formatSlotTime(start)} - ${formatSlotTime(end)}`,
+      startISO: start.toISOString(),
+      endISO: end.toISOString(),
+      badge:
+        index === 0
+          ? 'Earliest'
+          : index === PICKUP_TIME_SLOTS_TEMPLATE.length - 1
+            ? 'Latest'
+            : 'Standard',
+    };
+  });
+};
 
-  return (
-    <View className="mb-4 flex-row rounded-[28px] border border-[#F5DFD3] bg-white p-4 shadow-[0px_8px_12px_rgba(249,115,22,0.08)]">
-      <Image
-        source={{ uri: item.image }}
-        className="h-20 w-20 rounded-2xl"
-        resizeMode="cover"
-        accessibilityIgnoresInvertColors
-      />
-      <View className="ml-4 flex-1">
-        <View className="flex-row justify-between">
-          <View className="flex-1 pr-6">
-            <Text className="text-sm font-semibold text-text">{item.title}</Text>
-            <Text className="mt-1 text-xs text-sub">{item.restaurant || 'TechnoMart Kitchen'}</Text>
-            {item.notes ? (
-              <View className="mt-2 flex-row items-start">
-                <MaterialCommunityIcons name="note-text-outline" size={14} color="#A16236" />
-                <Text className="ml-1 flex-1 text-xs italic text-[#A16236]">{item.notes}</Text>
-              </View>
-            ) : null}
-          </View>
-          <TouchableOpacity
-            onPress={onEdit}
-            accessibilityRole="button"
-            accessibilityLabel={`Edit ${item.title}`}
-            className="p-1">
-            <Feather name="edit-2" size={18} color="#D97706" />
-          </TouchableOpacity>
-        </View>
-
-        {item.extras?.length ? (
-          <View className="mt-2 flex-row flex-wrap">
-            {item.extras.map((extra) => (
-              <View
-                key={extra.key}
-                className="mr-2 mt-2 rounded-full border border-[#F5DFD3] bg-[#FFF2E6] px-3 py-[3px]">
-                <Text className="text-[11px] text-peach-500">
-                  +{peso(extra.price)} {extra.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        <View className="mt-3 flex-row items-center justify-between">
-          <View>
-            <Text className="text-xs text-sub">
-              {peso(item.basePrice)}
-              {item.extrasTotal ? ` + ${peso(item.extrasTotal)} extras` : ''}
-            </Text>
-            <Text className="mt-1 text-base font-semibold text-peach-500">{peso(lineTotal)}</Text>
-          </View>
-          <View className="flex-row items-center">
-            <TouchableOpacity
-              onPress={onDecrement}
-              className="h-8 w-8 items-center justify-center rounded-full bg-[#FFE8D6]"
-              accessibilityRole="button"
-              accessibilityLabel={`Decrease quantity of ${item.title}`}>
-              <Feather name="minus" size={16} color="#F07F13" />
-            </TouchableOpacity>
-            <Text className="mx-3 text-sm font-semibold text-text">{item.quantity}</Text>
-            <TouchableOpacity
-              onPress={onIncrement}
-              className="h-8 w-8 items-center justify-center rounded-full bg-peach-500"
-              accessibilityRole="button"
-              accessibilityLabel={`Increase quantity of ${item.title}`}>
-              <Feather name="plus" size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-export default function CartScreen({ navigation }) {
+export default function CartScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const {
@@ -168,45 +103,109 @@ export default function CartScreen({ navigation }) {
   const sheetAccentColor = '#F97316';
   const safeBottomInset = Math.max(insets.bottom, 0);
 
-  const safeNavigation = React.useMemo(() => navigation ?? fallbackNavigation, [navigation]);
-
   const hasItems = totalItems > 0;
-  const total = subtotal;
+
+  const {
+    redeemCredits,
+    canRedeemCredits,
+    creditSummaryText,
+    creditDiscount,
+    creditEarnedThisOrder,
+    handleToggleCredits,
+    total,
+    creditApplied,
+  } = useCartCredits({
+    subtotal,
+    hasItems,
+    creditPointsParam: route?.params?.creditPoints,
+  });
+
+  const pickupTimeSlots = React.useMemo(
+    () => (hasItems ? buildPickupSlots() : []),
+    [hasItems, totalItems]
+  );
+  const [pickupSlotId, setPickupSlotId] = React.useState(null);
+  const [pickupMode, setPickupMode] = React.useState('now');
+
+  React.useEffect(() => {
+    if (!hasItems) {
+      setPickupMode('now');
+      setPickupSlotId(null);
+      return;
+    }
+    if (pickupMode !== 'later') {
+      return;
+    }
+    if (!pickupTimeSlots.length) {
+      return;
+    }
+    const currentSlotExists = pickupTimeSlots.some((slot) => slot.id === pickupSlotId);
+    if (!pickupSlotId || !currentSlotExists) {
+      setPickupSlotId(pickupTimeSlots[0].id);
+    }
+  }, [hasItems, pickupMode, pickupSlotId, pickupTimeSlots]);
+
+  const selectedPickupSlot = React.useMemo(
+    () =>
+      pickupMode === 'later'
+        ? (pickupTimeSlots.find((slot) => slot.id === pickupSlotId) ?? null)
+        : null,
+    [pickupMode, pickupSlotId, pickupTimeSlots]
+  );
+
+  const estimatedArrivalLabel =
+    pickupMode === 'later' && selectedPickupSlot
+      ? selectedPickupSlot.label
+      : 'Ready within 15 minutes';
   const canCheckout = hasItems;
-  const estimatedArrivalLabel = 'Ready within 15 minutes';
+
   const handleIncrement = (item) => updateItemQuantity(item.variantKey, item.quantity + 1);
   const handleDecrement = (item) => updateItemQuantity(item.variantKey, item.quantity - 1);
   const handleEdit = (item) => {
-    const variantCopy = {
-      item: {
-        id: item.id,
-        title: item.title,
-        price: item.basePrice,
-        image: item.image,
-        restaurant: item.restaurant,
-      },
-      extras: item.extras,
-      notes: item.notes,
-      quantity: 1,
-    };
-    removeItem(item.variantKey);
-    safeNavigation.navigate('CustomizeItem', variantCopy);
+    if (navigation?.navigate) {
+      const variantCopy = {
+        item: {
+          id: item.id,
+          title: item.title,
+          price: item.basePrice,
+          image: item.image,
+          restaurant: item.restaurant,
+        },
+        extras: item.extras,
+        notes: item.notes,
+        quantity: 1,
+      };
+      removeItem(item.variantKey);
+      navigation.navigate('CustomizeItem', variantCopy);
+    } else {
+      Alert.alert('Edit unavailable', 'Item editing requires navigation support.');
+    }
   };
 
-  const handleAddOn = (addOn) => {
-    addItem({
-      item: {
-        id: addOn.id,
-        title: addOn.title,
-        price: addOn.price,
-        image: addOn.image,
-      },
-      extras: [],
-      notes: '',
-      quantity: 1,
-    });
-    Alert.alert('Added to cart', `${addOn.title} was added to your cart.`);
-  };
+  const handleAddOn = React.useCallback(
+    (addOn) => {
+      if (!addOn) {
+        return;
+      }
+      addItem({
+        item: {
+          id: addOn.id,
+          title: addOn.title,
+          price: addOn.price,
+          image: addOn.image,
+        },
+        extras: [],
+        notes: '',
+        quantity: 1,
+      });
+      Alert.alert('Added to cart', `${addOn.title} was added to your cart.`);
+    },
+    [addItem]
+  );
+
+  const handleViewAllAddOns = React.useCallback(() => {
+    Alert.alert('Add-ons', 'More add-ons are coming soon.');
+  }, []);
 
   const openOrderTypeModal = React.useCallback(() => {
     setSelectedOrderType(orderType ?? null);
@@ -245,12 +244,39 @@ export default function CartScreen({ navigation }) {
     if (!selectedOrderType) {
       return;
     }
-    trackCheckoutEvent('checkout_continue_to_payment', { orderType: selectedOrderType });
+    const pickupSlotPayload = selectedPickupSlot
+      ? {
+          id: selectedPickupSlot.id,
+          label: selectedPickupSlot.label,
+          startISO: selectedPickupSlot.startISO,
+          endISO: selectedPickupSlot.endISO,
+        }
+      : null;
+    if (pickupMode === 'later' && !selectedPickupSlot) {
+      Alert.alert('Select pickup time', 'Choose a pickup slot before continuing.');
+      return;
+    }
+    trackCheckoutEvent('checkout_continue_to_payment', {
+      orderType: selectedOrderType,
+      creditApplied,
+      creditEarned: creditEarnedThisOrder,
+      pickupMode,
+      pickupSlot: pickupSlotPayload?.id ?? null,
+      pickupSlotLabel: pickupSlotPayload?.label ?? null,
+    });
     updateOrderType(selectedOrderType);
     closeOrderTypeModal();
     try {
       beginCheckout();
-      safeNavigation.navigate('Payment', { orderType: selectedOrderType });
+      if (navigation?.navigate) {
+        navigation.navigate('Payment', {
+          orderType: selectedOrderType,
+          creditApplied,
+          creditEarned: creditEarnedThisOrder,
+          pickupMode,
+          pickupSlot: pickupSlotPayload,
+        });
+      }
     } catch (error) {
       console.error('Failed to continue to payment', error);
       if (Platform.OS === 'android') {
@@ -259,116 +285,34 @@ export default function CartScreen({ navigation }) {
         Alert.alert('Unable to continue', 'Please try again.');
       }
     }
-  }, [beginCheckout, closeOrderTypeModal, safeNavigation, selectedOrderType, updateOrderType]);
-
-  const renderOrderTypeOption = React.useCallback(
-    (option) => {
-      if (!option) {
-        return null;
-      }
-      const isSelected = selectedOrderType === option.key;
-      const circleBorderColor = isSelected ? option.accentColor : option.idleBorderColor;
-      const outerBackground = isDarkMode ? '#2E2A27' : option.circleBackground;
-      const innerBackground = isSelected ? option.accentColor : isDarkMode ? '#3F3F46' : '#FFFFFF';
-      return (
-        <Pressable
-          key={option.key}
-          onPress={() => handleSelectOrderType(option.key)}
-          accessibilityRole="button"
-          accessibilityState={{ selected: isSelected }}
-          accessibilityLabel={option.accessibilityLabel}
-          style={{
-            alignItems: 'center',
-            width: '100%',
-          }}>
-          <View
-            style={{
-              height: 138,
-              width: 138,
-              borderRadius: 69,
-              borderWidth: 4,
-              borderColor: circleBorderColor,
-              backgroundColor: outerBackground,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: option.accentColor,
-              shadowOpacity: isSelected ? 0.28 : 0.18,
-              shadowOffset: { width: 0, height: 10 },
-              shadowRadius: isSelected ? 20 : 14,
-              elevation: isSelected ? 12 : 6,
-            }}>
-            <View
-              style={{
-                height: 82,
-                width: 82,
-                borderRadius: 41,
-                backgroundColor: innerBackground,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <MaterialCommunityIcons
-                name={option.iconName}
-                size={40}
-                color={isSelected ? '#FFFFFF' : option.accentColor}
-              />
-            </View>
-          </View>
-          <Text
-            style={{
-              marginTop: 20,
-              fontSize: 18,
-              fontWeight: '800',
-              letterSpacing: 1.2,
-              color: '#FFFFFF',
-              textAlign: 'center',
-              maxWidth: 190,
-            }}>
-            {option.title}
-          </Text>
-          <Text
-            style={{
-              marginTop: 6,
-              fontSize: 12,
-              color: '#FFFFFF',
-              textAlign: 'center',
-              maxWidth: 180,
-              paddingHorizontal: 6,
-            }}>
-            {option.description}
-          </Text>
-        </Pressable>
-      );
-    },
-    [handleSelectOrderType, isDarkMode, selectedOrderType, sheetSubtitleColor, sheetTitleColor]
-  );
-
-  const [dineInOption, takeoutOption] = ORDER_TYPE_OPTIONS;
+  }, [
+    beginCheckout,
+    closeOrderTypeModal,
+    selectedOrderType,
+    updateOrderType,
+    creditApplied,
+    creditEarnedThisOrder,
+    pickupMode,
+    selectedPickupSlot,
+    navigation,
+  ]);
 
   return (
-    <View className="flex-1 bg-cream">
+    <View className="flex-1 bg-white/85">
       <View
         className="absolute inset-0"
         accessible={false}
         importantForAccessibility="no-hide-descendants"
         pointerEvents="none">
-        <MaterialCommunityIcons
-          name="bread-slice"
-          size={92}
-          color="#FFE6D2"
-          style={{ position: 'absolute', top: 260, left: -10, opacity: 0.12 }}
-        />
-        <MaterialCommunityIcons
-          name="noodles"
-          size={100}
-          color="#FFE6D2"
-          style={{ position: 'absolute', bottom: 180, right: -20, opacity: 0.1 }}
-        />
-        <MaterialCommunityIcons
-          name="cup"
-          size={88}
-          color="#FFE6D2"
-          style={{ position: 'absolute', top: 420, left: 80, opacity: 0.08 }}
-        />
+        <View className="absolute left-[-10px] top-[260px] opacity-[0.12]">
+          <MaterialCommunityIcons name="bread-slice" size={92} color="#FFE6D2" />
+        </View>
+        <View className="absolute bottom-[180px] right-[-20px] opacity-10">
+          <MaterialCommunityIcons name="noodles" size={100} color="#FFE6D2" />
+        </View>
+        <View className="absolute left-[80px] top-[420px] opacity-[0.08]">
+          <MaterialCommunityIcons name="cup" size={88} color="#FFE6D2" />
+        </View>
       </View>
       <LinearGradient
         colors={['#FFE0C2', '#FFEBD8']}
@@ -381,28 +325,23 @@ export default function CartScreen({ navigation }) {
           accessible={false}
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none">
-          <MaterialCommunityIcons
-            name="pizza"
-            size={100}
-            color="#FFD6B9"
-            style={{ position: 'absolute', top: 10, left: -12, opacity: 0.22 }}
-          />
-          <MaterialCommunityIcons
-            name="french-fries"
-            size={96}
-            color="#FFD6B9"
-            style={{ position: 'absolute', top: 60, right: -18, opacity: 0.18 }}
-          />
-          <MaterialCommunityIcons
-            name="ice-cream"
-            size={92}
-            color="#FFD6B9"
-            style={{ position: 'absolute', top: 160, left: 70, opacity: 0.16 }}
-          />
+          <View className="absolute left-[-12px] top-[10px] opacity-[0.22]">
+            <MaterialCommunityIcons name="pizza" size={100} color="#FFD6B9" />
+          </View>
+          <View className="absolute right-[-18px] top-[60px] opacity-[0.18]">
+            <MaterialCommunityIcons name="french-fries" size={96} color="#FFD6B9" />
+          </View>
+          <View className="absolute left-[70px] top-[160px] opacity-[0.16]">
+            <MaterialCommunityIcons name="ice-cream" size={92} color="#FFD6B9" />
+          </View>
         </View>
         <View className="flex-row items-center justify-between px-5">
           <TouchableOpacity
-            onPress={() => safeNavigation.goBack()}
+            onPress={() => {
+              if (navigation?.goBack) {
+                navigation.goBack();
+              }
+            }}
             className="h-10 w-10 items-center justify-center rounded-full bg-white/70"
             accessibilityRole="button"
             accessibilityLabel="Go back">
@@ -428,264 +367,212 @@ export default function CartScreen({ navigation }) {
         showsVerticalScrollIndicator={false}>
         <View className="mt-5 px-5">
           {hasItems ? (
-            items.map((item) => (
-              <CartItem
-                key={item.variantKey}
-                item={item}
-                onIncrement={() => handleIncrement(item)}
-                onDecrement={() => handleDecrement(item)}
-                onEdit={() => handleEdit(item)}
-              />
-            ))
+            <>
+              <View className="mb-5 rounded-[26px] border border-[#F5DFD3] bg-white p-1 shadow-[0px_4px_12px_rgba(249,115,22,0.05)]">
+                <View className="flex-row rounded-[22px] bg-[#FFF4E6]">
+                  {PICKUP_MODE_OPTIONS.map((option) => {
+                    const isActive = pickupMode === option.key;
+                    return (
+                      <TouchableOpacity
+                        key={option.key}
+                        onPress={() => setPickupMode(option.key)}
+                        className={`flex-1 rounded-[22px] px-4 py-3 ${
+                          isActive ? 'bg-peach-500 shadow-[0px_6px_14px_rgba(249,115,22,0.18)]' : ''
+                        }`}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isActive }}
+                        accessibilityLabel={option.title}>
+                        <Text
+                          className={`text-sm font-semibold ${
+                            isActive ? 'text-white' : 'text-[#6B4F3A]'
+                          }`}>
+                          {option.title}
+                        </Text>
+                        <Text
+                          className={`mt-1 text-[11px] ${
+                            isActive ? 'text-white/80' : 'text-[#A87952]'
+                          }`}>
+                          {option.subtitle}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {pickupMode === 'later' ? (
+                <View className="mb-5 rounded-[28px] border border-[#F5DFD3] bg-white p-5 shadow-[0px_6px_12px_rgba(249,115,22,0.05)]">
+                  <View className="flex-row items-start justify-between">
+                    <View className="flex-1 pr-4">
+                      <View className="flex-row items-center">
+                        <MaterialCommunityIcons name="clock-outline" size={18} color="#F97316" />
+                        <Text className="ml-2 text-sm font-semibold text-text">
+                          Pickup time slot
+                        </Text>
+                      </View>
+                      <Text className="mt-2 text-xs text-sub">
+                        Reserve a pickup window so your meal is ready when you arrive.
+                      </Text>
+                    </View>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: 12 }}>
+                    {pickupTimeSlots.map((slot) => {
+                      const isSelected = slot.id === pickupSlotId;
+                      return (
+                        <TouchableOpacity
+                          key={slot.id}
+                          onPress={() => setPickupSlotId(slot.id)}
+                          className={`mr-3 rounded-[22px] border px-4 py-3 ${
+                            isSelected
+                              ? 'border-peach-500 bg-peach-500 shadow-[0px_8px_16px_rgba(249,115,22,0.18)]'
+                              : 'border-[#F5DFD3] bg-[#FFF4E6] shadow-[0px_4px_10px_rgba(249,115,22,0.08)]'
+                          }`}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: isSelected }}
+                          accessibilityLabel={`Pickup between ${slot.label}`}>
+                          <Text
+                            className={`text-xs font-semibold ${
+                              isSelected ? 'text-white' : 'text-[#6B4F3A]'
+                            }`}>
+                            {slot.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                  {selectedPickupSlot ? (
+                    <View className="mt-2 flex-row items-center rounded-[18px] bg-[#FFF4E6] px-3 py-2">
+                      <MaterialCommunityIcons
+                        name="clock-check-outline"
+                        size={16}
+                        color="#EA580C"
+                      />
+                      <Text className="ml-2 text-xs text-[#9A6A46]">
+                        We will prepare your order for {selectedPickupSlot.label}.
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {items.map((item) => (
+                <CartItemCard
+                  key={item.variantKey}
+                  item={item}
+                  onIncrement={() => handleIncrement(item)}
+                  onDecrement={() => handleDecrement(item)}
+                  onEdit={() => handleEdit(item)}
+                />
+              ))}
+            </>
           ) : (
-            <View className="items-center justify-center rounded-[28px] border border-[#F5DFD3] bg-white px-6 py-12 shadow-[0px_6px_12px_rgba(249,115,22,0.06)]">
-              <MaterialCommunityIcons name="food-variant-off" size={48} color="#D1D5DB" />
-              <Text className="mt-4 text-base font-semibold text-text">Your cart is empty</Text>
-              <Text className="mt-1 text-center text-sm text-sub">
-                Add your campus favorites from the home screen to get started.
-              </Text>
-              <TouchableOpacity
-                onPress={() => safeNavigation.navigate('Home')}
-                className="mt-4 rounded-full bg-peach-500 px-5 py-3"
-                accessibilityRole="button"
-                accessibilityLabel="Browse menu">
-                <Text className="text-sm font-semibold text-white">Browse menu</Text>
-              </TouchableOpacity>
-            </View>
+            <CartEmptyState
+              onBrowse={() => {
+                if (navigation?.navigate) {
+                  navigation.navigate('Home');
+                }
+              }}
+            />
           )}
         </View>
 
-        <View className="px-5">
-          <View className="mt-2 rounded-[28px] border border-[#F5DFD3] bg-white p-5 shadow-[0px_6px_10px_rgba(249,115,22,0.06)]">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-semibold text-text">Subtotal</Text>
-              <Text className="text-sm font-semibold text-text">{peso(subtotal)}</Text>
-            </View>
-            <View className="my-3 h-px bg-[#F2D4C4]" />
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="text-base font-semibold text-text">Total</Text>
-                <Text className="text-[11px] text-sub">No additional fees apply</Text>
+        {hasItems && pickupMode === 'later' ? (
+          <View className="mt-4 px-5">
+            <View className="rounded-[28px] border border-[#F5DFD3] bg-white p-5 shadow-[0px_6px_12px_rgba(249,115,22,0.05)]">
+              <View className="flex-row items-start justify-between">
+                <View className="flex-1 pr-4">
+                  <View className="flex-row items-center">
+                    <MaterialCommunityIcons name="clock-outline" size={18} color="#F97316" />
+                    <Text className="ml-2 text-sm font-semibold text-text">Pickup time slot</Text>
+                  </View>
+                  <Text className="mt-2 text-xs text-sub">
+                    Reserve a pickup window so your meal is ready when you arrive.
+                  </Text>
+                </View>
               </View>
-              <Text className="text-xl font-bold text-peach-500">{peso(total)}</Text>
+              <View className="mt-4 flex-row flex-wrap">
+                {pickupTimeSlots.map((slot) => {
+                  const isSelected = slot.id === pickupSlotId;
+                  return (
+                    <TouchableOpacity
+                      key={slot.id}
+                      onPress={() => setPickupSlotId(slot.id)}
+                      className={`mr-2 mt-2 rounded-full border px-4 py-2 ${
+                        isSelected
+                          ? 'border-peach-500 bg-peach-500'
+                          : 'border-[#F5DFD3] bg-[#FFF4E6]'
+                      }`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={`Pickup between ${slot.label}`}>
+                      <Text
+                        className={`text-xs font-semibold ${
+                          isSelected ? 'text-white' : 'text-[#6B4F3A]'
+                        }`}>
+                        {slot.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {selectedPickupSlot ? (
+                <View className="mt-4 flex-row items-center rounded-[18px] bg-[#FFF4E6] px-3 py-2">
+                  <MaterialCommunityIcons name="clock-check-outline" size={16} color="#EA580C" />
+                  <Text className="ml-2 text-xs text-[#9A6A46]">
+                    We will prepare your order for {selectedPickupSlot.label}.
+                  </Text>
+                </View>
+              ) : null}
             </View>
           </View>
+        ) : null}
+
+        <View className="mt-4 px-5">
+          <CartSummaryCard
+            subtotal={subtotal}
+            total={total}
+            redeemCredits={redeemCredits}
+            canRedeemCredits={canRedeemCredits}
+            creditSummaryText={creditSummaryText}
+            creditDiscount={creditDiscount}
+            creditEarnedThisOrder={creditEarnedThisOrder}
+            onToggleCredits={handleToggleCredits}
+          />
         </View>
 
-        <View className="mt-6 px-5">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-semibold text-text">Add something extra</Text>
-            <TouchableOpacity
-              onPress={() => Alert.alert('Add-ons', 'More add-ons are coming soon.')}
-              accessibilityRole="button"
-              accessibilityLabel="Browse all add-ons">
-              <Text className="text-sm font-medium text-peach-500">View all</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingVertical: 14 }}>
-            {RECOMMENDED_ADDONS.map((addOn) => (
-              <TouchableOpacity
-                key={addOn.id}
-                className="mr-4 w-[150px] rounded-[24px] border border-[#F5DFD3] bg-white p-3.5 shadow-[0px_6px_12px_rgba(249,115,22,0.06)]"
-                onPress={() => handleAddOn(addOn)}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${addOn.title}`}>
-                <Image
-                  source={{ uri: addOn.image }}
-                  className="h-24 w-full rounded-2xl"
-                  resizeMode="cover"
-                  accessibilityIgnoresInvertColors
-                />
-                <Text className="mt-3 text-sm font-semibold text-text">{addOn.title}</Text>
-                <Text className="mt-1 text-xs text-sub">Perfect with your meal</Text>
-                <Text className="mt-2 text-sm font-semibold text-peach-500">
-                  {peso(addOn.price)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        <CartAddOnsCarousel
+          addOns={RECOMMENDED_ADDONS}
+          onAdd={handleAddOn}
+          onViewAll={handleViewAllAddOns}
+        />
       </ScrollView>
 
-      {hasItems ? (
-        <LinearGradient
-          colors={['#F97316', '#FB923C']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          className="absolute left-5 right-5 rounded-[28px] px-6 py-5"
-          style={{
-            bottom: 20 + safeBottomInset,
-            borderRadius: 28,
-            paddingBottom: 26,
-            shadowColor: '#F97316',
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.28,
-            shadowRadius: 20,
-            elevation: 12,
-          }}>
-          <View className="flex-row items-start justify-between">
-            <View className="flex-1 pr-4">
-              <Text className="text-[11px] uppercase tracking-[1.2px] text-white/75">
-                Estimated arrival
-              </Text>
-              <Text className="mt-2 text-xl font-semibold text-white">{estimatedArrivalLabel}</Text>
-              <View className="mt-3 flex-row items-center">
-                <Feather name="clock" size={14} color="#FFE8D6" />
-                <Text className="ml-2 text-xs text-white/80">
-                  We will notify you when everything is warm and ready.
-                </Text>
-              </View>
-            </View>
-            <View className="items-end">
-              <Text className="text-[11px] uppercase tracking-[1.1px] text-white/75">
-                Total due
-              </Text>
-              <Text className="mt-1 text-lg font-semibold text-white">{peso(total)}</Text>
-              <TouchableOpacity
-                onPress={onCheckout}
-                disabled={!canCheckout}
-                className="mt-4 rounded-full bg-white px-5 py-3 shadow-md shadow-black/10"
-                accessibilityRole="button"
-                accessibilityLabel="Checkout"
-                style={!canCheckout ? { opacity: 0.55 } : null}>
-                <Text className="text-sm font-semibold text-[#F97316]">Checkout {peso(total)}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-      ) : null}
-      <Modal
-        animationType="fade"
-        transparent
+      <EstimatedArrivalCard
+        isVisible={hasItems}
+        estimatedArrivalLabel={estimatedArrivalLabel}
+        total={total}
+        canCheckout={canCheckout}
+        onCheckout={onCheckout}
+        safeBottomInset={safeBottomInset}
+      />
+
+      <OrderTypeModal
         visible={isOrderTypeModalVisible}
-        onRequestClose={closeOrderTypeModal}
-        statusBarTranslucent>
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: 'rgba(17,17,17,0.6)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-            paddingBottom: Math.max(insets.bottom, 24),
-          }}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close order type selection"
-            onPress={closeOrderTypeModal}
-            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
-          />
-          <View style={{ width: '100%', maxWidth: 420, alignItems: 'center' }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
-                paddingHorizontal: 12,
-                marginBottom: 32,
-              }}>
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                {renderOrderTypeOption(dineInOption)}
-              </View>
-              <Text
-                style={{
-                  marginHorizontal: 18,
-                  alignSelf: 'center',
-                  fontSize: 16,
-                  fontWeight: '700',
-                  letterSpacing: 1.3,
-                  color: sheetSubtitleColor,
-                }}>
-                or
-              </Text>
-              <View style={{ flex: 1, alignItems: 'center' }}>
-                {renderOrderTypeOption(takeoutOption)}
-              </View>
-            </View>
-            <View
-              style={{
-                width: '100%',
-                backgroundColor: sheetBackgroundColor,
-                borderRadius: 32,
-                paddingHorizontal: 24,
-                paddingTop: 32,
-                paddingBottom: Math.max(insets.bottom + 12, 28),
-                alignItems: 'center',
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 16 },
-                shadowOpacity: isDarkMode ? 0.45 : 0.18,
-                shadowRadius: 28,
-                elevation: 18,
-              }}>
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: '700',
-                  color: sheetTitleColor,
-                  textAlign: 'center',
-                }}>
-                Choose how you like to receive your order
-              </Text>
-              <Text
-                style={{
-                  marginTop: 8,
-                  fontSize: 14,
-                  color: sheetSubtitleColor,
-                  textAlign: 'center',
-                }}>
-                Tap an option above to continue. You can change this later from the cart.
-              </Text>
-              <TouchableOpacity
-                onPress={handleContinueToPayment}
-                disabled={!selectedOrderType}
-                accessibilityRole="button"
-                accessibilityLabel="Proceed to payment"
-                style={{ width: '100%', marginTop: 28 }}>
-                <LinearGradient
-                  colors={selectedOrderType ? ['#F97316', '#F63D0C'] : ['#F4C6A6', '#F4C6A6']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    borderRadius: 999,
-                    paddingVertical: 16,
-                    alignItems: 'center',
-                    opacity: selectedOrderType ? 1 : 0.6,
-                  }}>
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: '700',
-                      color: selectedOrderType ? '#FFFFFF' : '#B45309',
-                      letterSpacing: 1.05,
-                      textTransform: 'uppercase',
-                    }}>
-                    Proceed to Pay
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <Pressable
-                onPress={closeOrderTypeModal}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel order type selection"
-                style={{ marginTop: 18 }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: sheetAccentColor,
-                  }}>
-                  Cancel
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={closeOrderTypeModal}
+        options={ORDER_TYPE_OPTIONS}
+        selectedOrderType={selectedOrderType}
+        onSelect={handleSelectOrderType}
+        onContinue={handleContinueToPayment}
+        sheetBackgroundColor={sheetBackgroundColor}
+        sheetTitleColor={sheetTitleColor}
+        sheetSubtitleColor={sheetSubtitleColor}
+        sheetAccentColor={sheetAccentColor}
+        insets={insets}
+        isDarkMode={isDarkMode}
+      />
     </View>
   );
 }

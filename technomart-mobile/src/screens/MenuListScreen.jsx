@@ -52,7 +52,7 @@ export default function MenuListScreen({ navigation, route }) {
   };
 
   return (
-    <View className="flex-1 bg-cream">
+    <View className="flex-1 bg-white/85">
       {/* Background icons */}
       <View
         className="absolute inset-0"
@@ -173,7 +173,7 @@ export default function MenuListScreen({ navigation, route }) {
             items.map((item) => (
               <TouchableOpacity
                 key={`${item.id}-menu`}
-                className="mb-3 flex-row items-center rounded-[26px] border border-[#F5DFD3] bg-white p-4 shadow"
+                className="mb-3 flex-row items-center rounded-[26px] border border-[#F5DFD3] bg-[#FFF4E6] p-4 shadow"
                 style={{
                   elevation: 2,
                   shadowColor: '#F97316',
@@ -204,7 +204,7 @@ export default function MenuListScreen({ navigation, route }) {
                     </Text>
                   </View>
                 </View>
-                <Text className="text-sm font-semibold text-peach-500">₱{item.price}</Text>
+                <Text className="text-lg font-bold text-peach-500">₱{item.price}</Text>
               </TouchableOpacity>
             ))
           )}
