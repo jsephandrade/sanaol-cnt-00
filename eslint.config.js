@@ -7,14 +7,14 @@ import react from 'eslint-plugin-react';
 
 export default [
   // Ignore build and vendor outputs
-  { ignores: ['dist/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'node_modules/**', '**/.venv/**'] },
 
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
-      globals: { ...globals.browser, ...globals.node },
+      globals: { ...globals.browser, ...globals.node, __DEV__: 'readonly' },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     plugins: {

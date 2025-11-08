@@ -5,6 +5,8 @@ import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import AccountCreatedScreen from '../screens/AccountCreatedScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import OtpVerificationScreen from '../screens/OtpVerificationScreen';
+import PendingVerificationScreen from '../screens/PendingVerificationScreen';
 import FaceScanScreen from '../screens/FaceScanScreen'; // make sure this path is correct
 // import FoodOrdersScreen from '../screens/FoodOrdersScreen'
 import ProfileScreen from '../screens/ProfileScreen';
@@ -37,6 +39,8 @@ export default function RootNavigator() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="AccountCreated" component={AccountCreatedScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="OtpVerification" component={OtpVerificationScreen} />
+      <Stack.Screen name="PendingVerification" component={PendingVerificationScreen} />
       <Stack.Screen name="FaceScan" component={FaceScanScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Alerts" component={AlertsScreen} />

@@ -21,9 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import AuthLayout from '../components/AuthLayout';
 import TermsNotice from '../components/TermsNotice';
-
-// NOTE: No signIn import — auth is disabled for now.
-// import { signIn } from "../utils/auth"
+import { useAuth } from '../context/AuthContext';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -32,13 +30,19 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // --- Touch & submit state (kept for UI hints only) ---
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const {
+    signIn: signInWithAuth,
+    authenticating,
+    error: authError,
+    clearError,
+    hydrated,
+  } = useAuth();
 
   // --- Refs for focus management ---
   const passwordRef = useRef(null);
@@ -85,7 +89,6 @@ export default function LoginScreen({ navigation }) {
     []
   );
 
-  const setSafeLoading = useMemo(() => setSafeState(setLoading), [setSafeState]);
   const setSafeError = useMemo(() => setSafeState(setErrorMessage), [setSafeState]);
   const setSafeEmail = useMemo(() => setSafeState(setEmail), [setSafeState]);
   const setSafePassword = useMemo(() => setSafeState(setPassword), [setSafeState]);
@@ -93,39 +96,113 @@ export default function LoginScreen({ navigation }) {
   const setSafePasswordTouched = useMemo(() => setSafeState(setPasswordTouched), [setSafeState]);
   const setSafeFormSubmitted = useMemo(() => setSafeState(setFormSubmitted), [setSafeState]);
 
-  // Clear error as user edits
   useEffect(() => {
-    if (errorMessage) setSafeError('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, password]);
+    if (!authError) return;
+    const message =
+      authError?.message ||
+      authError?.data?.message ||
+      'Unable to sign in. Please check your credentials.';
+    setSafeError(message);
+  }, [authError, setSafeError]);
 
   // Change handlers mark fields as touched
   const handleEmailChange = useCallback(
     (t) => {
       if (!emailTouched) setSafeEmailTouched(true);
       setSafeEmail(t);
+      if (errorMessage) {
+        setSafeError('');
+      }
+      if (authError) {
+        clearError();
+      }
     },
-    [emailTouched, setSafeEmailTouched, setSafeEmail]
+    [
+      emailTouched,
+      setSafeEmailTouched,
+      setSafeEmail,
+      errorMessage,
+      authError,
+      clearError,
+      setSafeError,
+    ]
   );
 
   const handlePasswordChange = useCallback(
     (t) => {
       if (!passwordTouched) setSafePasswordTouched(true);
       setSafePassword(t);
+      if (errorMessage) {
+        setSafeError('');
+      }
+      if (authError) {
+        clearError();
+      }
     },
-    [passwordTouched, setSafePasswordTouched, setSafePassword]
+    [
+      passwordTouched,
+      setSafePasswordTouched,
+      setSafePassword,
+      errorMessage,
+      authError,
+      clearError,
+      setSafeError,
+    ]
   );
 
   // --- Submit handler (no auth; just navigate) ---
   const handleLogin = useCallback(async () => {
-    if (loading) return;
+    if (authenticating) return;
     setSafeFormSubmitted(true); // keeps error hints/UX, but doesn't block navigation
     setSafeError('');
-    setSafeLoading(true);
 
     try {
-      // Optional tiny delay so the spinner shows briefly
-      await new Promise((r) => setTimeout(r, 250));
+      const remember = true;
+      const result = await signInWithAuth(trimmedEmail, trimmedPassword, {
+        remember,
+      });
+
+      if (result?.otpRequired) {
+        if (!result?.otpToken) {
+          setSafeError(
+            'Verification could not be started. Please try again or request a new code.'
+          );
+          return;
+        }
+        const expiresInSeconds = Number(result?.expiresIn ?? result?.otpExpiresIn ?? 0) || 0;
+        const issuedAt = Date.now();
+        AccessibilityInfo.announceForAccessibility?.(
+          'Verification required. Enter the 6-digit code we sent to your email.'
+        );
+        navigation.replace('OtpVerification', {
+          email: trimmedEmail,
+          otpToken: result.otpToken,
+          remember,
+          user: result.user || null,
+          expiresIn: expiresInSeconds,
+          issuedAt,
+        });
+        return;
+      }
+
+      const normalizedStatus = (result?.user?.status || '').toLowerCase();
+      if (result?.pending || (normalizedStatus && normalizedStatus !== 'active')) {
+        AccessibilityInfo.announceForAccessibility?.('Your account is pending verification.');
+        navigation.replace('PendingVerification', {
+          email: trimmedEmail,
+          verifyToken: result?.verifyToken || '',
+          user: result?.user || null,
+        });
+        return;
+      }
+
+      if (!result?.success && !result?.token && !result?.accessToken) {
+        const message =
+          result?.message || 'Unable to sign in. Please verify your email and password.';
+        setSafeError(message);
+        return;
+      }
+
       AccessibilityInfo.announceForAccessibility?.('Logged in');
       // Clear fields/touch state (cosmetic)
       setSafeEmail('');
@@ -135,14 +212,20 @@ export default function LoginScreen({ navigation }) {
       setSafeFormSubmitted(false);
       // Go straight to the next screen
       navigation.replace('Home');
-    } finally {
-      setSafeLoading(false);
+    } catch (err) {
+      const message =
+        err?.message ||
+        err?.data?.detail ||
+        'Unable to sign in. Please verify your email and password.';
+      setSafeError(message);
     }
   }, [
-    loading,
+    authenticating,
+    signInWithAuth,
+    trimmedEmail,
+    trimmedPassword,
     navigation,
     setSafeError,
-    setSafeLoading,
     setSafeEmail,
     setSafePassword,
     setSafeEmailTouched,
@@ -154,7 +237,8 @@ export default function LoginScreen({ navigation }) {
   const onEmailSubmit = useCallback(() => passwordRef.current?.focus(), []);
   const onPasswordSubmit = handleLogin;
 
-  const inputsEditable = !loading;
+  const inputsEditable = !authenticating && hydrated;
+  const loading = authenticating;
 
   // --- Spinning decorative icons (same vibe as Splash) ---
   const spin1 = useRef(new Animated.Value(0)).current;
@@ -369,7 +453,7 @@ export default function LoginScreen({ navigation }) {
 
                     <TouchableOpacity
                       onPress={() => navigation.navigate('ForgotPassword')}
-                      disabled={loading}
+                      disabled={!inputsEditable}
                       accessibilityRole="button"
                       accessibilityLabel="Forgot password">
                       <Text className="text-sm text-peach-500">Forgot password?</Text>
@@ -379,11 +463,11 @@ export default function LoginScreen({ navigation }) {
                   {/* Submit */}
                   <TouchableOpacity
                     testID="continueButton"
-                    disabled={loading}
+                    disabled={!inputsEditable}
                     onPress={handleLogin}
                     className={[
                       'mt-2 rounded-xl py-3',
-                      loading ? 'bg-peach-300' : 'bg-peach-500',
+                      !inputsEditable ? 'bg-peach-300' : 'bg-peach-500',
                     ].join(' ')}
                     accessibilityRole="button"
                     accessibilityLabel="Continue">
@@ -420,7 +504,7 @@ export default function LoginScreen({ navigation }) {
                   <TouchableOpacity
                     className="flex-row items-center justify-center rounded-xl border border-gray-200 bg-white py-3"
                     onPress={() => Alert.alert('Google login', 'Not implemented in this build')}
-                    disabled={loading}
+                    disabled={!inputsEditable}
                     accessibilityRole="button"
                     accessibilityLabel="Login with Google">
                     <MaterialCommunityIcons name="google" size={20} color="#DB4437" />
@@ -432,7 +516,7 @@ export default function LoginScreen({ navigation }) {
                     <Text className="text-sm text-gray-600">Don&apos;t have an account? </Text>
                     <TouchableOpacity
                       onPress={() => navigation.navigate('SignUp')}
-                      disabled={loading}
+                      disabled={!inputsEditable}
                       accessibilityRole="button"
                       accessibilityLabel="Sign up">
                       <Text className="text-sm font-semibold text-peach-500">Sign Up</Text>

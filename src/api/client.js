@@ -315,6 +315,7 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 export default apiClient;
+export { ApiClient };
 
 // Private helpers
 ApiClient.prototype._readCookie = function (name) {

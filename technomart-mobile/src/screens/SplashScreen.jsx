@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '../context/AuthContext';
 
 export default function SplashScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { hydrated, isAuthenticated } = useAuth();
 
   // logo animations
   const opacity = useRef(new Animated.Value(0)).current;
@@ -25,11 +27,13 @@ export default function SplashScreen({ navigation }) {
   const spin3 = useRef(new Animated.Value(0)).current;
 
   const goNext = useCallback(() => {
+    if (!hydrated) return;
+    const target = isAuthenticated ? 'Home' : 'Login';
     // prevent double navigation
-    if (navigation.getState?.()?.routes?.slice(-1)[0]?.name !== 'Login') {
-      navigation.replace('Login');
+    if (navigation.getState?.()?.routes?.slice(-1)[0]?.name !== target) {
+      navigation.replace(target);
     }
-  }, [navigation]);
+  }, [hydrated, isAuthenticated, navigation]);
 
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility?.('TechnoMart is loading');
@@ -101,6 +105,12 @@ export default function SplashScreen({ navigation }) {
     };
   }, [goNext, logoY, opacity, scale, spin1, spin2, spin3]);
 
+  useEffect(() => {
+    if (!hydrated) return undefined;
+    const timer = setTimeout(goNext, 600);
+    return () => clearTimeout(timer);
+  }, [hydrated, goNext]);
+
   // map spin values to degrees (spin2 reversed for variety)
   const rotate1 = spin1.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const rotate2 = spin2.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
@@ -108,7 +118,11 @@ export default function SplashScreen({ navigation }) {
 
   return (
     <TouchableWithoutFeedback
-      onPress={goNext}
+      onPress={() => {
+        if (hydrated) {
+          goNext();
+        }
+      }}
       accessibilityRole="button"
       accessibilityLabel="Skip intro and continue to login">
       <View

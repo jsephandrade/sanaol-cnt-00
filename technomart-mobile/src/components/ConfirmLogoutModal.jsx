@@ -1,6 +1,6 @@
 // components/ConfirmLogoutModal.jsx
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, Platform } from 'react-native';
+import { Modal, View, Text, TouchableOpacity } from 'react-native';
 
 export default function ConfirmLogoutModal({ visible, onCancel, onConfirm }) {
   return (

@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     # Local apps
     "api",
     "accounts",
-    "mobile_api",
 ]
 
 # Keep middleware lightweight; omit session/auth/csrf
@@ -114,7 +113,7 @@ DISABLE_INMEM_FALLBACK = (
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "mobile_api.authentication.JWTAuthentication",
+        "api.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",

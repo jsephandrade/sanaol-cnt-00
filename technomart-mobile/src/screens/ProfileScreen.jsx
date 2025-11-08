@@ -18,6 +18,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import ConfirmLogoutModal from '../components/ConfirmLogoutModal';
 import BottomNavigation from '../components/BottomNavigation';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 
 const DEFAULT_AVATAR =
@@ -64,6 +65,7 @@ export default function ProfileScreen({ navigation, route }) {
   const lockNavigation = route?.params?.lockNavigation ?? false;
   const { totalItems } = useCart();
   const cartHasItems = totalItems > 0;
+  const { signOut } = useAuth();
 
   // Existing state
   const [pushEnabled, setPushEnabled] = React.useState(true);
@@ -193,11 +195,17 @@ export default function ProfileScreen({ navigation, route }) {
   };
 
   // Called only after user confirms in the modal
-  const confirmLogoutAndNavigate = () => {
-    isLoggingOut.current = true;
-    // Clear any auth/session state here if needed...
-    navigation.replace?.('Login');
-  };
+  const confirmLogoutAndNavigate = React.useCallback(async () => {
+    try {
+      isLoggingOut.current = true;
+      setShowLogoutConfirm(false);
+      await signOut();
+      navigation.replace?.('Login');
+    } catch (err) {
+      isLoggingOut.current = false;
+      Alert.alert('Logout failed', err?.message || 'We could not sign you out. Please try again.');
+    }
+  }, [navigation, signOut]);
 
   return (
     <View

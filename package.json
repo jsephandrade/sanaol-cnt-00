@@ -11,8 +11,10 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
+    "verify:openapi": "npm run generate:openapi && git diff --quiet --exit-code -- shared/api/generated",
     "clean:vite": "rimraf node_modules/.vite node_modules/.cache/vite",
     "preview": "vite preview",
+    "generate:openapi": "node scripts/generate-openapi.js",
     "prepare": "husky install"
   },
   "lint-staged": {
@@ -80,7 +82,11 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@babel/generator": "^7.28.5",
+    "@babel/parser": "^7.28.5",
     "@babel/preset-react": "^7.27.1",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
     "@eslint/js": "^9.33.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
@@ -103,6 +109,7 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "zod-to-json-schema": "^3.24.6"
   }
 }

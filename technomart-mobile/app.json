@@ -20,7 +20,7 @@
     },
     "assetBundlePatterns": ["**/*"],
     "extra": {
-      "apiUrl": "https://reqres.in/api",
+      "enableMocks": false,
       "eas": {
         "projectId": "724f128a-e5fa-4d17-b1dc-5358de696900"
       }

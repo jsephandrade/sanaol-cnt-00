@@ -9,6 +9,7 @@ import './global.css'; // Ensure global styles are imported
 import { CartProvider } from './src/context/CartContext';
 import { OrdersProvider } from './src/context/OrdersContext';
 import { CheckoutProvider } from './src/context/CheckoutContext';
+import { AuthProvider } from './src/context/AuthContext';
 
 export default function App() {
   return (
@@ -20,15 +21,17 @@ export default function App() {
 
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <CartProvider>
-          <CheckoutProvider>
-            <OrdersProvider>
-              <NavigationContainer>
-                <RootNavigator />
-              </NavigationContainer>
-            </OrdersProvider>
-          </CheckoutProvider>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <CheckoutProvider>
+              <OrdersProvider>
+                <NavigationContainer>
+                  <RootNavigator />
+                </NavigationContainer>
+              </OrdersProvider>
+            </CheckoutProvider>
+          </CartProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
