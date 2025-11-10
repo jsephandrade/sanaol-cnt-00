@@ -166,12 +166,11 @@ const CustomerDisplay = ({ queue }) => {
   return (
     <Card className="h-full border border-border/60 bg-card/90 shadow-sm">
       <CardHeader className="space-y-2">
-        <div className="flex items-center justify-center gap-4 text-4xl font-semibold uppercase tracking-[0.4em] text-muted-foreground">
-          <span className="text-foreground">Preparing</span>
-          <span aria-hidden="true" className="text-border">
-            |
+        <div className="flex w-full items-center gap-4 text-4xl font-semibold uppercase tracking-[0.4em] text-muted-foreground">
+          <span className="flex-1 text-center text-foreground">Preparing</span>
+          <span className="flex-1 text-center text-foreground">
+            Now Serving
           </span>
-          <span className="text-foreground">Now Serving</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -181,13 +180,14 @@ const CustomerDisplay = ({ queue }) => {
             accent="text-amber-600 dark:text-amber-300"
             orders={preparingOrders}
             emptyText="No orders currently in preparation."
+            className="bg-blue-500/10 dark:bg-blue-500/20"
           />
           <Section
             title=""
             accent="text-emerald-600 dark:text-emerald-300"
             orders={servingOrders}
             emptyText="No orders ready for pickup."
-            className="md:border-l md:border-border/60 md:pl-6"
+            className="bg-emerald-500/10 dark:bg-emerald-500/20 md:border-l md:border-border/60 md:pl-6"
           />
         </div>
       </CardContent>

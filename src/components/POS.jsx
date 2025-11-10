@@ -114,25 +114,37 @@ const POS = () => {
     return EMPTY_QUEUE_STATE;
   }, [setOrderQueue]);
 
-  const handleProcessPayment = async (paymentDetails) => {
-    const info = await processPayment(paymentMethod, paymentDetails);
-    if (info?.id) {
-      setIsPaymentModalOpen(false);
-      setActiveTab('queue');
-
-      const triggerQueueRefresh = () => {
-        refreshQueue().catch((e) => console.error(e));
-      };
-
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(triggerQueueRefresh);
-      } else {
-        setTimeout(triggerQueueRefresh, 0);
-      }
-
-      return true;
+  const scheduleQueueRefresh = useCallback(() => {
+    const update = () => {
+      refreshQueue().catch((error) => console.error(error));
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(update);
+    } else {
+      setTimeout(update, 0);
     }
-    return false;
+  }, [refreshQueue]);
+
+  const handleProcessPayment = (paymentDetails) => {
+    const paymentPromise = processPayment(paymentMethod, paymentDetails);
+
+    setIsPaymentModalOpen(false);
+    setActiveTab('queue');
+
+    scheduleQueueRefresh();
+
+    paymentPromise
+      .then((info) => {
+        if (info?.id) {
+          scheduleQueueRefresh();
+        }
+      })
+      .catch((error) => {
+        console.error('Payment flow failed after optimistic accept:', error);
+        scheduleQueueRefresh();
+      });
+
+    return paymentPromise;
   };
 
   const handleOpenPaymentModal = () => {
@@ -230,7 +242,7 @@ const POS = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pos">Point of Sale</TabsTrigger>
           <TabsTrigger value="queue">Order Queue</TabsTrigger>
-          <TabsTrigger value="display">Customer Display</TabsTrigger>
+          <TabsTrigger value="display">Claim Monitor</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pos">

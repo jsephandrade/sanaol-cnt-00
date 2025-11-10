@@ -52,16 +52,24 @@ const getOrderStatus = (order) => {
   return '';
 };
 
+const MANUAL_COMPLETION_STATUSES = new Set(['staged', 'handoff']);
+
 const resolveAutoAdvanceTarget = (order) => {
   if (!order) return null;
-  const direct = normalizeStatus(order.autoAdvanceTarget);
-  if (direct) return direct;
   const canonicalStatus = toCanonicalStatus(getOrderStatus(order));
+  const direct = normalizeStatus(order.autoAdvanceTarget);
+  if (direct) {
+    const canonicalTarget = toCanonicalStatus(direct);
+    if (
+      canonicalTarget === 'completed' &&
+      MANUAL_COMPLETION_STATUSES.has(canonicalStatus)
+    ) {
+      return null;
+    }
+    return direct;
+  }
   if (canonicalStatus === 'in_prep') {
     return 'ready';
-  }
-  if (canonicalStatus === 'staged') {
-    return 'completed';
   }
   return null;
 };

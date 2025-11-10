@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from uuid import UUID
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -18,7 +19,12 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import F
 from decimal import Decimal
 
-from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
+from .views_common import (
+    _actor_from_request,
+    _has_permission,
+    _require_admin_or_manager,
+    rate_limit,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -79,6 +85,59 @@ def _serialize_db(p, order_numbers=None):
         "processedBy": (p.processed_by.email if getattr(p, "processed_by", None) else ""),
         "date": (p.created_at or dj_timezone.now()).isoformat(),
     }
+
+
+def _run_background_task(target, *args, **kwargs):
+    def wrapper():
+        try:
+            target(*args, **kwargs)
+        except Exception:
+            logger.exception("Background payment task failed")
+
+    thread = threading.Thread(target=wrapper, daemon=True)
+    thread.start()
+
+
+def _post_payment_tasks(
+    request,
+    actor,
+    reward_user_id,
+    order_id,
+    amount,
+    method,
+    payment_id,
+    order_number,
+):
+    if reward_user_id:
+        try:
+            from .models import AppUser
+
+            AppUser.objects.filter(id=reward_user_id).update(
+                credit_points=F("credit_points") + LOYALTY_EARN_PER_PURCHASE
+            )
+        except Exception:
+            logger.exception("Failed to award credit points for purchase (background)")
+
+    try:
+        from .utils_audit import record_audit
+
+        record_audit(
+            request,
+            user=actor if hasattr(actor, "id") else None,
+            type="action",
+            action="Payment processed",
+            details=f"order={order_id} amount={amount} method={method}",
+            severity="info",
+            meta={
+                "orderId": str(order_id),
+                "amount": float(amount),
+                "method": method,
+                "paymentId": payment_id,
+                "orderNumber": order_number or "",
+            },
+        )
+    except Exception:
+        logger.exception("Failed to record payment audit log (background)")
 
 
 @require_http_methods(["POST"])  # /orders/<order_id>/payment
@@ -194,30 +253,18 @@ def order_payment(request, order_id: str):
             pass
         if not reward_user_id and hasattr(actor, "id"):
             reward_user_id = getattr(actor, "id", None)
-        if reward_user_id:
-            try:
-                from .models import AppUser
-                AppUser.objects.filter(id=reward_user_id).update(
-                    credit_points=F("credit_points") + LOYALTY_EARN_PER_PURCHASE
-                )
-            except Exception:
-                logger.exception("Failed to award credit points for purchase")
 
-        # Audit log
-        try:
-            from .utils_audit import record_audit
-            ua, ip = _client_meta(request)
-            record_audit(
-                request,
-                user=actor if hasattr(actor, "id") else None,
-                type="action",
-                action="Payment processed",
-                details=f"order={order_id} amount={amt} method={method}",
-                severity="info",
-                meta={"orderId": str(order_id), "amount": float(amt), "method": method, "paymentId": str(p.id)},
-            )
-        except Exception:
-            pass
+        _run_background_task(
+            _post_payment_tasks,
+            request,
+            actor,
+            reward_user_id,
+            order_id,
+            float(amt),
+            method,
+            str(p.id),
+            order_number,
+        )
         mapping = None
         if order_number:
             mapping = {str(order_id): order_number}

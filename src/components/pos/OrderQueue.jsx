@@ -154,6 +154,20 @@ const getOrderChannel = (order) => {
   return 'walk-in';
 };
 
+const READY_STATUS_SET = new Set(['ready', 'staged', 'handoff']);
+
+const shouldDisableReadyAutoAdvance = (order, statusOverride = null) => {
+  if (!order) return false;
+  const currentStatus = normalizeStatus(
+    statusOverride || getOrderStatus(order)
+  );
+  if (!READY_STATUS_SET.has(currentStatus)) {
+    return false;
+  }
+  const target = toCanonicalStatus(order?.autoAdvanceTarget);
+  return target === 'completed';
+};
+
 const formatStatusLabel = (status) => {
   const normalized = normalizeStatus(status);
   if (!normalized) return 'Unknown';
@@ -233,6 +247,9 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
       if (!order || order.autoAdvancePaused) {
         return null;
       }
+      if (shouldDisableReadyAutoAdvance(order)) {
+        return null;
+      }
       const targetTimestamp = order.autoAdvanceAt
         ? new Date(order.autoAdvanceAt).getTime()
         : NaN;
@@ -260,6 +277,7 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
   const renderAutoBadge = useCallback(
     (order) => {
       if (!order?.autoAdvanceTarget) return null;
+      if (shouldDisableReadyAutoAdvance(order)) return null;
       const countdown = computeCountdownSeconds(order);
       const paused = order.autoAdvancePaused;
       const displayCountdown =
@@ -368,10 +386,15 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                   'in_prep',
                 ].includes(status);
                 const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const disableAutoAdvance = shouldDisableReadyAutoAdvance(
+                  order,
+                  status
+                );
                 const showAutoControls = Boolean(
                   updateOrderAutoFlow &&
                     order.autoAdvanceTarget &&
-                    can('order.status.update')
+                    can('order.status.update') &&
+                    !disableAutoAdvance
                 );
 
                 return (
@@ -529,10 +552,15 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                   'in_prep',
                 ].includes(status);
                 const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const disableAutoAdvance = shouldDisableReadyAutoAdvance(
+                  order,
+                  status
+                );
                 const showAutoControls = Boolean(
                   updateOrderAutoFlow &&
                     order.autoAdvanceTarget &&
-                    can('order.status.update')
+                    can('order.status.update') &&
+                    !disableAutoAdvance
                 );
 
                 return (

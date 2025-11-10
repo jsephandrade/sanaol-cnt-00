@@ -196,6 +196,13 @@ export const usePOSLogic = () => {
     setDiscount({ type: 'percentage', value: 0 });
   };
 
+  const logDuration = (label, startTs) => {
+    const endTs =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const duration = Math.max(0, endTs - startTs).toFixed(1);
+    console.debug(`[POS][Payment] ${label} took ${duration}ms`);
+  };
+
   const processPayment = async (paymentMethod, paymentDetails = {}) => {
     const total = calculateTotal();
     if (!currentOrder.length) {
@@ -217,6 +224,9 @@ export const usePOSLogic = () => {
         ? paymentDetails.change
         : Math.max(0, tenderedAmount - total);
     let createdOrder = null;
+    const overallStart =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const toastId = toast.loading('Processing payment...');
     try {
       const payload = {
         items: currentOrder.map((it) => ({
@@ -237,7 +247,10 @@ export const usePOSLogic = () => {
         tenderedAmount,
         change,
       };
+      const createStart =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
       const res = await orderService.createOrder(payload);
+      logDuration('createOrder', createStart);
       const data = res?.data ?? res;
       const infoRaw = extractOrderInfo(data) || {
         id: data?.id || null,
@@ -251,14 +264,33 @@ export const usePOSLogic = () => {
         orderNumber: infoRaw.orderNumber || identifiers.number,
       };
       createdOrder = info;
+      // Prefetch next order identifiers while payment finalizes
+      const nextIdentifiersPromise = obtainOrderIdentifiers().catch((err) => {
+        console.error('Failed to prefetch next order number:', err);
+        return null;
+      });
+      const paymentStart =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
       await orderService.processPayment(info.id, {
         amount: total,
         method: paymentMethod,
         tenderedAmount,
         change,
       });
+      logDuration('processPayment', paymentStart);
       clearOrder();
-      await refreshOrderIdentifiers();
+      const nextIdentifiers =
+        (await nextIdentifiersPromise) ||
+        (await obtainOrderIdentifiers().catch((err) => {
+          console.error('Retrying order number fetch failed:', err);
+          return null;
+        })) ||
+        createFallbackOrderIdentifiers();
+      if (isMountedRef.current) {
+        setOrderIdentifiers(nextIdentifiers);
+      }
+      toast.success('Payment completed');
+      logDuration('totalPaymentFlow', overallStart);
       return info;
     } catch (e) {
       console.error(e);
@@ -278,6 +310,8 @@ export const usePOSLogic = () => {
         'Failed to process payment. Please try again.';
       toast.error(message);
       return null;
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
