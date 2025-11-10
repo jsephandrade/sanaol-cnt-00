@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAuth } from '@/components/AuthContext';
 import { useAttendance } from '@/hooks/useAttendance';
 import { useEmployees } from '@/hooks/useEmployees';
@@ -30,21 +30,12 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Edit as EditIcon, Trash2, Loader2 } from 'lucide-react';
+import { Edit as EditIcon, Trash2, Loader2, Plus } from 'lucide-react';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 export default function AttendanceAdmin() {
   const { hasAnyRole } = useAuth();
   const isManager = hasAnyRole(['admin', 'manager']);
-  const {
-    records,
-    loading,
-    setParams,
-    createRecord,
-    updateRecord,
-    deleteRecord,
-  } = useAttendance();
-  const { employees } = useEmployees();
   const [filters, setFilters] = useState({
     employeeId: '_all',
     from: '',
@@ -52,17 +43,78 @@ export default function AttendanceAdmin() {
     status: '_any',
   });
   const [editing, setEditing] = useState(null);
-
-  useEffect(() => {
-    if (!isManager) return;
-    const payload = {
+  const attendanceParams = useMemo(
+    () => ({
       employeeId: filters.employeeId === '_all' ? '' : filters.employeeId,
       from: filters.from || '',
       to: filters.to || '',
       status: filters.status === '_any' ? '' : filters.status,
-    };
-    setParams(payload);
-  }, [filters, isManager, setParams]);
+    }),
+    [filters]
+  );
+
+  const [saving, setSaving] = useState(false);
+
+  const {
+    records,
+    loading,
+    refetch,
+    createRecord,
+    updateRecord,
+    deleteRecord,
+  } = useAttendance(attendanceParams, {
+    autoFetch: isManager,
+    watchInitialParams: true,
+  });
+  const { employees, loading: employeesLoading } = useEmployees();
+
+  const handleAddAttendance = () => {
+    if (!employees.length) {
+      toast.error('No employees available');
+      return;
+    }
+    const preferredEmployeeId =
+      filters.employeeId && filters.employeeId !== '_all'
+        ? filters.employeeId
+        : employees[0]?.id;
+    const today = new Date().toISOString().split('T')[0];
+    setEditing({
+      employeeId: preferredEmployeeId || '',
+      date: filters.from || today,
+      checkIn: '',
+      checkOut: '',
+      status: 'present',
+      notes: '',
+    });
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!editing) return;
+    if (!editing.employeeId || !editing.date) {
+      toast.error('Employee and date are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const isNew = !editing.id;
+      if (isNew) {
+        await createRecord(editing);
+      } else {
+        await updateRecord(editing.id, editing);
+      }
+      setEditing(null);
+      toast.success(isNew ? 'Attendance added' : 'Attendance updated');
+      try {
+        await refetch();
+      } catch (err) {
+        console.warn('Failed to refresh attendance after save', err);
+      }
+    } catch {
+      toast.error('Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!isManager) {
     return null;
@@ -75,67 +127,76 @@ export default function AttendanceAdmin() {
         description="Review and manage employee attendance"
         contentClassName="space-y-4"
       >
-        <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-5">
-          <div>
-            <Label>Employee</Label>
-            <Select
-              value={filters.employeeId}
-              onValueChange={(v) =>
-                setFilters((f) => ({ ...f, employeeId: v }))
-              }
-            >
-              <SelectTrigger className="h-8 w-full text-xs">
-                <SelectValue placeholder="All employees" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_all">All</SelectItem>
-                {employees.map((e) => (
-                  <SelectItem key={e.id} value={e.id}>
-                    {e.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="grid grid-cols-1 gap-3 items-end md:grid-cols-5 flex-1">
+            <div>
+              <Label>Employee</Label>
+              <Select
+                value={filters.employeeId}
+                onValueChange={(v) =>
+                  setFilters((f) => ({ ...f, employeeId: v }))
+                }
+              >
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="All employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_all">All</SelectItem>
+                  {employees.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>From</Label>
+              <Input
+                type="date"
+                className="h-8 text-xs"
+                value={filters.from}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, from: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label>To</Label>
+              <Input
+                type="date"
+                className="h-8 text-xs"
+                value={filters.to}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, to: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={filters.status}
+                onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}
+              >
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_any">Any</SelectItem>
+                  <SelectItem value="present">Present</SelectItem>
+                  <SelectItem value="absent">Absent</SelectItem>
+                  <SelectItem value="late">Late</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label>From</Label>
-            <Input
-              type="date"
-              className="h-8 text-xs"
-              value={filters.from}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, from: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <Label>To</Label>
-            <Input
-              type="date"
-              className="h-8 text-xs"
-              value={filters.to}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, to: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <Label>Status</Label>
-            <Select
-              value={filters.status}
-              onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}
-            >
-              <SelectTrigger className="h-8 w-full text-xs">
-                <SelectValue placeholder="Any" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_any">Any</SelectItem>
-                <SelectItem value="present">Present</SelectItem>
-                <SelectItem value="absent">Absent</SelectItem>
-                <SelectItem value="late">Late</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Button
+            className="h-9 w-full md:w-auto"
+            onClick={handleAddAttendance}
+            disabled={employeesLoading || employees.length === 0}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Attendance
+          </Button>
         </div>
 
         <div className="overflow-x-auto mt-4">
@@ -232,7 +293,11 @@ export default function AttendanceAdmin() {
             <DialogTitle>
               {editing?.id ? 'Edit Attendance' : 'Add Attendance'}
             </DialogTitle>
-            <DialogDescription>Update employee attendance.</DialogDescription>
+            <DialogDescription>
+              {editing?.id
+                ? 'Update employee attendance.'
+                : 'Create a manual attendance record.'}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <div className="grid grid-cols-4 items-center gap-3">
@@ -319,23 +384,14 @@ export default function AttendanceAdmin() {
             <Button variant="outline" onClick={() => setEditing(null)}>
               Cancel
             </Button>
-            <Button
-              onClick={async () => {
-                try {
-                  if (!editing.employeeId || !editing.date) {
-                    toast.error('Employee and date are required');
-                    return;
-                  }
-                  if (!editing.id) await createRecord(editing);
-                  else await updateRecord(editing.id, editing);
-                  setEditing(null);
-                  toast.success('Saved');
-                } catch {
-                  toast.error('Failed to save');
-                }
-              }}
-            >
-              Save
+            <Button onClick={handleSaveAttendance} disabled={saving}>
+              {saving && (
+                <Loader2
+                  className="mr-2 h-3.5 w-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              )}
+              {saving ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>

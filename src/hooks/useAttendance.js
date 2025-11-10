@@ -2,34 +2,83 @@ import { useEffect, useState, useCallback } from 'react';
 import { attendanceService } from '@/api/services/attendanceService';
 import { toast } from 'sonner';
 
-export function useAttendance(initialParams = {}) {
+const shallowEqual = (a = {}, b = {}) => {
+  const aKeys = Object.keys(a || {});
+  const bKeys = Object.keys(b || {});
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => {
+    const aVal = a?.[key];
+    const bVal = b?.[key];
+    if (aVal === bVal) return true;
+    if (
+      typeof aVal === 'object' &&
+      aVal !== null &&
+      typeof bVal === 'object' &&
+      bVal !== null
+    ) {
+      return shallowEqual(aVal, bVal);
+    }
+    return false;
+  });
+};
+
+const cloneParams = (value) => {
+  if (!value || typeof value !== 'object') return {};
+  return { ...value };
+};
+
+export function useAttendance(initialParams = {}, options = {}) {
+  const {
+    autoFetch = true,
+    suppressErrorToast = false,
+    watchInitialParams = true,
+  } = options || {};
+
   const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(autoFetch));
   const [error, setError] = useState(null);
-  const [params, setParams] = useState(initialParams);
+  const [params, setParams] = useState(() => cloneParams(initialParams));
+
+  const updateParams = useCallback((updater) => {
+    setParams((prev) => {
+      const nextValue =
+        typeof updater === 'function'
+          ? cloneParams(updater(prev || {}))
+          : cloneParams(updater);
+      if (shallowEqual(prev || {}, nextValue || {})) return prev || {};
+      return nextValue;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!watchInitialParams) return;
+    updateParams(initialParams || {});
+  }, [initialParams, watchInitialParams, updateParams]);
 
   const fetchRecords = useCallback(
     async (override = null) => {
+      const query = override ?? params;
       try {
         setLoading(true);
         setError(null);
-        const res = await attendanceService.getAttendance(override || params);
+        const res = await attendanceService.getAttendance(query);
         setRecords(res || []);
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : 'Failed to load attendance';
         setError(msg);
-        toast.error(msg);
+        if (!suppressErrorToast) toast.error(msg);
       } finally {
         setLoading(false);
       }
     },
-    [params]
+    [params, suppressErrorToast]
   );
 
   useEffect(() => {
+    if (!autoFetch) return;
     fetchRecords();
-  }, [fetchRecords]);
+  }, [fetchRecords, autoFetch]);
 
   const createRecord = async (payload) => {
     const created = await attendanceService.createAttendance(payload);
@@ -54,7 +103,7 @@ export function useAttendance(initialParams = {}) {
     loading,
     error,
     params,
-    setParams,
+    setParams: updateParams,
     refetch: fetchRecords,
     createRecord,
     updateRecord,

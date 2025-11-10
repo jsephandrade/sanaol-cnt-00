@@ -110,6 +110,7 @@ urlpatterns = [
     path("employees", emp_views.employees, name="employees"),
     path("employees/<uuid:emp_id>", emp_views.employee_detail, name="employee_detail"),
     path("schedule", emp_views.schedule, name="schedule"),
+    path("schedule/overview", emp_views.schedule_overview, name="schedule_overview"),
     path("schedule/<uuid:sid>", emp_views.schedule_detail, name="schedule_detail"),
 
     # Attendance & Leaves

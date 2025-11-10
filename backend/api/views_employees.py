@@ -62,6 +62,48 @@ def _safe_sched(s):
     }
 
 
+def _restrict_schedule_queryset(actor, qs, Employee):
+    role_l = (getattr(actor, "role", "") or "").lower()
+    if role_l in {"admin", "manager"} or _has_permission(actor, "schedule.manage"):
+        return qs
+
+    employee = None
+    try:
+        actor_id = getattr(actor, "id", None)
+        if actor_id:
+            employee = Employee.objects.filter(user_id=actor_id).first()
+    except Exception:
+        employee = None
+
+    if not employee:
+        actor_email = (getattr(actor, "email", "") or "").strip().lower()
+        if actor_email:
+            employee = Employee.objects.filter(contact__iexact=actor_email).first()
+
+    if not employee:
+        actor_name = (getattr(actor, "name", "") or "").strip()
+        if actor_name:
+            employee = Employee.objects.filter(name__iexact=actor_name).first()
+
+    if employee:
+        return qs.filter(employee_id=employee.id)
+    return qs.none()
+
+
+def _duration_minutes(start_time, end_time):
+    if not start_time or not end_time:
+        return 0
+    start_minutes = start_time.hour * 60 + start_time.minute
+    end_minutes = end_time.hour * 60 + end_time.minute
+    if end_minutes < start_minutes:
+        end_minutes += 24 * 60
+    return max(0, end_minutes - start_minutes)
+
+
+def _format_time(value):
+    return value.strftime("%H:%M") if value else None
+
+
 @require_http_methods(["GET", "POST"])
 def employees(request):
     """List/create employees.
@@ -243,29 +285,7 @@ def schedule(request):
             employee_id = request.GET.get("employeeId")
             day = request.GET.get("day")
             qs = ScheduleEntry.objects.select_related("employee").all()
-            # Confidentiality: if not manager/admin (or schedule.manage), limit to actor's employee
-            role_l = (getattr(actor, "role", "") or "").lower()
-            if role_l not in {"admin", "manager"} and not _has_permission(actor, "schedule.manage"):
-                # map actor -> employee via relation, then fallback
-                e = None
-                try:
-                    actor_id = getattr(actor, "id", None)
-                    if actor_id:
-                        e = Employee.objects.filter(user_id=actor_id).first()
-                except Exception:
-                    e = None
-                if not e:
-                    actor_email = (getattr(actor, "email", "") or "").strip().lower()
-                    if actor_email:
-                        e = Employee.objects.filter(contact__iexact=actor_email).first()
-                if not e:
-                    actor_name = (getattr(actor, "name", "") or "").strip()
-                    if actor_name:
-                        e = Employee.objects.filter(name__iexact=actor_name).first()
-                if e:
-                    qs = qs.filter(employee_id=e.id)
-                else:
-                    qs = qs.none()
+            qs = _restrict_schedule_queryset(actor, qs, Employee)
             # Apply explicit filters (manager/admin may use these)
             if employee_id:
                 qs = qs.filter(employee_id=employee_id)
@@ -353,9 +373,147 @@ def schedule_detail(request, sid):
         return JsonResponse({"success": False, "message": "Server error"}, status=500)
 
 
+@require_http_methods(["GET"])
+def schedule_overview(request):
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "schedule.view_edit"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    try:
+        from .models import ScheduleEntry, Employee
+
+        qs = ScheduleEntry.objects.select_related("employee").all()
+        qs = _restrict_schedule_queryset(actor, qs, Employee)
+
+        employee_id = request.GET.get("employeeId")
+        day = request.GET.get("day")
+
+        if employee_id:
+            qs = qs.filter(employee_id=employee_id)
+        if day:
+            qs = qs.filter(day=day)
+
+        entries = list(qs)
+        total_minutes = 0
+        employee_stats = {}
+        day_stats = {
+            day_name: {"count": 0, "minutes": 0, "earliest": None, "latest": None}
+            for day_name in DAYS
+        }
+
+        for entry in entries:
+            day_name = entry.day if entry.day in day_stats else (entry.day or "Unknown")
+            if day_name not in day_stats:
+                day_stats[day_name] = {"count": 0, "minutes": 0, "earliest": None, "latest": None}
+
+            stats = day_stats[day_name]
+            stats["count"] += 1
+            minutes = _duration_minutes(entry.start_time, entry.end_time)
+            stats["minutes"] += minutes
+            total_minutes += minutes
+
+            if entry.start_time and (stats["earliest"] is None or entry.start_time < stats["earliest"]):
+                stats["earliest"] = entry.start_time
+            if entry.end_time and (stats["latest"] is None or entry.end_time > stats["latest"]):
+                stats["latest"] = entry.end_time
+
+            emp_id = str(entry.employee_id)
+            if emp_id not in employee_stats:
+                employee_stats[emp_id] = {
+                    "employeeId": emp_id,
+                    "employeeName": getattr(entry.employee, "name", "") or "",
+                    "shifts": 0,
+                    "minutes": 0,
+                }
+            employee_stats[emp_id]["shifts"] += 1
+            employee_stats[emp_id]["minutes"] += minutes
+
+        total_shifts = len(entries)
+        unique_employees = len(employee_stats)
+        avg_hours = round(total_minutes / total_shifts / 60, 2) if total_shifts else 0
+        total_hours = round(total_minutes / 60, 2)
+        avg_daily_target = total_shifts / len(day_stats) if total_shifts else 0
+
+        ordered_days = [day for day in DAYS if day in day_stats] + [
+            day for day in day_stats.keys() if day not in DAYS
+        ]
+
+        day_summary = []
+        alerts = []
+        for day_name in ordered_days:
+            stats = day_stats[day_name]
+            hours = round(stats["minutes"] / 60, 2)
+            coverage_rating = "none"
+            if stats["count"] == 0:
+                coverage_rating = "none"
+            elif stats["count"] < max(1, avg_daily_target * 0.6):
+                coverage_rating = "low"
+            elif stats["count"] < max(1, avg_daily_target * 0.9):
+                coverage_rating = "ok"
+            else:
+                coverage_rating = "ideal"
+
+            summary = {
+                "day": day_name,
+                "shifts": stats["count"],
+                "totalHours": hours,
+                "earliestStart": _format_time(stats["earliest"]),
+                "latestEnd": _format_time(stats["latest"]),
+                "coverageRating": coverage_rating,
+            }
+            day_summary.append(summary)
+
+            if coverage_rating in {"none", "low"}:
+                alerts.append(
+                    {
+                        "day": day_name,
+                        "shifts": stats["count"],
+                        "message": "No coverage" if coverage_rating == "none" else "Below weekly average",
+                        "severity": "critical" if coverage_rating == "none" else "warning",
+                    }
+                )
+
+        top_contributors = sorted(
+            [
+                {
+                    "employeeId": stats["employeeId"],
+                    "employeeName": stats["employeeName"],
+                    "shifts": stats["shifts"],
+                    "totalHours": round(stats["minutes"] / 60, 2),
+                }
+                for stats in employee_stats.values()
+            ],
+            key=lambda item: item["totalHours"],
+            reverse=True,
+        )[:5]
+
+        max_capacity_minutes = len(DAYS) * 12 * 60
+        utilization = 0
+        if max_capacity_minutes:
+            utilization = round(min(100, (total_minutes / max_capacity_minutes) * 100))
+
+        payload = {
+            "totals": {
+                "shifts": total_shifts,
+                "uniqueEmployees": unique_employees,
+                "totalHours": total_hours,
+                "avgHoursPerShift": avg_hours,
+                "utilizationScore": utilization,
+            },
+            "days": day_summary,
+            "alerts": alerts,
+            "topContributors": top_contributors,
+        }
+        return JsonResponse({"success": True, "data": payload})
+    except Exception:
+        return JsonResponse({"success": False, "message": "Server error"}, status=500)
+
+
 __all__ = [
     "employees",
     "employee_detail",
     "schedule",
     "schedule_detail",
+    "schedule_overview",
 ]

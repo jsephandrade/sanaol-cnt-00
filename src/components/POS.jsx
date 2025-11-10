@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuSelection from '@/components/pos/MenuSelection';
 import CurrentOrder from '@/components/pos/CurrentOrder';
 import OrderQueue from '@/components/pos/OrderQueue';
+import CustomerDisplay from '@/components/pos/CustomerDisplay';
 import PaymentModal from '@/components/pos/PaymentModal';
 import DiscountModal from '@/components/pos/DiscountModal';
 import OrderHistoryModal from '@/components/pos/OrderHistoryModal';
@@ -226,9 +227,10 @@ const POS = () => {
         onValueChange={(value) => setActiveTab(value)}
         className="w-full"
       >
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pos">Point of Sale</TabsTrigger>
           <TabsTrigger value="queue">Order Queue</TabsTrigger>
+          <TabsTrigger value="display">Customer Display</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pos">
@@ -275,6 +277,10 @@ const POS = () => {
             updateOrderItemState={updateOrderItemState}
             updateOrderAutoFlow={updateOrderAutoFlow}
           />
+        </TabsContent>
+
+        <TabsContent value="display">
+          <CustomerDisplay queue={orderQueue} />
         </TabsContent>
       </Tabs>
 

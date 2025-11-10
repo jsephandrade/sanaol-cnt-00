@@ -143,26 +143,24 @@ def attendance(request):
             qs = AttendanceRecord.objects.select_related("employee").all()
             can_manage = _has_permission(actor, "attendance.manage")
 
-            # Always resolve the authenticated user's employee profile
+            # Resolve the authenticated user's employee profile for staff-only filtering.
             self_employee = _employee_for_actor(actor, create_if_missing=False)
-            if not self_employee:
-                return JsonResponse({"success": False, "message": "No employee profile found"}, status=403)
+            if not self_employee and not can_manage:
+                return JsonResponse(
+                    {"success": False, "message": "No employee profile found"},
+                    status=403,
+                )
 
             # Determine which employee's records to show
             if not can_manage:
                 # Staff: Always filter to their own records, ignore employeeId param
                 qs = qs.filter(employee_id=self_employee.id)
             else:
-                # Manager/Admin: Default to own records unless specifically requesting another employee
-                if not employee_id or str(employee_id).strip() == "":
-                    # No employeeId provided → show own records
-                    qs = qs.filter(employee_id=self_employee.id)
-                elif str(employee_id) == str(self_employee.id):
-                    # Requesting own records explicitly → show own records
-                    qs = qs.filter(employee_id=self_employee.id)
-                else:
-                    # Requesting another employee's records → allowed for managers
+                # Manager/Admin: filter only when a specific employee is requested or when they have their own profile.
+                if employee_id:
                     qs = qs.filter(employee_id=employee_id)
+                elif self_employee:
+                    qs = qs.filter(employee_id=self_employee.id)
 
             if dfrom:
                 qs = qs.filter(date__gte=dfrom)

@@ -21,8 +21,11 @@ const AttendanceTimeCard = ({ user, className }) => {
     records = [],
     createRecord,
     updateRecord,
-    setParams,
-  } = useAttendance(attendanceParams);
+  } = useAttendance(attendanceParams, {
+    autoFetch: Boolean(subjectEmployeeId),
+    watchInitialParams: true,
+    suppressErrorToast: true,
+  });
 
   const toLocalDateStr = (d) => {
     const y = d.getFullYear();
@@ -48,18 +51,6 @@ const AttendanceTimeCard = ({ user, className }) => {
     }, 1000);
     return () => window.clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (!subjectEmployeeId) return;
-
-    setParams((prev = {}) => {
-      const nextId = String(subjectEmployeeId);
-      const prevId =
-        prev && prev.employeeId != null ? String(prev.employeeId) : null;
-      if (prevId === nextId) return prev;
-      return { ...prev, employeeId: subjectEmployeeId };
-    });
-  }, [subjectEmployeeId, setParams]);
 
   const todayRecord = useMemo(() => {
     if (!subjectEmployeeId) return undefined;

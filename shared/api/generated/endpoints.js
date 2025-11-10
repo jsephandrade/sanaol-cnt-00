@@ -1100,6 +1100,15 @@ export const operations = {
     source: 'src/api/services/employeeService.js:75:23',
     summary: 'Generated from src/api/services/employeeService.js#getSchedule',
   },
+  employee_getScheduleOverview: {
+    method: 'get',
+    path: '/schedule/overview',
+    service: 'employeeService',
+    functionName: 'getScheduleOverview',
+    source: 'src/api/services/employeeService.js:130:23',
+    summary:
+      'Generated from src/api/services/employeeService.js#getScheduleOverview',
+  },
   employee_createSchedule: {
     method: 'post',
     path: '/schedule',

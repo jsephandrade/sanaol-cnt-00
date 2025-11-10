@@ -1,72 +1,192 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
+import UserManagementCard from '@/components/users/UserManagementCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
-import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  MoreHorizontal,
-  Plus,
-  Clock,
-  Calendar as CalendarIcon,
-  UserPlus,
-  Users,
-  Briefcase,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
+  AlertTriangle,
+  CalendarRange,
+  CheckCircle2,
+  Copy,
+  MoreHorizontal,
+  PlusCircle,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const formatTimeLabel = (time) => {
-  if (!time) return '--:--';
-  const [hour = '00', minute = '00'] = String(time).split(':');
-  const parsedHour = Number.parseInt(hour, 10);
-  const parsedMinute = Number.parseInt(minute, 10);
-  if (Number.isNaN(parsedHour) || Number.isNaN(parsedMinute)) {
-    return '--:--';
-  }
-  const date = new Date();
-  date.setHours(parsedHour, parsedMinute, 0, 0);
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+const DEFAULT_DAY_OPTIONS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+const coverageBadgeVariants = {
+  none: 'border border-destructive/40 bg-destructive/10 text-destructive',
+  low: 'border border-amber-300/60 bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-50',
+  ok: 'border border-sky-300/60 bg-sky-50 text-sky-700 dark:bg-sky-400/10 dark:text-sky-100',
+  ideal:
+    'border border-emerald-300/60 bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-100',
 };
 
-const pesoFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  minimumFractionDigits: 2,
-});
+const coverageCopy = {
+  none: 'Needs coverage',
+  low: 'Light coverage',
+  ok: 'On track',
+  ideal: 'Fully covered',
+};
+
+const getMinutesBetween = (start, end) => {
+  if (!start || !end) return 0;
+  const [sh, sm] = String(start).split(':').map(Number);
+  const [eh, em] = String(end).split(':').map(Number);
+  if ([sh, sm, eh, em].some((value) => Number.isNaN(value))) return 0;
+  let startMinutes = sh * 60 + sm;
+  let endMinutes = eh * 60 + em;
+  if (endMinutes < startMinutes) endMinutes += 24 * 60;
+  return Math.max(0, endMinutes - startMinutes);
+};
+
+const buildLocalOverview = (entries = []) => {
+  const uniqueEmployeeIds = new Set();
+  let minutes = 0;
+  entries.forEach((entry) => {
+    if (entry?.employeeId) uniqueEmployeeIds.add(entry.employeeId);
+    minutes += getMinutesBetween(entry?.startTime, entry?.endTime);
+  });
+  const hours = minutes / 60;
+  const roundedHours = Number(hours.toFixed(1));
+  const avg = entries.length ? Number((hours / entries.length).toFixed(1)) : 0;
+  return {
+    totals: {
+      shifts: entries.length,
+      uniqueEmployees: uniqueEmployeeIds.size,
+      totalHours: roundedHours,
+      avgHoursPerShift: avg,
+      utilizationScore: entries.length
+        ? Math.min(100, Math.round((roundedHours / (entries.length * 8)) * 100))
+        : 0,
+    },
+    days: [],
+    alerts: [],
+    topContributors: [],
+  };
+};
+
+const getInitials = (name = '') =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2) || '??';
+
+const formatDurationLabel = (start, end) => {
+  const minutes = getMinutesBetween(start, end);
+  if (!minutes) return '0m';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours && mins) return `${hours}h ${mins}m`;
+  if (hours) return `${hours}h`;
+  return `${mins}m`;
+};
+
+const buildDraftShift = (daysOfWeek, employeeList, preset = {}) => {
+  const fallbackDay = preset.day || daysOfWeek[0] || 'Monday';
+  const fallbackEmployee =
+    preset.employeeId ??
+    (employeeList.length ? String(employeeList[0].id) : '');
+
+  return {
+    id: preset.id || '',
+    employeeId: fallbackEmployee ? String(fallbackEmployee) : '',
+    day: fallbackDay,
+    startTime: preset.startTime || '09:00',
+    endTime: preset.endTime || '17:00',
+    repeatDays:
+      preset.repeatDays && preset.repeatDays.length
+        ? [...new Set(preset.repeatDays)]
+        : [fallbackDay],
+  };
+};
 
 const WeeklyScheduleCard = ({
-  daysOfWeek,
-  employeeList,
-  schedule,
-  onEditSchedule,
-  onDeleteSchedule,
-  onAddScheduleForDay,
-  onOpenManageEmployees,
-  onOpenAddSchedule,
+  daysOfWeek = [],
+  employeeList = [],
+  schedule = [],
+  overview,
+  overviewLoading = false,
+  scheduleLoading = false,
+  filters,
+  onFiltersChange,
+  onCreateShift,
+  onUpdateShift,
+  onDeleteShift,
   canManage = false,
 }) => {
-  // Track which days are expanded (show shifts)
-  const [expandedDays, setExpandedDays] = useState(() => {
-    const days = daysOfWeek.filter((day) => day !== 'Sunday');
-    return days.reduce((acc, day) => ({ ...acc, [day]: true }), {});
+  const selectableDays = daysOfWeek.length ? daysOfWeek : DEFAULT_DAY_OPTIONS;
+  const [internalFilters, setInternalFilters] = useState({
+    employeeId: '',
+    day: '_all',
   });
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerMode, setComposerMode] = useState('create');
+  const [composerSaving, setComposerSaving] = useState(false);
+  const [draftShift, setDraftShift] = useState(() =>
+    buildDraftShift(selectableDays, employeeList)
+  );
+  const [shiftPendingDelete, setShiftPendingDelete] = useState(null);
 
-  const toggleDay = (day) => {
-    setExpandedDays((prev) => ({ ...prev, [day]: !prev[day] }));
+  const appliedFilters = filters ?? internalFilters;
+
+  const handleFiltersChange = (patch) => {
+    const next = { ...appliedFilters, ...patch };
+    if (typeof onFiltersChange === 'function') onFiltersChange(next);
+    else setInternalFilters(next);
   };
 
-  const employeesById = useMemo(() => {
+  const employeeMap = useMemo(() => {
     const map = new Map();
     employeeList.forEach((employee) => {
       if (!employee?.id) return;
@@ -75,293 +195,664 @@ const WeeklyScheduleCard = ({
     return map;
   }, [employeeList]);
 
-  // Group schedules by day, only for employees that are explicitly available
-  const schedulesByDay = useMemo(() => {
-    const grouped = {};
+  const resolvedOverview = useMemo(() => {
+    if (overview && overview.totals) return overview;
+    return buildLocalOverview(schedule);
+  }, [overview, schedule]);
 
-    daysOfWeek
-      .filter((day) => day !== 'Sunday')
-      .forEach((day) => {
-        grouped[day] = [];
-      });
+  const daySummaries = useMemo(() => {
+    const map = new Map();
+    (resolvedOverview?.days || []).forEach((day) => {
+      if (!day?.day) return;
+      map.set(day.day, day);
+    });
+    return map;
+  }, [resolvedOverview]);
 
-    schedule.forEach((entry) => {
-      if (!entry?.day || !entry?.employeeId) return;
+  const normalizedSchedule = useMemo(() => {
+    return (schedule || []).map((entry) => ({
+      ...entry,
+      employee: employeeMap.get(String(entry?.employeeId)) || null,
+    }));
+  }, [schedule, employeeMap]);
 
-      const normalizedDay = String(entry.day).trim();
-      if (!normalizedDay) return;
-      if (normalizedDay.toLowerCase() === 'sunday') return;
+  const filteredSchedule = useMemo(() => {
+    return normalizedSchedule.filter((entry) => {
+      const matchesEmployee =
+        !appliedFilters.employeeId ||
+        String(entry.employeeId) === String(appliedFilters.employeeId);
+      const matchesDay =
+        !appliedFilters.day ||
+        appliedFilters.day === '_all' ||
+        entry.day === appliedFilters.day;
+      return matchesEmployee && matchesDay;
+    });
+  }, [normalizedSchedule, appliedFilters]);
 
-      const employee = employeesById.get(String(entry.employeeId));
-      if (!employee) return;
+  const boardDays = useMemo(() => {
+    if (appliedFilters.day && appliedFilters.day !== '_all') {
+      return [appliedFilters.day];
+    }
+    return selectableDays;
+  }, [appliedFilters.day, selectableDays]);
 
-      if (!grouped[normalizedDay]) {
-        grouped[normalizedDay] = [];
+  const groupedSchedule = useMemo(() => {
+    const map = new Map();
+    boardDays.forEach((day) => map.set(day, []));
+    filteredSchedule.forEach((entry) => {
+      const dayKey = entry?.day || 'Unassigned';
+      if (!map.has(dayKey)) {
+        if (appliedFilters.day && appliedFilters.day !== '_all') return;
+        map.set(dayKey, []);
       }
-
-      grouped[normalizedDay].push({
-        ...entry,
-        employee,
-      });
+      map.get(dayKey).push(entry);
     });
-
-    Object.values(grouped).forEach((dayEntries = []) => {
-      dayEntries.sort((a, b) => {
-        const aKey = `${a.startTime ?? ''}`;
-        const bKey = `${b.startTime ?? ''}`;
-        if (aKey < bKey) return -1;
-        if (aKey > bKey) return 1;
-        return 0;
-      });
+    map.forEach((entries) => {
+      entries.sort((a, b) =>
+        (a.startTime || '').localeCompare(b.startTime || '')
+      );
     });
+    return map;
+  }, [boardDays, filteredSchedule, appliedFilters.day]);
 
-    return grouped;
-  }, [daysOfWeek, employeesById, schedule]);
+  const dayMetaMap = useMemo(() => {
+    const map = new Map();
+    groupedSchedule.forEach((entries, day) => {
+      if (daySummaries.has(day)) {
+        map.set(day, daySummaries.get(day));
+      } else {
+        const totalMinutes = entries.reduce(
+          (acc, current) =>
+            acc + getMinutesBetween(current.startTime, current.endTime),
+          0
+        );
+        map.set(day, {
+          day,
+          shifts: entries.length,
+          totalHours: Number((totalMinutes / 60).toFixed(1)),
+          coverageRating:
+            entries.length === 0
+              ? 'none'
+              : totalMinutes >= 8 * 60
+                ? 'ok'
+                : 'low',
+        });
+      }
+    });
+    return map;
+  }, [groupedSchedule, daySummaries]);
 
-  const headerActions = canManage ? (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        onClick={onOpenManageEmployees}
-      >
-        <Users className="h-4 w-4" />
-        Edit Employee
-      </Button>
-      <Button size="sm" className="gap-2" onClick={onOpenAddSchedule}>
-        <Plus className="h-4 w-4" />
-        Add Schedule
-      </Button>
-    </div>
-  ) : null;
+  const alerts = resolvedOverview?.alerts || [];
+  const topContributors = resolvedOverview?.topContributors || [];
+  const topContributorMax = topContributors.reduce(
+    (acc, entry) => Math.max(acc, entry?.totalHours ?? 0),
+    0
+  );
+  const showSkeletonBoard =
+    scheduleLoading && (filteredSchedule.length === 0 || schedule.length === 0);
+  const composerHasEmployees = employeeList.length > 0;
+  const composerValid =
+    composerHasEmployees &&
+    draftShift.employeeId &&
+    draftShift.day &&
+    draftShift.startTime &&
+    draftShift.endTime;
 
-  const renderShiftRow = (shift) => {
-    if (!shift) return null;
+  const handleComposerOpenChange = (open) => {
+    setComposerOpen(open);
+    if (!open) {
+      setComposerMode('create');
+      setComposerSaving(false);
+      setDraftShift(buildDraftShift(selectableDays, employeeList));
+    }
+  };
 
-    const canEditShift = canManage && typeof onEditSchedule === 'function';
-    const shiftRowClasses = [
-      'group flex items-center justify-between bg-background border rounded-lg px-4 py-3 transition-colors',
-      canEditShift ? 'hover:bg-muted/30 cursor-pointer' : 'cursor-default',
-    ].join(' ');
+  const handleOpenComposer = (mode, preset = {}) => {
+    if (!canManage) return;
+    setComposerMode(mode);
+    setDraftShift(buildDraftShift(selectableDays, employeeList, preset));
+    setComposerOpen(true);
+  };
+
+  const handleComposerFieldChange = (field, value) => {
+    setDraftShift((prev) => {
+      if (field === 'day') {
+        const nextRepeat =
+          composerMode === 'edit'
+            ? [value]
+            : prev.repeatDays.includes(value)
+              ? prev.repeatDays
+              : [...prev.repeatDays, value];
+        return { ...prev, day: value, repeatDays: nextRepeat };
+      }
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const toggleRepeatDay = (day) => {
+    if (composerMode === 'edit') return;
+    setDraftShift((prev) => {
+      const next = new Set(prev.repeatDays || []);
+      if (next.has(day)) {
+        if (next.size > 1) next.delete(day);
+      } else {
+        next.add(day);
+      }
+      return { ...prev, repeatDays: Array.from(next) };
+    });
+  };
+
+  const handleComposerSubmit = async () => {
+    if (!canManage || !composerValid || composerSaving) return;
+    const createMode = composerMode === 'create';
+    const handler =
+      createMode && typeof onCreateShift === 'function'
+        ? onCreateShift
+        : !createMode && typeof onUpdateShift === 'function'
+          ? onUpdateShift
+          : null;
+    if (!handler) return;
+
+    const uniqueDays =
+      createMode && draftShift.repeatDays?.length
+        ? Array.from(new Set(draftShift.repeatDays))
+        : [draftShift.day];
+
+    setComposerSaving(true);
+    try {
+      if (createMode) {
+        for (const day of uniqueDays) {
+          const success = await handler({
+            employeeId: draftShift.employeeId,
+            day,
+            startTime: draftShift.startTime,
+            endTime: draftShift.endTime,
+          });
+          if (!success) {
+            setComposerSaving(false);
+            return;
+          }
+        }
+      } else {
+        const success = await handler({
+          id: draftShift.id,
+          employeeId: draftShift.employeeId,
+          day: draftShift.day,
+          startTime: draftShift.startTime,
+          endTime: draftShift.endTime,
+        });
+        if (!success) {
+          setComposerSaving(false);
+          return;
+        }
+      }
+      handleComposerOpenChange(false);
+    } finally {
+      setComposerSaving(false);
+    }
+  };
+
+  const handleDuplicateShift = (shift) => {
+    if (!canManage) return;
+    handleOpenComposer('create', {
+      employeeId: shift?.employeeId,
+      day: shift?.day,
+      startTime: shift?.startTime,
+      endTime: shift?.endTime,
+      repeatDays: [shift?.day],
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (
+      !canManage ||
+      !shiftPendingDelete ||
+      typeof onDeleteShift !== 'function'
+    ) {
+      setShiftPendingDelete(null);
+      return;
+    }
+    try {
+      await onDeleteShift(shiftPendingDelete.id);
+    } finally {
+      setShiftPendingDelete(null);
+    }
+  };
+
+  const renderShiftCard = (entry) => {
+    const employee =
+      entry?.employee || employeeMap.get(String(entry?.employeeId));
+    const initials = getInitials(employee?.name || entry?.employeeName);
 
     return (
       <div
-        key={shift.id}
-        className={shiftRowClasses}
-        onClick={canEditShift ? () => onEditSchedule(shift) : undefined}
+        key={entry.id}
+        className="group relative flex items-start gap-3 rounded-2xl border border-border/70 bg-card/80 p-3 shadow-sm"
       >
-        {/* Left: Employee Info */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Avatar className="h-9 w-9 ring-2 ring-background">
-            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-              {shift.employee.name?.charAt(0)?.toUpperCase() || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">
-              {shift.employee.name}
-            </p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Briefcase className="h-3 w-3" />
-                <span className="truncate">
-                  {shift.employee.position || 'Staff'}
-                </span>
-              </div>
-              {shift.employee.hourlyRate > 0 && (
-                <div className="flex items-center gap-1">
-                  <span className="font-semibold text-muted-foreground">
-                    PHP
-                  </span>
-                  <span className="font-medium">
-                    {pesoFormatter.format(shift.employee.hourlyRate)}/hr
-                  </span>
-                </div>
-              )}
+        <Avatar className="h-10 w-10 border border-border/60">
+          {employee?.avatar ? (
+            <AvatarImage
+              src={employee.avatar}
+              alt={employee.name || 'Employee avatar'}
+            />
+          ) : null}
+          <AvatarFallback>{initials}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold leading-tight">
+                {employee?.name || entry?.employeeName || 'Unassigned'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {employee?.position || 'Team member'}
+              </p>
             </div>
-          </div>
-        </div>
-
-        {/* Middle: Time Range */}
-        <div className="flex items-center gap-4 mx-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">
-              Start:
-            </span>
-            <Badge
-              variant="outline"
-              className="font-mono text-xs text-green-600"
-            >
-              {formatTimeLabel(shift.startTime)}
+            <Badge variant="outline" className="text-[11px]">
+              {formatDurationLabel(entry?.startTime, entry?.endTime)}
             </Badge>
           </div>
-          <Separator orientation="vertical" className="h-6" />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">
-              End:
-            </span>
-            <Badge
-              variant="outline"
-              className="font-mono text-xs text-orange-600"
-            >
-              {formatTimeLabel(shift.endTime)}
-            </Badge>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {entry?.startTime} - {entry?.endTime}
+          </p>
         </div>
-
-        {/* Right: Duration & Actions */}
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="text-xs gap-1 font-medium">
-            <Clock className="h-3 w-3" />
-            {(() => {
-              const start = new Date(`2000-01-01T${shift.startTime}`);
-              const end = new Date(`2000-01-01T${shift.endTime}`);
-              const hours = (end - start) / (1000 * 60 * 60);
-              return `${hours.toFixed(1)}h`;
-            })()}
-          </Badge>
-
-          {canManage && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditSchedule(shift);
-                  }}
-                >
-                  Edit Shift
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSchedule(shift.id);
-                  }}
-                >
-                  Delete Shift
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+        {canManage ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              >
+                <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Open shift actions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Shift actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => handleOpenComposer('edit', entry)}
+              >
+                Edit shift
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDuplicateShift(entry)}>
+                <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setShiftPendingDelete(entry)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
     );
   };
 
   return (
-    <FeaturePanelCard
-      badgeText="Weekly Schedule"
-      description="Manage employee shifts across the week"
-      headerActions={headerActions}
-      contentClassName="space-y-4"
-    >
-      {employeeList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[300px] rounded-xl bg-gradient-to-br from-primary/5 via-background to-secondary/5 p-12 text-center">
-          <div className="rounded-full bg-background shadow-lg p-4 mb-6">
-            <UserPlus className="h-12 w-12 text-primary" />
+    <>
+      <UserManagementCard
+        title="Weekly Shift Planner"
+        titleStyle="accent"
+        titleIcon={CalendarRange}
+        description="Plan coverage, assign teammates, and publish this week's roster from a single view."
+        headerActions={
+          <div className="flex items-center gap-3 text-sm">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 bg-gradient-to-r from-indigo-500 via-sky-500 to-blue-600 text-white shadow-sm hover:from-indigo-600 hover:via-sky-600 hover:to-blue-700"
+              onClick={() =>
+                handleOpenComposer('create', {
+                  repeatDays: boardDays,
+                })
+              }
+              disabled={!canManage || !composerHasEmployees}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              Quick fill
+            </Button>
+            <span className="text-muted-foreground" aria-hidden="true">
+              |
+            </span>
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() =>
+                handleOpenComposer('create', {
+                  day:
+                    appliedFilters.day && appliedFilters.day !== '_all'
+                      ? appliedFilters.day
+                      : selectableDays[0],
+                })
+              }
+              disabled={!canManage || !composerHasEmployees}
+            >
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />
+              Plan shift
+            </Button>
           </div>
-          <h3 className="font-bold text-2xl mb-2">Build Your Team</h3>
-          <p className="text-muted-foreground mb-6 max-w-md text-sm">
-            {canManage
-              ? 'Start by adding team members and assigning their work schedules.'
-              : "Your team schedule will appear here once it's set up."}
-          </p>
-          {canManage && (
-            <div className="flex gap-3">
-              <Button
-                onClick={onOpenManageEmployees}
-                size="lg"
-                className="gap-2"
-              >
-                <Users className="h-5 w-5" />
-                Add Team Members
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* List View by Day */}
-          {daysOfWeek
-            .filter((day) => day !== 'Sunday')
-            .map((day) => {
-              const daySchedules = schedulesByDay[day] || [];
-
+        }
+      >
+        {showSkeletonBoard ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <Skeleton className="h-36 rounded-2xl" />
+            <Skeleton className="h-36 rounded-2xl" />
+            <Skeleton className="h-36 rounded-2xl" />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {Array.from(groupedSchedule.entries()).map(([day, entries]) => {
+              const meta = dayMetaMap.get(day);
+              const badgeKey = meta?.coverageRating || 'none';
               return (
-                <div key={day} className="space-y-2">
-                  {/* Day Header */}
-                  <div className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3 border">
-                    <div className="flex items-center gap-3">
-                      {/* Toggle Button */}
-                      {daySchedules.length > 0 && (
+                <div
+                  key={day}
+                  className="flex flex-col rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">
+                        {day}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {meta?.shifts ?? 0} shifts | {meta?.totalHours ?? 0}h
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={cn(
+                          'text-[11px]',
+                          coverageBadgeVariants[badgeKey] ||
+                            coverageBadgeVariants.none
+                        )}
+                      >
+                        {coverageCopy[badgeKey] || coverageCopy.none}
+                      </Badge>
+                      {canManage ? (
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
-                          onClick={() => toggleDay(day)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            handleOpenComposer('create', {
+                              day,
+                              repeatDays: [day],
+                            })
+                          }
                         >
-                          {expandedDays[day] ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
+                          <PlusCircle className="h-4 w-4" aria-hidden="true" />
+                          <span className="sr-only">Add shift for {day}</span>
                         </Button>
-                      )}
-                      <CalendarIcon className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold text-base">{day}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {daySchedules.length}{' '}
-                        {daySchedules.length === 1 ? 'shift' : 'shifts'}
-                      </Badge>
+                      ) : null}
                     </div>
-                    {canManage && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => onAddScheduleForDay(null, day)}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add Shift
-                      </Button>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {entries.length ? (
+                      entries.map((entry) => renderShiftCard(entry))
+                    ) : (
+                      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-xs text-muted-foreground">
+                        No shifts planned.
+                        {canManage ? (
+                          <span>{' Use "Plan shift" to assign coverage.'}</span>
+                        ) : null}
+                      </div>
                     )}
                   </div>
-
-                  {/* Shifts List */}
-                  {expandedDays[day] && (
-                    <>
-                      {daySchedules.length > 0 ? (
-                        <div className="space-y-1 pl-2">
-                          {daySchedules.map(renderShiftRow)}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center py-8 text-center border border-dashed rounded-lg bg-muted/20 ml-2">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <p className="text-sm">No shifts scheduled</p>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
                 </div>
               );
             })}
+          </div>
+        )}
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Coverage alerts</p>
+                <p className="text-xs text-muted-foreground">
+                  Automated checks for low coverage
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[11px]">
+                {alerts.length} alerts
+              </Badge>
+            </div>
+            <div className="mt-4 space-y-3">
+              {alerts.length ? (
+                alerts.map((alert) => {
+                  const SeverityIcon =
+                    alert?.severity === 'critical'
+                      ? AlertTriangle
+                      : CheckCircle2;
+                  return (
+                    <div
+                      key={`${alert.day}-${alert.message}`}
+                      className="flex gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                        <SeverityIcon className="h-4 w-4" aria-hidden="true" />
+                      </div>
+                      <div className="flex-1 text-sm">
+                        <p className="font-medium">{alert?.day}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {alert?.message}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="text-[11px]">
+                        {alert?.shifts ?? 0} shifts
+                      </Badge>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="rounded-2xl border border-dashed border-border/60 p-4 text-xs text-muted-foreground">
+                  All good! No coverage issues detected for this week.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Top contributors</p>
+                <p className="text-xs text-muted-foreground">
+                  Hours committed by your most active staff
+                </p>
+              </div>
+              <Badge variant="outline" className="text-[11px]">
+                {topContributors.length}
+              </Badge>
+            </div>
+            <div className="mt-4 space-y-3">
+              {topContributors.length ? (
+                topContributors.map((contributor) => (
+                  <div key={contributor.employeeId}>
+                    <div className="flex items-center justify-between text-sm">
+                      <p className="font-medium">{contributor.employeeName}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {contributor.totalHours}h
+                      </span>
+                    </div>
+                    <Progress
+                      value={
+                        topContributorMax
+                          ? (contributor.totalHours / topContributorMax) * 100
+                          : 0
+                      }
+                      className="mt-2 h-2"
+                    />
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-2xl border border-dashed border-border/60 p-4 text-xs text-muted-foreground">
+                  Contributors will appear once shifts are assigned.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
-      )}
-    </FeaturePanelCard>
+      </UserManagementCard>
+
+      <Sheet open={composerOpen} onOpenChange={handleComposerOpenChange}>
+        <SheetContent
+          side="right"
+          className="w-full max-w-[520px] overflow-y-auto border-l border-border/80 bg-background/95"
+        >
+          <SheetHeader>
+            <SheetTitle>
+              {composerMode === 'create' ? 'Plan a shift' : 'Edit shift'}
+            </SheetTitle>
+            <SheetDescription>
+              Choose the teammate, timing, and (optionally) duplicate the shift
+              across multiple days.
+            </SheetDescription>
+          </SheetHeader>
+          {composerHasEmployees ? (
+            <div className="mt-6 space-y-4">
+              <div className="space-y-2">
+                <Label>Employee</Label>
+                <Select
+                  value={draftShift.employeeId || ''}
+                  onValueChange={(value) =>
+                    handleComposerFieldChange('employeeId', value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employeeList.map((employee) => (
+                      <SelectItem key={employee.id} value={String(employee.id)}>
+                        {employee.name} ({employee.position || 'Team member'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Day</Label>
+                  <Select
+                    value={draftShift.day}
+                    onValueChange={(value) =>
+                      handleComposerFieldChange('day', value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectableDays.map((day) => (
+                        <SelectItem key={day} value={day}>
+                          {day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Repeat on</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectableDays.map((day) => (
+                      <Button
+                        key={day}
+                        type="button"
+                        size="sm"
+                        variant={
+                          draftShift.repeatDays.includes(day)
+                            ? 'default'
+                            : 'outline'
+                        }
+                        className="rounded-full text-xs"
+                        disabled={composerMode === 'edit'}
+                        onClick={() => toggleRepeatDay(day)}
+                      >
+                        {day.slice(0, 3)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Start time</Label>
+                  <Input
+                    type="time"
+                    value={draftShift.startTime}
+                    onChange={(event) =>
+                      handleComposerFieldChange('startTime', event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End time</Label>
+                  <Input
+                    type="time"
+                    value={draftShift.endTime}
+                    onChange={(event) =>
+                      handleComposerFieldChange('endTime', event.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-6 rounded-2xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+              Add employees from the admin panel first to start planning shifts.
+            </p>
+          )}
+          <SheetFooter className="mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleComposerOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleComposerSubmit}
+              disabled={!composerValid || composerSaving}
+            >
+              {composerMode === 'create' ? 'Save shift' : 'Update shift'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog
+        open={Boolean(shiftPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setShiftPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete shift</AlertDialogTitle>
+            <AlertDialogDescription>
+              This shift will be removed from the weekly planner. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShiftPendingDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              Delete shift
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

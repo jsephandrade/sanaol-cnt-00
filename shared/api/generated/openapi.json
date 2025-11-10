@@ -1676,6 +1676,18 @@
         }
       }
     },
+    "/schedule/overview": {
+      "get": {
+        "operationId": "employee_getScheduleOverview",
+        "summary": "Generated from src/api/services/employeeService.js#getScheduleOverview",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
     "/schedule/{id}": {
       "delete": {
         "operationId": "employee_deleteSchedule",

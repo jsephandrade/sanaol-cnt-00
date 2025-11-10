@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Edit as EditIcon, Trash2, Loader2 } from 'lucide-react';
+import { Edit as EditIcon, Trash2, Loader2, Plus } from 'lucide-react';
 
 export default function LeaveManagement() {
   const { user, hasAnyRole } = useAuth();
@@ -44,7 +44,7 @@ export default function LeaveManagement() {
     updateRecord,
     deleteRecord,
   } = useLeaves({}, { autoFetch: isManager, suppressErrorToast: !isManager });
-  const { employees } = useEmployees();
+  const { employees, loading: employeesLoading } = useEmployees();
 
   const [filters, setFilters] = useState({
     employeeId: '_all',
@@ -53,6 +53,7 @@ export default function LeaveManagement() {
   });
   const [editing, setEditing] = useState(null);
   const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Auto-apply filters when inputs change
   useEffect(() => {
@@ -65,9 +66,17 @@ export default function LeaveManagement() {
   }, [filters, setParams]);
 
   const onAdd = () => {
+    if (!employees.length) {
+      toast.error('No employees available');
+      return;
+    }
+    const preferredEmployeeId =
+      filters.employeeId && filters.employeeId !== '_all'
+        ? filters.employeeId
+        : employees[0]?.id;
     setEditing({
       id: null,
-      employeeId: '',
+      employeeId: preferredEmployeeId || '',
       startDate: '',
       endDate: '',
       type: 'other',
@@ -106,11 +115,13 @@ export default function LeaveManagement() {
   };
 
   const onSave = async () => {
+    if (saving) return;
     try {
-      if (!editing.employeeId || !editing.startDate || !editing.endDate) {
+      if (!editing?.employeeId || !editing?.startDate || !editing?.endDate) {
         toast.error('Employee, start and end dates are required');
         return;
       }
+      setSaving(true);
       const payload = { ...editing };
       if (!isManager) {
         payload.status = 'pending';
@@ -129,6 +140,8 @@ export default function LeaveManagement() {
       toast.success('Saved');
     } catch (e) {
       toast.error('Failed to save');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -297,8 +310,14 @@ export default function LeaveManagement() {
             >
               Clear
             </Button>
-            <Button size="sm" onClick={onSave}>
-              Submit
+            <Button size="sm" onClick={onSave} disabled={saving}>
+              {saving && (
+                <Loader2
+                  className="mr-1.5 h-3.5 w-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              )}
+              {saving ? 'Submitting...' : 'Submit'}
             </Button>
           </div>
         </FeaturePanelCard>
@@ -309,7 +328,12 @@ export default function LeaveManagement() {
           badgeText="Leave Requests"
           description="Request and manage leave"
           headerActions={
-            <Button onClick={onAdd} className="shrink-0">
+            <Button
+              onClick={onAdd}
+              className="shrink-0"
+              disabled={employeesLoading || employees.length === 0}
+            >
+              <Plus className="mr-2 h-4 w-4" />
               Add Leave
             </Button>
           }
@@ -584,7 +608,15 @@ export default function LeaveManagement() {
               <Button variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={onSave}>Save</Button>
+              <Button onClick={onSave} disabled={saving}>
+                {saving && (
+                  <Loader2
+                    className="mr-2 h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
+                {saving ? 'Saving...' : 'Save'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
