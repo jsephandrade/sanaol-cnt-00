@@ -143,8 +143,12 @@ export async function requestPasswordReset(email) {
   return unwrap(res) || { success: true };
 }
 
-export async function resendVerification(email) {
-  const payload = { email: (email || '').trim().toLowerCase() };
+export async function resendVerification(emailOrPayload) {
+  const normalized = typeof emailOrPayload === 'string' ? emailOrPayload : emailOrPayload?.email;
+  const payload = { email: (normalized || '').trim().toLowerCase() };
+  if (!payload.email) {
+    throw new Error('Email is required to resend verification.');
+  }
   const res = await callOperation('auth_resendVerification', {
     data: payload,
     config: { retry: DEFAULT_RETRY },

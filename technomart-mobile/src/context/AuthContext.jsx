@@ -98,7 +98,10 @@ export function AuthProvider({ children }) {
   );
 
   const handleResendVerification = useCallback(
-    (payload) => runAuthAction(() => resendVerificationEmail(payload)),
+    (payload) => {
+      const email = typeof payload === 'string' ? payload : payload?.email;
+      return runAuthAction(() => resendVerificationEmail(email));
+    },
     [runAuthAction]
   );
 

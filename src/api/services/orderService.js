@@ -1,11 +1,8 @@
 import apiClient from '../client';
 import { mockOrders } from '../mockData';
+import { getEnvBoolean } from '../env';
 
-const shouldUseMocks = () =>
-  typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  (import.meta.env.VITE_ENABLE_MOCKS === 'true' ||
-    import.meta.env.VITE_ENABLE_MOCKS === '1');
+const shouldUseMocks = () => getEnvBoolean('VITE_ENABLE_MOCKS', false);
 
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) =>
