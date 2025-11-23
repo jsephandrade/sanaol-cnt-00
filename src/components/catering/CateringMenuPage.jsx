@@ -128,12 +128,6 @@ const CateringMenuPage = () => {
   }, []);
 
   const handleClearAll = useCallback(() => {
-    if (
-      Object.keys(selectedItems).length > 0 &&
-      !confirm('Are you sure you want to clear all items from the order?')
-    ) {
-      return;
-    }
     setSelectedItems({});
     setDiscount('0');
   }, [selectedItems]);
@@ -189,6 +183,7 @@ const CateringMenuPage = () => {
   const itemCount = useMemo(() => {
     return Object.keys(selectedItems).length;
   }, [selectedItems]);
+  const hasItems = itemCount > 0;
 
   const handlePaymentSubmit = async (paymentData) => {
     try {
@@ -272,7 +267,11 @@ const CateringMenuPage = () => {
           </div>
         }
       >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          className={`grid grid-cols-1 gap-6 ${
+            hasItems ? 'lg:grid-cols-2' : 'lg:grid-cols-1'
+          }`}
+        >
           {/* Left Panel: Menu Selection */}
           <div>
             {isLoading ? (
@@ -307,23 +306,27 @@ const CateringMenuPage = () => {
           </div>
 
           {/* Right Panel: Order Summary */}
-          <div className="hidden lg:block">
-            <CateringOrderSummary
-              selectedItems={selectedItems}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onClearAll={handleClearAll}
-              discount={discount}
-              discountType={discountType}
-              onDiscountChange={setDiscount}
-              onDiscountTypeChange={setDiscountType}
-              canProcessPayment={Boolean(event?.estimatedTotal || event?.total)}
-              onProcessPayment={() => setShowPaymentModal(true)}
-              onSaveOrder={handleSaveOrder}
-              isSaving={isSaving}
-              itemCount={itemCount}
-            />
-          </div>
+          {hasItems ? (
+            <div className="hidden lg:block">
+              <CateringOrderSummary
+                selectedItems={selectedItems}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onClearAll={handleClearAll}
+                discount={discount}
+                discountType={discountType}
+                onDiscountChange={setDiscount}
+                onDiscountTypeChange={setDiscountType}
+                canProcessPayment={Boolean(
+                  event?.estimatedTotal || event?.total
+                )}
+                onProcessPayment={() => setShowPaymentModal(true)}
+                onSaveOrder={handleSaveOrder}
+                isSaving={isSaving}
+                itemCount={itemCount}
+              />
+            </div>
+          ) : null}
         </div>
       </FeaturePanelCard>
 

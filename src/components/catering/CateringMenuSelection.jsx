@@ -157,12 +157,8 @@ const CateringMenuSelection = ({
       <div className="pb-4 space-y-3">
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold">Menu Selection</h3>
-            <p className="text-sm text-muted-foreground">
-              {eventName} - {attendees} attendees
-            </p>
+            <h3 className="text-lg font-semibold sr-only">Menu</h3>
           </div>
-          <Badge variant="outline">Catering</Badge>
         </div>
         <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
           <div className="relative flex-1">

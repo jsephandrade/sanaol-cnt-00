@@ -16,6 +16,7 @@ import {
   Smartphone,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ import PaymentsFilters from '@/components/payments/PaymentsFilters';
 import { paymentsService } from '@/api/services/paymentsService';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 import { formatOrderNumber } from '@/lib/utils';
+import exportPayments from '@/utils/exportPayments';
 
 const Payments = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -185,6 +187,16 @@ const Payments = () => {
     [filteredPayments]
   );
 
+  const handleExportPayments = useCallback(async () => {
+    try {
+      await exportPayments(sortedPayments);
+      toast.success('Payments exported');
+    } catch (error) {
+      console.error('Failed to export payments', error);
+      toast.error('Failed to export payments');
+    }
+  }, [sortedPayments]);
+
   const handleRefund = async (paymentId) => {
     try {
       const updated = await paymentsService.refund(paymentId);
@@ -247,7 +259,7 @@ const Payments = () => {
           titleAccentClassName="px-3 py-1 text-xs md:text-sm"
           titleClassName="text-xs md:text-sm"
           description="Track and process payments"
-          headerActions={<PaymentsHeader />}
+          headerActions={<PaymentsHeader onExport={handleExportPayments} />}
           contentClassName="space-y-4"
         >
           {error ? (
