@@ -32,6 +32,8 @@ export function useAttendance(initialParams = {}, options = {}) {
     autoFetch = true,
     suppressErrorToast = false,
     watchInitialParams = true,
+    enforceSelfOnly = true,
+    onAuthError,
   } = options || {};
 
   const [records, setRecords] = useState([]);
@@ -57,7 +59,11 @@ export function useAttendance(initialParams = {}, options = {}) {
 
   const fetchRecords = useCallback(
     async (override = null) => {
-      const query = override ?? params;
+      const baseQuery = override ?? params;
+      const query =
+        enforceSelfOnly && baseQuery?.employeeId
+          ? { employeeId: baseQuery.employeeId }
+          : baseQuery;
       try {
         setLoading(true);
         setError(null);
@@ -67,12 +73,15 @@ export function useAttendance(initialParams = {}, options = {}) {
         const msg =
           err instanceof Error ? err.message : 'Failed to load attendance';
         setError(msg);
+        if (err?.status === 401 && typeof onAuthError === 'function') {
+          onAuthError(err);
+        }
         if (!suppressErrorToast) toast.error(msg);
       } finally {
         setLoading(false);
       }
     },
-    [params, suppressErrorToast]
+    [params, suppressErrorToast, enforceSelfOnly, onAuthError]
   );
 
   useEffect(() => {

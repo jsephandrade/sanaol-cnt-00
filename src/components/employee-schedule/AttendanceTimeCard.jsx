@@ -6,6 +6,49 @@ import { useAttendance } from '@/hooks/useAttendance';
 import FeaturePanelCard from '../shared/FeaturePanelCard';
 import { cn } from '@/lib/utils';
 
+const buildLocalKey = (employeeId, date) =>
+  `attendance:${employeeId || 'unknown'}:${date || ''}`;
+
+const defaultLocalAttendance = {
+  checkIn: false,
+  checkOut: false,
+  checkInAt: null,
+  checkOutAt: null,
+};
+
+const readLocalAttendance = (employeeId, date) => {
+  try {
+    const raw = localStorage.getItem(buildLocalKey(employeeId, date));
+    if (!raw) return { ...defaultLocalAttendance };
+    const parsed = JSON.parse(raw);
+    const checkInAt = parsed.checkInAt || null;
+    const checkOutAt = parsed.checkOutAt || null;
+    return {
+      ...defaultLocalAttendance,
+      checkIn: Boolean(parsed.checkIn || checkInAt),
+      checkOut: Boolean(parsed.checkOut || checkOutAt),
+      checkInAt,
+      checkOutAt,
+    };
+  } catch {
+    return { ...defaultLocalAttendance };
+  }
+};
+
+const writeLocalAttendance = (employeeId, date, data) => {
+  try {
+    const next = {
+      checkIn: Boolean(data?.checkIn),
+      checkOut: Boolean(data?.checkOut),
+      checkInAt: data?.checkInAt || null,
+      checkOutAt: data?.checkOutAt || null,
+    };
+    localStorage.setItem(buildLocalKey(employeeId, date), JSON.stringify(next));
+  } catch {
+    // ignore storage failures
+  }
+};
+
 const AttendanceTimeCard = ({ user, className }) => {
   const subjectEmployeeId = useMemo(() => {
     if (!user) return null;
@@ -43,6 +86,9 @@ const AttendanceTimeCard = ({ user, className }) => {
 
   const today = todayStr();
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const [localStatus, setLocalStatus] = useState(() =>
+    readLocalAttendance(subjectEmployeeId, today)
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -64,25 +110,59 @@ const AttendanceTimeCard = ({ user, className }) => {
     );
   }, [records, subjectEmployeeId, today]);
 
+  useEffect(() => {
+    setLocalStatus(readLocalAttendance(subjectEmployeeId, today));
+  }, [subjectEmployeeId, today, todayRecord?.checkIn, todayRecord?.checkOut]);
+
+  const effectiveRecord = useMemo(() => {
+    if (todayRecord) return todayRecord;
+    if (!subjectEmployeeId) return null;
+    if (localStatus.checkIn || localStatus.checkOut) {
+      return {
+        id: `local-${today}`,
+        employeeId: subjectEmployeeId,
+        date: today,
+        checkIn:
+          localStatus.checkInAt || (localStatus.checkIn ? 'local' : null),
+        checkOut:
+          localStatus.checkOutAt || (localStatus.checkOut ? 'local' : null),
+        status: 'present',
+      };
+    }
+    return null;
+  }, [todayRecord, localStatus, subjectEmployeeId, today]);
+
   const handleTimeIn = async () => {
     const selectedEmployeeId = subjectEmployeeId;
     if (!selectedEmployeeId) {
       toast.error('Unable to identify user for attendance.');
       return;
     }
-    if (todayRecord?.checkIn) {
+    if (effectiveRecord?.checkIn) {
       toast.error('Already timed in today.');
       return;
     }
 
     try {
-      const created = await createRecord({
+      const checkInTime = nowTime();
+      await createRecord({
         employeeId: selectedEmployeeId,
         employeeName: user?.name || '',
         date: todayStr(),
-        checkIn: nowTime(),
+        checkIn: checkInTime,
         status: 'present',
       });
+      writeLocalAttendance(selectedEmployeeId, today, {
+        checkIn: true,
+        checkOut: Boolean(effectiveRecord?.checkOut),
+        checkInAt: checkInTime,
+        checkOutAt: effectiveRecord?.checkOut || null,
+      });
+      setLocalStatus((prev) => ({
+        ...prev,
+        checkIn: true,
+        checkInAt: checkInTime,
+      }));
       toast.success('Timed in successfully');
     } catch (error) {
       console.error(error);
@@ -96,14 +176,37 @@ const AttendanceTimeCard = ({ user, className }) => {
       toast.error('Unable to identify user for attendance.');
       return;
     }
-    if (!todayRecord || todayRecord.checkOut) {
+    if (!effectiveRecord || !effectiveRecord.checkIn) {
       toast.error('No active time-in record today');
+      return;
+    }
+    if (effectiveRecord.checkOut) {
+      toast.error('You already completed time out today.');
       return;
     }
 
     try {
-      const updated = await updateRecord(todayRecord.id, {
-        checkOut: nowTime(),
+      const checkOutTime = nowTime();
+      const checkInTimeValue =
+        (effectiveRecord.checkIn &&
+          String(effectiveRecord.checkIn).includes(':') &&
+          effectiveRecord.checkIn) ||
+        localStatus.checkInAt ||
+        null;
+      await updateRecord(effectiveRecord.id, {
+        checkOut: checkOutTime,
+      });
+      writeLocalAttendance(selectedEmployeeId, today, {
+        checkIn: true,
+        checkOut: true,
+        checkInAt: checkInTimeValue,
+        checkOutAt: checkOutTime,
+      });
+      setLocalStatus({
+        checkIn: true,
+        checkOut: true,
+        checkInAt: checkInTimeValue,
+        checkOutAt: checkOutTime,
       });
       toast.success('Timed out successfully');
     } catch (error) {
@@ -147,12 +250,12 @@ const AttendanceTimeCard = ({ user, className }) => {
   };
 
   const checkInDate = useMemo(
-    () => parseTimeToDate(todayRecord?.checkIn),
-    [todayRecord?.checkIn]
+    () => parseTimeToDate(effectiveRecord?.checkIn),
+    [effectiveRecord?.checkIn]
   );
   const checkOutDate = useMemo(
-    () => parseTimeToDate(todayRecord?.checkOut),
-    [todayRecord?.checkOut]
+    () => parseTimeToDate(effectiveRecord?.checkOut),
+    [effectiveRecord?.checkOut]
   );
 
   const displayCurrentTime = formatTo12Hour(currentTime);
@@ -164,24 +267,27 @@ const AttendanceTimeCard = ({ user, className }) => {
   }, [checkInDate, checkOutDate, currentTime]);
 
   const statusConfig = useMemo(() => {
-    if (!todayRecord) {
+    if (!effectiveRecord) {
       return { label: 'Not Clocked In', className: 'text-muted-foreground' };
     }
-    if (todayRecord.checkIn && !todayRecord.checkOut) {
+    if (effectiveRecord.checkIn && !effectiveRecord.checkOut) {
       return { label: 'Clocked In', className: 'text-emerald-600' };
     }
-    if (todayRecord.checkOut) {
+    if (effectiveRecord.checkOut) {
       return { label: 'Clocked Out', className: 'text-red-600' };
     }
     return {
-      label: todayRecord.status || 'Unknown Status',
+      label: effectiveRecord.status || 'Unknown Status',
       className: 'text-muted-foreground',
     };
-  }, [todayRecord]);
+  }, [effectiveRecord]);
 
-  const hasTimedInToday = Boolean(todayRecord?.checkIn);
-  const isClockedIn = Boolean(todayRecord?.checkIn && !todayRecord?.checkOut);
-  const canTimeOut = Boolean(todayRecord?.checkIn) && !todayRecord?.checkOut;
+  const hasTimedInToday = Boolean(effectiveRecord?.checkIn);
+  const isClockedIn = Boolean(
+    effectiveRecord?.checkIn && !effectiveRecord?.checkOut
+  );
+  const canTimeOut =
+    Boolean(effectiveRecord?.checkIn) && !effectiveRecord?.checkOut;
   const selectedEmployeeId = subjectEmployeeId;
 
   return (

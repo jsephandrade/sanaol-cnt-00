@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/dialog';
 
 const DAYS_OF_WEEK = [
-  'Sunday',
   'Monday',
   'Tuesday',
   'Wednesday',
@@ -255,18 +254,11 @@ const EmployeeSchedule = () => {
       return;
     }
 
-    if (scheduleLoading || !hasShiftToday) return;
     if (attendanceDialogOpen || attendanceAutoOpenDismissed.current) return;
 
     attendanceAutoOpenDismissed.current = true;
     setAttendanceDialogOpen(true);
-  }, [
-    attendanceDialogOpen,
-    hasShiftToday,
-    isStaffOnly,
-    location.pathname,
-    scheduleLoading,
-  ]);
+  }, [attendanceDialogOpen, isStaffOnly, location.pathname]);
 
   const lookupEmployeeName = (employeeId) =>
     displayEmployees.find((e) => e?.id === employeeId)?.name || 'Unknown';
@@ -398,9 +390,18 @@ const EmployeeSchedule = () => {
 
   const handleCreateEmployee = async (payload) => {
     if (!canManage) return false;
-    const { name, position, hourlyRate, contact, status } = payload || {};
-    if (!name?.trim() || !position?.trim()) {
-      toast.error('Please provide employee name and position');
+    const { name, position, hourlyRate, contact, status, userId } =
+      payload || {};
+    if (!userId) {
+      toast.error('Select a user account for the employee');
+      return false;
+    }
+    if (!name?.trim()) {
+      toast.error('Employee name is required');
+      return false;
+    }
+    if (!position?.trim()) {
+      toast.error('Please provide employee position');
       return false;
     }
 
@@ -410,6 +411,7 @@ const EmployeeSchedule = () => {
         : 0;
       await addEmployee({
         name: name.trim(),
+        userId,
         position: position.trim(),
         hourlyRate: sanitizedRate,
         contact: contact?.trim() || '',
@@ -430,9 +432,18 @@ const EmployeeSchedule = () => {
       return false;
     }
 
-    const { name, position, hourlyRate, contact, status } = updates || {};
-    if (!name?.trim() || !position?.trim()) {
-      toast.error('Please provide employee name and position');
+    const { name, position, hourlyRate, contact, status, userId } =
+      updates || {};
+    if (!userId) {
+      toast.error('Select a user account for the employee');
+      return false;
+    }
+    if (!name?.trim()) {
+      toast.error('Employee name is required');
+      return false;
+    }
+    if (!position?.trim()) {
+      toast.error('Please provide employee position');
       return false;
     }
 
@@ -442,6 +453,7 @@ const EmployeeSchedule = () => {
         : 0;
       await updateEmployee(id, {
         name: name.trim(),
+        userId,
         position: position.trim(),
         hourlyRate: sanitizedRate,
         contact: contact?.trim() || '',
@@ -504,7 +516,7 @@ const EmployeeSchedule = () => {
             employeeList={displayEmployees}
             className="w-full"
           />
-          {user && !isStaffOnly ? (
+          {isStaffOnly && user ? (
             <AttendanceTimeCard user={user} className="w-full" />
           ) : null}
         </div>
@@ -586,7 +598,7 @@ const EmployeeSchedule = () => {
         scheduleContent
       )}
 
-      {user && (
+      {isStaffOnly && user && (
         <Dialog
           open={attendanceDialogOpen}
           onOpenChange={handleAttendanceDialogChange}

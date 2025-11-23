@@ -310,6 +310,69 @@ class UserService {
     await mockDelay(200);
     return { success: true, data: roleConfig };
   }
+
+  async getActiveUserOptions(params = {}) {
+    const {
+      search = '',
+      limit = 50,
+      roles = ['staff', 'manager'], // optional override, default staff+manager
+    } = params;
+    const toOption = (user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      label: user.name ? `${user.name} (${user.email})` : user.email,
+    });
+
+    if (!USE_MOCKS) {
+      try {
+        const qs = new URLSearchParams();
+        if (search) qs.append('search', search);
+        if (limit) qs.append('limit', String(limit));
+        const res = await apiClient.get(
+          `/users/active-options?${qs.toString()}`,
+          {
+            retry: { retries: 1 },
+          }
+        );
+        const list = Array.isArray(res) ? res : res?.data || [];
+        return {
+          success: true,
+          data: list
+            .filter((u) =>
+              Array.isArray(roles)
+                ? roles.includes((u.role || '').toLowerCase())
+                : true
+            )
+            .map(toOption),
+        };
+      } catch (e) {
+        console.warn(
+          'getActiveUserOptions API failed, falling back to mocks:',
+          e?.message
+        );
+      }
+    }
+
+    await mockDelay(250);
+    const filtered = usersApiToModel(mockUsers).filter((u) => {
+      const roleOk = Array.isArray(roles)
+        ? roles.includes((u.role || '').toLowerCase())
+        : true;
+      const statusOk = (u.status || '').toLowerCase() === 'active';
+      const matchesSearch =
+        !search ||
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase());
+      return roleOk && statusOk && matchesSearch;
+    });
+    return {
+      success: true,
+      data: filtered.slice(0, limit).map(toOption),
+    };
+  }
 }
 
 export const userService = new UserService();

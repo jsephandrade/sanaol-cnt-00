@@ -37,6 +37,20 @@ def _parse_time(val: str):
 
 
 def _safe_emp(e):
+    user_summary = {}
+    try:
+        user = getattr(e, "user", None)
+        if user:
+            user_summary = {
+                "userId": str(user.id),
+                "userName": user.name,
+                "userEmail": user.email,
+                "userRole": user.role,
+                "userStatus": user.status,
+            }
+    except Exception:
+        user_summary = {}
+
     return {
         "id": str(e.id),
         "name": e.name,
@@ -46,6 +60,7 @@ def _safe_emp(e):
         "status": e.status,
         "createdAt": e.created_at.isoformat() if e.created_at else None,
         "updatedAt": e.updated_at.isoformat() if e.updated_at else None,
+        **user_summary,
     }
 
 
@@ -125,7 +140,7 @@ def employees(request):
             limit = request.GET.get("limit", 50)
 
             # Query only explicitly created employees (no auto-sync)
-            qs = Employee.objects.all()
+            qs = Employee.objects.select_related("user").all()
             # Confidentiality: Staff should only see themselves
             role_l = (getattr(actor, "role", "") or "").lower()
             if role_l not in {"admin", "manager"} and not _has_permission(actor, "employees.manage"):
@@ -195,17 +210,34 @@ def employees(request):
     except Exception:
         payload = {}
     name = (payload.get("name") or "").strip()
-    if not name:
-        return JsonResponse({"success": False, "message": "Name is required"}, status=400)
     try:
-        from .models import Employee
+        from .models import Employee, AppUser
         with transaction.atomic():
+            user = None
+            user_id = payload.get("userId") or payload.get("user")
+            if user_id:
+                user = AppUser.objects.filter(id=user_id).first()
+                if not user:
+                    return JsonResponse({"success": False, "message": "User not found"}, status=404)
+                role_l = (getattr(user, "role", "") or "").lower()
+                if role_l not in {"staff", "manager"}:
+                    return JsonResponse({"success": False, "message": "Only staff or manager users can be linked"}, status=400)
+                status_l = (getattr(user, "status", "") or "").lower()
+                if status_l != "active":
+                    return JsonResponse({"success": False, "message": "User must be active to be linked"}, status=400)
+                if Employee.objects.filter(user_id=user.id).exists():
+                    return JsonResponse({"success": False, "message": "User is already linked to an employee"}, status=400)
+            if not name and user:
+                name = (user.name or user.email or "").strip()
+            if not name:
+                return JsonResponse({"success": False, "message": "Name is required"}, status=400)
             emp = Employee.objects.create(
                 name=name,
                 position=(payload.get("position") or "").strip(),
                 hourly_rate=float(payload.get("hourlyRate") or 0),
-                contact=(payload.get("contact") or "").strip(),
+                contact=(payload.get("contact") or "").strip() or (user.email if user else ""),
                 status=(payload.get("status") or "active").lower(),
+                user=user,
             )
         return JsonResponse({"success": True, "data": _safe_emp(emp)})
     except Exception as e:
@@ -218,7 +250,7 @@ def employee_detail(request, emp_id):
     if not actor:
         return err
     try:
-        from .models import Employee
+        from .models import Employee, AppUser
         emp = Employee.objects.filter(id=emp_id).first()
         if not emp:
             return JsonResponse({"success": False, "message": "Not found"}, status=404)
@@ -252,6 +284,26 @@ def employee_detail(request, emp_id):
             emp.contact = str(payload["contact"]).strip(); changed = True
         if "status" in payload and payload["status"] is not None:
             emp.status = str(payload["status"]).lower(); changed = True
+        if "userId" in payload or "user" in payload:
+            target_user_id = payload.get("userId") or payload.get("user")
+            if target_user_id:
+                user = AppUser.objects.filter(id=target_user_id).first()
+                if not user:
+                    return JsonResponse({"success": False, "message": "User not found"}, status=404)
+                role_l = (getattr(user, "role", "") or "").lower()
+                if role_l not in {"staff", "manager"}:
+                    return JsonResponse({"success": False, "message": "Only staff or manager users can be linked"}, status=400)
+                status_l = (getattr(user, "status", "") or "").lower()
+                if status_l != "active":
+                    return JsonResponse({"success": False, "message": "User must be active to be linked"}, status=400)
+                # Prevent linking to multiple employees
+                if Employee.objects.filter(user_id=user.id).exclude(id=emp.id).exists():
+                    return JsonResponse({"success": False, "message": "User is already linked to another employee"}, status=400)
+                emp.user = user; changed = True
+                if not emp.name:
+                    emp.name = (user.name or user.email or "").strip()
+            else:
+                emp.user = None; changed = True
         if changed:
             emp.save()
         return JsonResponse({"success": True, "data": _safe_emp(emp)})

@@ -114,7 +114,7 @@ export const NavigationSidebar = () => {
           allowedRoles: ['admin', 'manager'],
         },
         {
-          name: 'Employee Management',
+          name: 'Employee Shift',
           href: '/employees',
           icon: CalendarClock,
           allowedRoles: ['admin', 'manager', 'staff'],

@@ -14,6 +14,11 @@ class EmployeeService {
     return list.map((e) => ({
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',
@@ -25,6 +30,7 @@ class EmployeeService {
   async createEmployee(employee) {
     const payload = {
       name: employee?.name || '',
+      userId: employee?.userId || employee?.user || null,
       position: employee?.position || '',
       hourlyRate: Number(employee?.hourlyRate ?? 0),
       contact: employee?.contact || '',
@@ -37,6 +43,11 @@ class EmployeeService {
     return {
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',
@@ -54,6 +65,11 @@ class EmployeeService {
     return {
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',

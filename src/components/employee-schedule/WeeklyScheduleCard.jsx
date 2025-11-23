@@ -3,7 +3,6 @@ import UserManagementCard from '@/components/users/UserManagementCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,19 +40,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  AlertTriangle,
   CalendarRange,
-  CheckCircle2,
   Copy,
   MoreHorizontal,
+  ChevronDown,
   PlusCircle,
-  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_DAY_OPTIONS = [
-  'Sunday',
   'Monday',
   'Tuesday',
   'Wednesday',
@@ -165,7 +161,14 @@ const WeeklyScheduleCard = ({
   onDeleteShift,
   canManage = false,
 }) => {
-  const selectableDays = daysOfWeek.length ? daysOfWeek : DEFAULT_DAY_OPTIONS;
+  const filteredDays = daysOfWeek.length ? daysOfWeek : DEFAULT_DAY_OPTIONS;
+  const selectableDays = (filteredDays || []).filter(
+    (day) => String(day || '').toLowerCase() !== 'sunday'
+  ).length
+    ? (filteredDays || []).filter(
+        (day) => String(day || '').toLowerCase() !== 'sunday'
+      )
+    : DEFAULT_DAY_OPTIONS;
   const [internalFilters, setInternalFilters] = useState({
     employeeId: '',
     day: '_all',
@@ -177,6 +180,11 @@ const WeeklyScheduleCard = ({
     buildDraftShift(selectableDays, employeeList)
   );
   const [shiftPendingDelete, setShiftPendingDelete] = useState(null);
+  const [collapsedDays, setCollapsedDays] = useState(() => {
+    const initial = new Set(selectableDays);
+    initial.delete('Monday');
+    return initial;
+  });
 
   const appliedFilters = filters ?? internalFilters;
 
@@ -204,6 +212,7 @@ const WeeklyScheduleCard = ({
     const map = new Map();
     (resolvedOverview?.days || []).forEach((day) => {
       if (!day?.day) return;
+      if (String(day.day).toLowerCase() === 'sunday') return;
       map.set(day.day, day);
     });
     return map;
@@ -218,6 +227,8 @@ const WeeklyScheduleCard = ({
 
   const filteredSchedule = useMemo(() => {
     return normalizedSchedule.filter((entry) => {
+      const isSunday = String(entry?.day || '').toLowerCase() === 'sunday';
+      if (isSunday) return false;
       const matchesEmployee =
         !appliedFilters.employeeId ||
         String(entry.employeeId) === String(appliedFilters.employeeId);
@@ -282,12 +293,6 @@ const WeeklyScheduleCard = ({
     return map;
   }, [groupedSchedule, daySummaries]);
 
-  const alerts = resolvedOverview?.alerts || [];
-  const topContributors = resolvedOverview?.topContributors || [];
-  const topContributorMax = topContributors.reduce(
-    (acc, entry) => Math.max(acc, entry?.totalHours ?? 0),
-    0
-  );
   const showSkeletonBoard =
     scheduleLoading && (filteredSchedule.length === 0 || schedule.length === 0);
   const composerHasEmployees = employeeList.length > 0;
@@ -305,6 +310,18 @@ const WeeklyScheduleCard = ({
       setComposerSaving(false);
       setDraftShift(buildDraftShift(selectableDays, employeeList));
     }
+  };
+
+  const toggleDayCollapsed = (day) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) {
+        next.delete(day);
+      } else {
+        next.add(day);
+      }
+      return next;
+    });
   };
 
   const handleOpenComposer = (mode, preset = {}) => {
@@ -430,12 +447,13 @@ const WeeklyScheduleCard = ({
         className="group relative flex items-start gap-3 rounded-2xl border border-border/70 bg-card/80 p-3 shadow-sm"
       >
         <Avatar className="h-10 w-10 border border-border/60">
-          {employee?.avatar ? (
-            <AvatarImage
-              src={employee.avatar}
-              alt={employee.name || 'Employee avatar'}
-            />
-          ) : null}
+          <AvatarImage
+            src=""
+            alt={employee?.name || 'Employee avatar'}
+            className="bg-muted text-foreground"
+          >
+            {initials}
+          </AvatarImage>
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-1">
@@ -502,41 +520,26 @@ const WeeklyScheduleCard = ({
         titleIcon={CalendarRange}
         description="Plan coverage, assign teammates, and publish this week's roster from a single view."
         headerActions={
-          <div className="flex items-center gap-3 text-sm">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="gap-2 bg-gradient-to-r from-indigo-500 via-sky-500 to-blue-600 text-white shadow-sm hover:from-indigo-600 hover:via-sky-600 hover:to-blue-700"
-              onClick={() =>
-                handleOpenComposer('create', {
-                  repeatDays: boardDays,
-                })
-              }
-              disabled={!canManage || !composerHasEmployees}
-            >
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-              Quick fill
-            </Button>
-            <span className="text-muted-foreground" aria-hidden="true">
-              |
-            </span>
-            <Button
-              size="sm"
-              className="gap-2"
-              onClick={() =>
-                handleOpenComposer('create', {
-                  day:
-                    appliedFilters.day && appliedFilters.day !== '_all'
-                      ? appliedFilters.day
-                      : selectableDays[0],
-                })
-              }
-              disabled={!canManage || !composerHasEmployees}
-            >
-              <PlusCircle className="h-4 w-4" aria-hidden="true" />
-              Plan shift
-            </Button>
-          </div>
+          canManage ? (
+            <div className="flex items-center gap-3 text-sm">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={() =>
+                  handleOpenComposer('create', {
+                    day:
+                      appliedFilters.day && appliedFilters.day !== '_all'
+                        ? appliedFilters.day
+                        : selectableDays[0],
+                  })
+                }
+                disabled={!composerHasEmployees}
+              >
+                <PlusCircle className="h-4 w-4" aria-hidden="true" />
+                Plan shift
+              </Button>
+            </div>
+          ) : null
         }
       >
         {showSkeletonBoard ? (
@@ -549,13 +552,25 @@ const WeeklyScheduleCard = ({
           <div className="flex flex-col gap-4">
             {Array.from(groupedSchedule.entries()).map(([day, entries]) => {
               const meta = dayMetaMap.get(day);
+              const isCollapsed = collapsedDays.has(day);
               const badgeKey = meta?.coverageRating || 'none';
               return (
                 <div
                   key={day}
                   className="flex flex-col rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div
+                    className="flex flex-wrap items-center justify-between gap-3 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleDayCollapsed(day)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleDayCollapsed(day);
+                      }
+                    }}
+                  >
                     <div>
                       <p className="text-sm font-semibold leading-tight">
                         {day}
@@ -574,6 +589,26 @@ const WeeklyScheduleCard = ({
                       >
                         {coverageCopy[badgeKey] || coverageCopy.none}
                       </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleDayCollapsed(day);
+                        }}
+                      >
+                        <ChevronDown
+                          className={cn(
+                            'h-4 w-4 transition-transform',
+                            isCollapsed ? '-rotate-90' : 'rotate-0'
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">
+                          {isCollapsed ? 'Expand shifts' : 'Collapse shifts'}
+                        </span>
+                      </Button>
                       {canManage ? (
                         <Button
                           variant="ghost"
@@ -585,6 +620,8 @@ const WeeklyScheduleCard = ({
                               repeatDays: [day],
                             })
                           }
+                          onMouseDown={(event) => event.stopPropagation()}
+                          onClickCapture={(event) => event.stopPropagation()}
                         >
                           <PlusCircle className="h-4 w-4" aria-hidden="true" />
                           <span className="sr-only">Add shift for {day}</span>
@@ -592,111 +629,27 @@ const WeeklyScheduleCard = ({
                       ) : null}
                     </div>
                   </div>
-                  <div className="mt-4 space-y-3">
-                    {entries.length ? (
-                      entries.map((entry) => renderShiftCard(entry))
-                    ) : (
-                      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-xs text-muted-foreground">
-                        No shifts planned.
-                        {canManage ? (
-                          <span>{' Use "Plan shift" to assign coverage.'}</span>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
+                  {!isCollapsed ? (
+                    <div className="mt-4 space-y-3">
+                      {entries.length ? (
+                        entries.map((entry) => renderShiftCard(entry))
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-6 text-center text-xs text-muted-foreground">
+                          No shifts planned.
+                          {canManage ? (
+                            <span>
+                              {' Use "Plan shift" to assign coverage.'}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
           </div>
         )}
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">Coverage alerts</p>
-                <p className="text-xs text-muted-foreground">
-                  Automated checks for low coverage
-                </p>
-              </div>
-              <Badge variant="outline" className="text-[11px]">
-                {alerts.length} alerts
-              </Badge>
-            </div>
-            <div className="mt-4 space-y-3">
-              {alerts.length ? (
-                alerts.map((alert) => {
-                  const SeverityIcon =
-                    alert?.severity === 'critical'
-                      ? AlertTriangle
-                      : CheckCircle2;
-                  return (
-                    <div
-                      key={`${alert.day}-${alert.message}`}
-                      className="flex gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3"
-                    >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-                        <SeverityIcon className="h-4 w-4" aria-hidden="true" />
-                      </div>
-                      <div className="flex-1 text-sm">
-                        <p className="font-medium">{alert?.day}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {alert?.message}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-[11px]">
-                        {alert?.shifts ?? 0} shifts
-                      </Badge>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="rounded-2xl border border-dashed border-border/60 p-4 text-xs text-muted-foreground">
-                  All good! No coverage issues detected for this week.
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="rounded-3xl border border-border/70 bg-card/80 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">Top contributors</p>
-                <p className="text-xs text-muted-foreground">
-                  Hours committed by your most active staff
-                </p>
-              </div>
-              <Badge variant="outline" className="text-[11px]">
-                {topContributors.length}
-              </Badge>
-            </div>
-            <div className="mt-4 space-y-3">
-              {topContributors.length ? (
-                topContributors.map((contributor) => (
-                  <div key={contributor.employeeId}>
-                    <div className="flex items-center justify-between text-sm">
-                      <p className="font-medium">{contributor.employeeName}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {contributor.totalHours}h
-                      </span>
-                    </div>
-                    <Progress
-                      value={
-                        topContributorMax
-                          ? (contributor.totalHours / topContributorMax) * 100
-                          : 0
-                      }
-                      className="mt-2 h-2"
-                    />
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-2xl border border-dashed border-border/60 p-4 text-xs text-muted-foreground">
-                  Contributors will appear once shifts are assigned.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
       </UserManagementCard>
 
       <Sheet open={composerOpen} onOpenChange={handleComposerOpenChange}>

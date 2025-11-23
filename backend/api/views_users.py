@@ -10,7 +10,16 @@ from django.conf import settings
 import jwt
 from django.contrib.auth.hashers import make_password
 
-from .views_common import USERS, _paginate, _maybe_seed_from_memory, _safe_user_from_db, _now_iso, DEFAULT_ROLE_PERMISSIONS
+from .views_common import (
+    USERS,
+    _actor_from_request,
+    _has_permission,
+    _paginate,
+    _maybe_seed_from_memory,
+    _safe_user_from_db,
+    _now_iso,
+    DEFAULT_ROLE_PERMISSIONS,
+)
 
 
 ROLES = {
@@ -455,6 +464,70 @@ def user_role_config(request, value):
     return JsonResponse({"success": True, "data": cfg})
 
 
+@require_http_methods(["GET"])
+def active_user_options(request):
+    """Lightweight list of active staff/manager accounts for employee linking."""
+
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+
+    role_l = (getattr(actor, "role", "") or "").lower()
+    if role_l not in {"admin", "manager"} and not _has_permission(actor, "employees.manage"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    search = (request.GET.get("search") or "").lower()
+    try:
+        limit = max(1, min(200, int(request.GET.get("limit") or 50)))
+    except Exception:
+        limit = 50
+
+    try:
+        from django.db.models import Q
+        from .models import AppUser
+
+        _maybe_seed_from_memory()
+        qs = AppUser.objects.filter(status="active", role__in=["staff", "manager"])
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(email__icontains=search))
+        qs = qs.order_by("name")[:limit]
+        items = [
+            {
+                "id": str(u.id),
+                "name": u.name,
+                "email": u.email,
+                "role": u.role,
+                "status": u.status,
+            }
+            for u in qs
+        ]
+        return JsonResponse({"success": True, "data": items})
+    except Exception:
+        # Fallback to in-memory data if DB is unavailable
+        pass
+
+    data = [
+        {
+            "id": str(u.get("id")),
+            "name": u.get("name"),
+            "email": u.get("email"),
+            "role": u.get("role"),
+            "status": u.get("status"),
+        }
+        for u in USERS
+        if (u.get("status", "").lower() == "active")
+        and (u.get("role", "").lower() in {"staff", "manager"})
+    ]
+    if search:
+        data = [
+            u
+            for u in data
+            if search in (u.get("name") or "").lower()
+            or search in (u.get("email") or "").lower()
+        ]
+    return JsonResponse({"success": True, "data": data[:limit]})
+
+
 __all__ = [
     "users",
     "user_detail",
@@ -462,4 +535,5 @@ __all__ = [
     "user_role",
     "user_roles",
     "user_role_config",
+    "active_user_options",
 ]

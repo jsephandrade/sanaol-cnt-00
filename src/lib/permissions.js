@@ -58,6 +58,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'order.history.view',
     'profile.view_roles',
     'schedule.view_edit',
+    'attendance.self',
+    'attendance.self.edit',
     'notification.send',
     'notification.receive',
     'notification.view',

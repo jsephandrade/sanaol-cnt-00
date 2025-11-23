@@ -78,16 +78,7 @@ def _safe_leave(l):
 
 
 def _employee_for_actor(actor, *, create_if_missing=False):
-    """Resolve the employee profile linked to the authenticated actor.
-
-    The resolver is intentionally strict: it only returns Employee records that
-    are explicitly linked to the AppUser through `employee.user`.
-
-    Auto-creation/linking is disabled (even if `create_if_missing=True`) so that
-    merely logging in or accessing attendance endpoints does not insert new
-    Employee rows. Administrators must manage Employee records explicitly via the
-    employees endpoints.
-    """
+    """Resolve (and optionally create) the employee profile linked to the actor."""
 
     if not actor:
         return None
@@ -103,23 +94,47 @@ def _employee_for_actor(actor, *, create_if_missing=False):
     except Exception:
         actor_id = None
 
-    # STRICT lookup by user_id only - prevents cross-user sharing
+    # STRICT lookup by user_id first - prevents cross-user sharing
     if not actor_id:
         return None
 
     try:
-        # Return existing employee linked to this user (if any)
         emp = Employee.objects.filter(user_id=actor_id).first()
         if emp:
             return emp
-        # Do not auto-create or link employees to users.
+
+        # Optionally create/link an employee for this user (staff/manager only)
         if create_if_missing:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.info(
-                "Employee lookup requested creation for user %s, but auto-creation is disabled.",
-                actor_id,
+            role_l = (getattr(actor, "role", "") or "").lower()
+            if role_l not in {"staff", "manager"}:
+                return None
+
+            # Try to reuse an employee row that matches the actor's email in contact
+            actor_email = (getattr(actor, "email", "") or "").strip().lower()
+            reusable = None
+            if actor_email:
+                reusable = (
+                    Employee.objects.filter(contact__iexact=actor_email, user__isnull=True)
+                    .order_by("created_at")
+                    .first()
+                )
+            if reusable:
+                reusable.user_id = actor_id
+                reusable.name = reusable.name or (getattr(actor, "name", "") or actor_email or "New Staff")
+                reusable.status = reusable.status or "active"
+                reusable.save()
+                return reusable
+
+            # Create a minimal employee linked to this user
+            emp = Employee.objects.create(
+                user_id=actor_id,
+                name=getattr(actor, "name", "") or actor_email or "New Staff",
+                position="",
+                contact=actor_email or "",
+                status="active",
             )
+            return emp
+
     except Exception as e:
         import logging
         logger = logging.getLogger(__name__)
@@ -176,7 +191,7 @@ def attendance(request):
         self_employee = None
         actor_id = getattr(actor, "id", None)
         if not can_manage:
-            self_employee = _employee_for_actor(actor, create_if_missing=False)
+            self_employee = _employee_for_actor(actor, create_if_missing=True)
             if not self_employee:
                 return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
 
