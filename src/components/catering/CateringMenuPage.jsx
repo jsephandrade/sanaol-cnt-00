@@ -1,7 +1,13 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Save, ArrowLeft, ShoppingCart } from 'lucide-react';
+import { AlertCircle, ArrowLeft, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import CateringMenuSelection from './CateringMenuSelection';
 import CateringOrderSummary from './CateringOrderSummary';
@@ -32,39 +38,59 @@ const CateringMenuPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isMobileOrderSheetOpen, setIsMobileOrderSheetOpen] = useState(false);
+  const [isSyncingPayment, setIsSyncingPayment] = useState(false);
+  const autoSaveTimeout = useRef(null);
+  const savePromiseRef = useRef(null);
+
+  const itemsArray = useMemo(() => {
+    return Object.values(selectedItems);
+  }, [selectedItems]);
+
+  const populateFromEvent = useCallback((eventData) => {
+    if (eventData?.items) {
+      const itemsMap = {};
+      eventData.items.forEach((item) => {
+        itemsMap[item.menuItemId || item.id] = {
+          id: item.menuItemId || item.id,
+          name: item.name,
+          price: item.unitPrice || 0,
+          quantity: item.quantity || 1,
+          category: '',
+        };
+      });
+      setSelectedItems(itemsMap);
+    }
+
+    if (eventData?.orderDiscount !== undefined) {
+      setDiscount(String(eventData.orderDiscount));
+      setDiscountType('fixed');
+    }
+  }, []);
+
+  const fetchEventData = useCallback(
+    async (options = { populate: true }) => {
+      if (!eventId) return null;
+      const res = await cateringService.getEvent(eventId, {
+        includeItems: true,
+      });
+      if (!res?.success)
+        throw new Error(res?.message || 'Failed to load event');
+      setEvent(res.data);
+      if (options.populate) {
+        populateFromEvent(res.data);
+      }
+      return res.data;
+    },
+    [eventId, populateFromEvent]
+  );
 
   // Fetch event data
   useEffect(() => {
-    const fetchEvent = async () => {
+    const run = async () => {
       if (!eventId) return;
       setIsLoadingEvent(true);
       try {
-        const res = await cateringService.getEvent(eventId, {
-          includeItems: true,
-        });
-        if (!res?.success) throw new Error(res?.message);
-        setEvent(res.data);
-
-        // Initialize selected items from event data
-        if (res.data?.items) {
-          const itemsMap = {};
-          res.data.items.forEach((item) => {
-            itemsMap[item.menuItemId || item.id] = {
-              id: item.menuItemId || item.id,
-              name: item.name,
-              price: item.unitPrice || 0,
-              quantity: item.quantity || 1,
-              category: '',
-            };
-          });
-          setSelectedItems(itemsMap);
-        }
-
-        // Initialize discount
-        if (res.data?.orderDiscount) {
-          setDiscount(String(res.data.orderDiscount));
-          setDiscountType('fixed');
-        }
+        await fetchEventData({ populate: true });
       } catch (err) {
         const message =
           err?.message ||
@@ -76,9 +102,8 @@ const CateringMenuPage = () => {
         setIsLoadingEvent(false);
       }
     };
-
-    fetchEvent();
-  }, [eventId, navigate]);
+    run();
+  }, [eventId, navigate, fetchEventData]);
 
   const handleAddToOrder = useCallback((item) => {
     setSelectedItems((prev) => {
@@ -132,58 +157,117 @@ const CateringMenuPage = () => {
     setDiscount('0');
   }, [selectedItems]);
 
-  const handleSaveOrder = async () => {
-    if (!eventId) {
-      toast.error('No event selected');
-      return;
-    }
-
-    const itemsArray = Object.values(selectedItems);
-    if (itemsArray.length === 0) {
-      toast.error('Please add at least one item to the order');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const items = itemsArray.map((item) => ({
-        menuItemId: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.price,
-      }));
-
-      const response = await cateringService.setEventMenuItems(eventId, items);
-
-      if (!response?.success) {
-        throw new Error(response?.message || 'Failed to save menu items');
+  const handleSaveOrder = useCallback(
+    async ({ withToast = false } = {}) => {
+      if (!eventId) {
+        return;
       }
 
-      // Update discount if changed
-      const discountValue = Number(discount) || 0;
-      if (discountValue !== (event?.orderDiscount || 0)) {
-        await cateringService.updateEvent(eventId, {
-          orderDiscount: discountValue,
+      if (savePromiseRef.current) {
+        return savePromiseRef.current;
+      }
+
+      setIsSaving(true);
+      savePromiseRef.current = (async () => {
+        const items = itemsArray.map((item) => ({
+          menuItemId: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.price,
+        }));
+
+        const response = await cateringService.setEventMenuItems(
+          eventId,
+          items
+        );
+
+        if (!response?.success) {
+          throw new Error(response?.message || 'Failed to save menu items');
+        }
+
+        const discountValue = Number(discount) || 0;
+        if (discountValue !== (event?.orderDiscount || 0)) {
+          await cateringService.updateEvent(eventId, {
+            orderDiscount: discountValue,
+          });
+        }
+
+        if (withToast) toast.success('Catering order saved automatically');
+      })()
+        .catch((err) => {
+          const message =
+            err?.message ||
+            err?.details?.message ||
+            'Failed to save catering order';
+          toast.error(message);
+          throw err;
+        })
+        .finally(() => {
+          setIsSaving(false);
+          savePromiseRef.current = null;
         });
-      }
 
-      toast.success('Catering order saved successfully!');
-      navigate('/catering');
+      return savePromiseRef.current;
+    },
+    [eventId, itemsArray, discount, event]
+  );
+
+  useEffect(() => {
+    if (!eventId || isLoadingEvent) return undefined;
+
+    if (autoSaveTimeout.current) {
+      clearTimeout(autoSaveTimeout.current);
+    }
+
+    autoSaveTimeout.current = setTimeout(() => {
+      handleSaveOrder({ withToast: false });
+    }, 800);
+
+    return () => {
+      if (autoSaveTimeout.current) {
+        clearTimeout(autoSaveTimeout.current);
+      }
+    };
+  }, [eventId, selectedItems, discount, isLoadingEvent, handleSaveOrder]);
+
+  const handleOpenPayment = useCallback(async () => {
+    setIsSyncingPayment(true);
+    try {
+      await handleSaveOrder({ withToast: false });
+      await fetchEventData({ populate: true });
+      setShowPaymentModal(true);
     } catch (err) {
       const message =
-        err?.message ||
-        err?.details?.message ||
-        'Failed to save catering order';
+        err?.message || err?.details?.message || 'Failed to sync order';
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      setIsSyncingPayment(false);
     }
-  };
+  }, [handleSaveOrder, fetchEventData]);
+
+  const paymentTotals = useMemo(() => {
+    const subtotal = itemsArray.reduce((sum, item) => {
+      const price = Number(item.price) || 0;
+      const quantity = Number(item.quantity) || 0;
+      return sum + price * quantity;
+    }, 0);
+
+    const discountValue = Number(discount) || 0;
+    const discountAmount =
+      discountType === 'percentage'
+        ? (subtotal * discountValue) / 100
+        : discountValue;
+
+    const total = Math.max(0, subtotal - discountAmount);
+
+    return { subtotal, discountAmount, total };
+  }, [itemsArray, discount, discountType]);
 
   const itemCount = useMemo(() => {
     return Object.keys(selectedItems).length;
   }, [selectedItems]);
   const hasItems = itemCount > 0;
+  const paymentEnabled = paymentTotals.total > 0 || itemsArray.length > 0;
 
   const handlePaymentSubmit = async (paymentData) => {
     try {
@@ -317,12 +401,8 @@ const CateringMenuPage = () => {
                 discountType={discountType}
                 onDiscountChange={setDiscount}
                 onDiscountTypeChange={setDiscountType}
-                canProcessPayment={Boolean(
-                  event?.estimatedTotal || event?.total
-                )}
-                onProcessPayment={() => setShowPaymentModal(true)}
-                onSaveOrder={handleSaveOrder}
-                isSaving={isSaving}
+                canProcessPayment={paymentEnabled}
+                onProcessPayment={handleOpenPayment}
                 itemCount={itemCount}
               />
             </div>
@@ -359,13 +439,11 @@ const CateringMenuPage = () => {
               discountType={discountType}
               onDiscountChange={setDiscount}
               onDiscountTypeChange={setDiscountType}
-              canProcessPayment={Boolean(event?.estimatedTotal || event?.total)}
+              canProcessPayment={paymentEnabled}
               onProcessPayment={() => {
                 setIsMobileOrderSheetOpen(false);
-                setShowPaymentModal(true);
+                handleOpenPayment();
               }}
-              onSaveOrder={handleSaveOrder}
-              isSaving={isSaving}
               itemCount={itemCount}
             />
           </div>
@@ -377,6 +455,8 @@ const CateringMenuPage = () => {
         open={showPaymentModal}
         onOpenChange={setShowPaymentModal}
         event={event}
+        totals={paymentTotals}
+        isSyncing={isSyncingPayment}
         onPaymentSubmit={handlePaymentSubmit}
       />
     </div>

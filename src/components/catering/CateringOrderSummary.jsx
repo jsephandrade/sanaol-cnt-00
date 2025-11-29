@@ -1,12 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  Trash2,
-  Plus,
-  Minus,
-  Save,
-  ShoppingCart,
-  CreditCard,
-} from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +15,6 @@ const CateringOrderSummary = ({
   onDiscountTypeChange,
   canProcessPayment = false,
   onProcessPayment,
-  onSaveOrder,
-  isSaving = false,
   itemCount = 0,
 }) => {
   const itemsArray = useMemo(() => {
@@ -176,26 +167,15 @@ const CateringOrderSummary = ({
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="flex items-stretch gap-2">
-              <Button
-                className="w-full"
-                size="sm"
-                variant="default"
-                disabled={!canProcessPayment || isSaving}
-                onClick={onProcessPayment}
-              >
-                <CreditCard className="mr-2 h-4 w-4" /> Process Payment
-              </Button>
-              <Button
-                className="w-full"
-                size="sm"
-                variant="outline"
-                disabled={isSaving}
-                onClick={onSaveOrder}
-              >
-                <Save className="mr-2 h-4 w-4" /> Save Order
-              </Button>
-            </div>
+            <Button
+              className="w-full"
+              size="sm"
+              variant="default"
+              disabled={!canProcessPayment}
+              onClick={onProcessPayment}
+            >
+              <CreditCard className="mr-2 h-4 w-4" /> Process Payment
+            </Button>
           </div>
         </div>
       </CardContent>

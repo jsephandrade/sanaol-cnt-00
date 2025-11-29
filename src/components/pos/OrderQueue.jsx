@@ -21,6 +21,7 @@ import {
   Check,
   PauseCircle,
   PlayCircle,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { formatOrderNumber } from '@/lib/utils';
@@ -201,6 +202,7 @@ const formatCountdown = (seconds) => {
 
 const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
   const { can } = useAuth();
+  const [statusUpdating, setStatusUpdating] = useState({});
   const queueOrders = useMemo(() => {
     if (!orderQueue) return [];
     if (Array.isArray(orderQueue)) return orderQueue;
@@ -226,6 +228,25 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
         return channel !== 'walk-in';
       }),
     [visibleOrders]
+  );
+
+  const handleStatusChange = useCallback(
+    async (orderId, targetStatus) => {
+      if (!orderId || !targetStatus) return;
+      setStatusUpdating((prev) => ({ ...prev, [orderId]: true }));
+      try {
+        await updateOrderStatus(orderId, targetStatus);
+      } catch (err) {
+        const message =
+          err?.message ||
+          err?.details?.message ||
+          'Failed to update order status';
+        toast.error(message);
+      } finally {
+        setStatusUpdating((prev) => ({ ...prev, [orderId]: false }));
+      }
+    },
+    [updateOrderStatus]
   );
 
   const [nowTs, setNowTs] = useState(() => Date.now());
@@ -431,7 +452,7 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                             {item.quantity}x {item.name}
                           </span>
                           <span>
-                            PHP {(item.price * item.quantity).toFixed(2)}
+                            ₱{(item.price * item.quantity).toFixed(2)}
                           </span>
                         </div>
                       ))}
@@ -443,11 +464,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                           <Button
                             size="sm"
                             className="flex-1"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'in_progress')
+                              handleStatusChange(order.id, 'in_progress')
                             }
                           >
-                            Start Preparing
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Start Preparing'
+                            )}
                           </Button>
                         )}
 
@@ -455,9 +484,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                           <Button
                             size="sm"
                             className="flex-1"
-                            onClick={() => updateOrderStatus(order.id, 'ready')}
+                            disabled={statusUpdating[order.id]}
+                            onClick={() =>
+                              handleStatusChange(order.id, 'ready')
+                            }
                           >
-                            Mark Ready
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Coming right up...
+                              </>
+                            ) : (
+                              'Mark Ready'
+                            )}
                           </Button>
                         )}
 
@@ -466,11 +505,22 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                             size="sm"
                             variant="default"
                             className="flex-1 bg-green-600 hover:bg-green-700"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'completed')
+                              handleStatusChange(order.id, 'completed')
                             }
                           >
-                            <Check className="h-4 w-4 mr-1" /> Complete Order
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Coming right up...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" /> Complete
+                                Order
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
@@ -600,7 +650,7 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                             {item.quantity}x {item.name}
                           </span>
                           <span>
-                            PHP {(item.price * item.quantity).toFixed(2)}
+                            ₱{(item.price * item.quantity).toFixed(2)}
                           </span>
                         </div>
                       ))}
@@ -612,11 +662,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                           <Button
                             size="sm"
                             className="flex-1"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'in_progress')
+                              handleStatusChange(order.id, 'in_progress')
                             }
                           >
-                            Start Preparing
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Start Preparing'
+                            )}
                           </Button>
                         )}
 
@@ -624,9 +682,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                           <Button
                             size="sm"
                             className="flex-1"
-                            onClick={() => updateOrderStatus(order.id, 'ready')}
+                            disabled={statusUpdating[order.id]}
+                            onClick={() =>
+                              handleStatusChange(order.id, 'ready')
+                            }
                           >
-                            Ready for Pickup
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Ready for Pickup'
+                            )}
                           </Button>
                         )}
 
@@ -635,11 +703,22 @@ const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
                             size="sm"
                             variant="default"
                             className="flex-1 bg-green-600 hover:bg-green-700"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'completed')
+                              handleStatusChange(order.id, 'completed')
                             }
                           >
-                            <Check className="h-4 w-4 mr-1" /> Complete Order
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" /> Complete
+                                Order
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>

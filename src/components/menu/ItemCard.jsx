@@ -1,11 +1,6 @@
 // src/components/menu/ItemCard.jsx
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Archive, Image as ImageIcon } from 'lucide-react';
@@ -70,8 +65,8 @@ const ItemCard = ({ item, onEdit, onArchive = () => {} }) => {
               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Starting at
               </p>
-              <p className="text-lg font-semibold text-primary">
-                PHP {Number(item.price).toFixed(2)}
+              <p className="text-2xl font-semibold text-primary">
+                ₱{Number(item.price).toFixed(2)}
               </p>
             </div>
             {item.category && (

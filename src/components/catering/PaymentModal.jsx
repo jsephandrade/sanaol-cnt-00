@@ -21,14 +21,24 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const PaymentModal = ({ open, onOpenChange, event, onPaymentSubmit }) => {
+const PaymentModal = ({
+  open,
+  onOpenChange,
+  event,
+  onPaymentSubmit,
+  totals,
+  isSyncing = false,
+}) => {
   const [paymentType, setPaymentType] = useState('deposit'); // 'deposit' or 'full'
   const [paymentMethod, setPaymentMethod] = useState('cash'); // 'cash', 'card', 'mobile'
   const [isProcessing, setIsProcessing] = useState(false);
 
   const total = useMemo(() => {
+    if (totals?.total !== undefined) {
+      return Number(totals.total) || 0;
+    }
     return Number(event?.estimatedTotal || event?.total || 0);
-  }, [event]);
+  }, [event, totals]);
 
   const depositAmount = useMemo(() => {
     const backendDeposit = Number(event?.depositAmount || event?.deposit || 0);
@@ -54,6 +64,7 @@ const PaymentModal = ({ open, onOpenChange, event, onPaymentSubmit }) => {
   }, [paymentType, total, depositAmount]);
 
   const handlePayment = async () => {
+    if (isSyncing) return;
     setIsProcessing(true);
     try {
       await onPaymentSubmit?.({
@@ -101,6 +112,15 @@ const PaymentModal = ({ open, onOpenChange, event, onPaymentSubmit }) => {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {isSyncing ? (
+            <div className="flex items-center justify-between rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                Syncing latest amounts...
+              </div>
+            </div>
+          ) : null}
+
           {/* Payment Type Selection */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Payment Type</Label>
@@ -286,7 +306,11 @@ const PaymentModal = ({ open, onOpenChange, event, onPaymentSubmit }) => {
           >
             Cancel
           </Button>
-          <Button onClick={handlePayment} disabled={isProcessing} size="lg">
+          <Button
+            onClick={handlePayment}
+            disabled={isProcessing || isSyncing}
+            size="lg"
+          >
             {isProcessing ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />

@@ -144,11 +144,8 @@ const MenuSelection = ({
                 Starting at
               </p>
               <div className="flex items-baseline gap-1 text-primary">
-                <span className="text-sm font-semibold text-muted-foreground sm:text-base">
-                  PHP
-                </span>
                 <span className="text-base font-semibold sm:text-lg">
-                  {Number(item.price).toFixed(2)}
+                  ₱{Number(item.price).toFixed(2)}
                 </span>
               </div>
               {showCategoryBadge && categoryLabel ? (

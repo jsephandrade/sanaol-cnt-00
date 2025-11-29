@@ -142,7 +142,7 @@ const ItemList = ({
 
             <div className="flex w-full items-center justify-between gap-4 sm:w-auto sm:flex-col sm:items-end sm:justify-center sm:text-right">
               <span className="text-lg font-semibold text-primary">
-                PHP {Number(item.price).toFixed(2)}
+                ₱{Number(item.price).toFixed(2)}
               </span>
 
               <div className="flex items-center gap-2">
