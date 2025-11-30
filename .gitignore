@@ -28,6 +28,8 @@ bun.lockb
 .env
 .env.*
 !.env.example
+!.env.production
+!backend/.env.production
 
 # Python (backend)
 __pycache__/
