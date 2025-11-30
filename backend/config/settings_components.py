@@ -43,6 +43,13 @@ def get_cors():
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ]
+    # Allow overrides for production domains (comma-separated)
+    extra = [
+        origin.strip()
+        for origin in os.getenv("DJANGO_CORS_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+    allowed = list({*allowed, *extra})
     headers = list(
         set(
             [

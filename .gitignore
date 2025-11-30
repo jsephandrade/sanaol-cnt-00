@@ -49,3 +49,4 @@ backend/.venv/
 backend/private_media/
 backend/backend/private_media/
 backend/db.sqlite3
+backend/staticfiles/

@@ -123,6 +123,10 @@ Optional: Django Admin superuser for `/admin` (separate from AppUser):
 python manage.py createsuperuser
 ```
 
+### Deploying to Hostinger
+
+See `docs/DEPLOY_HOSTINGER.md` for a step-by-step checklist (env vars, collectstatic, gunicorn/daphne, reverse proxy, and Redis requirements).
+
 ### Backend Environment (.env)
 
 Copy `backend/.env.example` to `backend/.env` and set:
