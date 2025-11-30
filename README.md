@@ -127,6 +127,10 @@ python manage.py createsuperuser
 
 See `docs/DEPLOY_HOSTINGER.md` for a step-by-step checklist (env vars, collectstatic, gunicorn/daphne, reverse proxy, and Redis requirements).
 
+### Deploying to Render
+
+See `docs/DEPLOY_RENDER.md` and `render.yaml` for Static Site (frontend) + Web Service (backend) presets. Update env vars and hostnames before deploying.
+
 ### Backend Environment (.env)
 
 Copy `backend/.env.example` to `backend/.env` and set:

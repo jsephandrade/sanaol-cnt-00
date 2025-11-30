@@ -1,0 +1,102 @@
+# Render configuration for frontend (Static Site) and backend (Web Service).
+# Replace placeholder values (<...>) with your own before deploying.
+
+services:
+  - type: static
+    name: technomart-frontend
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://technomart-api.onrender.com/api
+      - key: VITE_WS_URL
+        value: wss://technomart-ws.onrender.com/ws/events
+      - key: VITE_GOOGLE_CLIENT_ID
+        value: <your-google-client-id>
+      - key: VITE_ENABLE_MOCKS
+        value: "false"
+      - key: VITE_MEDIA_BASE_URL
+        value: https://technomart-api.onrender.com
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=3600
+    pullRequestPreviewsEnabled: false
+
+  - type: web
+    name: technomart-api
+    rootDir: backend
+    env: python
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-10000} --workers 3
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        value: <set-strong-secret>
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: technomart-api.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://technomart-api.onrender.com
+      - key: DJANGO_CORS_ALLOWED_ORIGINS
+        value: https://technomart-frontend.onrender.com
+      - key: FRONTEND_BASE_URL
+        value: https://technomart-frontend.onrender.com
+      - key: DJANGO_JWT_SECRET
+        value: <set-strong-jwt-secret>
+      - key: DJANGO_DB_ENGINE
+        value: django.db.backends.postgresql
+      - key: DJANGO_DB_NAME
+        value: <db-name>
+      - key: DJANGO_DB_USER
+        value: <db-user>
+      - key: DJANGO_DB_PASSWORD
+        value: <db-password>
+      - key: DJANGO_DB_HOST
+        value: <db-host>
+      - key: DJANGO_DB_PORT
+        value: "5432"
+      - key: REDIS_URL
+        value: <redis-url-if-using-websockets>
+      - key: WEBPUSH_VAPID_PUBLIC_KEY
+        value: <vapid-public>
+      - key: WEBPUSH_VAPID_PRIVATE_KEY
+        value: <vapid-private>
+      - key: WEBPUSH_VAPID_SUBJECT
+        value: mailto:admin@example.com
+      - key: GOOGLE_CLIENT_ID
+        value: <your-google-client-id>
+      - key: GOOGLE_CLIENT_SECRET
+        value: <your-google-client-secret>
+      - key: DJANGO_EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: DJANGO_EMAIL_HOST
+        value: <smtp-host>
+      - key: DJANGO_EMAIL_PORT
+        value: "587"
+      - key: DJANGO_EMAIL_USE_TLS
+        value: "1"
+      - key: DJANGO_EMAIL_HOST_USER
+        value: <smtp-user>
+      - key: DJANGO_EMAIL_HOST_PASSWORD
+        value: <smtp-password>
+      - key: DJANGO_DEFAULT_FROM_EMAIL
+        value: no-reply@technomart.com
+    autoDeploy: true
+
+  # Optional: dedicated websocket service (if you need /ws/events)
+  - type: web
+    name: technomart-ws
+    rootDir: backend
+    env: python
+    plan: starter
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: daphne -b 0.0.0.0 -p ${PORT:-10000} config.asgi:application
+    envVars:
+      - fromService: technomart-api
+        envVars: true
+      - key: REDIS_URL
+        value: <redis-url>
+    autoDeploy: true
