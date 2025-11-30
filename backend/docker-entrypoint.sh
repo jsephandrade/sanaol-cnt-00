@@ -41,4 +41,9 @@ fi
 # Run pending migrations before starting the application server.
 python manage.py migrate --noinput
 
+# Optionally collect static files when requested (e.g., production builds)
+if [ "${DJANGO_COLLECTSTATIC:-0}" = "1" ]; then
+  python manage.py collectstatic --noinput
+fi
+
 exec "$@"
