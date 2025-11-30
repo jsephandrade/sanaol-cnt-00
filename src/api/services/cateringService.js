@@ -42,6 +42,10 @@ class CateringService {
       items,
     });
   }
+
+  async submitPayment(eventId, payload) {
+    return apiClient.post(`/catering/events/${eventId}/payment`, payload);
+  }
 }
 
 export const cateringService = new CateringService();

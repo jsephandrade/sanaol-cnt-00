@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     # Third-party
     "corsheaders",
     "channels",
+    "rest_framework",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -95,7 +96,7 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 SITE_ID = 1
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Manila"
 USE_TZ = True
 
 # CORS
@@ -109,6 +110,17 @@ DISABLE_INMEM_FALLBACK = (
     os.getenv("DJANGO_DISABLE_INMEM_FALLBACK", "0") in {"1", "true", "True", "yes", "on"}
     or not DEBUG
 )
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "api.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 25,
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

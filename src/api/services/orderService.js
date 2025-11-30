@@ -1,11 +1,8 @@
 import apiClient from '../client';
 import { mockOrders } from '../mockData';
+import { getEnvBoolean } from '../env';
 
-const shouldUseMocks = () =>
-  typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  (import.meta.env.VITE_ENABLE_MOCKS === 'true' ||
-    import.meta.env.VITE_ENABLE_MOCKS === '1');
+const shouldUseMocks = () => getEnvBoolean('VITE_ENABLE_MOCKS', false);
 
 // Mock delay for realistic API simulation
 const mockDelay = (ms = 800) =>
@@ -37,6 +34,8 @@ const STATUS_CANONICAL_MAP = {
   in_progress: 'in_prep',
   ready: 'staged',
 };
+
+const AUTO_ADVANCE_DEFAULT_SECONDS = 60;
 
 const normalizeStatus = (status) => {
   const s = String(status || '').toLowerCase();
@@ -79,6 +78,42 @@ const normalizeOrder = (order) => {
   const canonical = normalizeStatus(
     order.canonicalStatus || order.status || order.rawStatus
   );
+  const autoAdvanceRaw = order.autoAdvance || {};
+  const phaseSequence = toNumber(
+    order.phaseSequence ?? autoAdvanceRaw.phaseSequence ?? order.phase_sequence,
+    0
+  );
+  const phaseStartedAt = toISO(
+    order.phaseStartedAt ??
+      autoAdvanceRaw.phaseStartedAt ??
+      order.phase_started_at
+  );
+  const autoAdvanceAt = toISO(
+    order.autoAdvanceAt ?? autoAdvanceRaw.autoAdvanceAt ?? order.auto_advance_at
+  );
+  const autoAdvanceTarget =
+    order.autoAdvanceTarget ??
+    autoAdvanceRaw.targetStatus ??
+    order.auto_advance_target ??
+    '';
+  const autoAdvancePaused = Boolean(
+    order.autoAdvancePaused ??
+      autoAdvanceRaw.paused ??
+      order.auto_advance_paused ??
+      false
+  );
+  const autoAdvancePauseReason =
+    order.autoAdvancePauseReason ??
+    autoAdvanceRaw.pauseReason ??
+    order.auto_advance_pause_reason ??
+    '';
+  const autoAdvanceDurationSeconds = toNumber(
+    order.autoAdvanceDurationSeconds ??
+      autoAdvanceRaw.durationSeconds ??
+      order.auto_advance_duration_seconds,
+    AUTO_ADVANCE_DEFAULT_SECONDS
+  );
+
   const items = Array.isArray(order.items)
     ? order.items.map(normalizeItem)
     : [];
@@ -122,6 +157,22 @@ const normalizeOrder = (order) => {
     throttleReason: order.throttleReason || order.throttle_reason || '',
     shelfSlot: order.shelfSlot || order.shelf_slot || '',
     handoffCode: order.handoffCode || order.handoff_code || '',
+    phaseSequence,
+    phaseStartedAt,
+    autoAdvanceAt,
+    autoAdvanceTarget,
+    autoAdvancePaused,
+    autoAdvancePauseReason,
+    autoAdvanceDurationSeconds,
+    autoAdvance: {
+      phaseSequence,
+      phaseStartedAt,
+      autoAdvanceAt,
+      targetStatus: autoAdvanceTarget,
+      paused: autoAdvancePaused,
+      pauseReason: autoAdvancePauseReason,
+      durationSeconds: autoAdvanceDurationSeconds,
+    },
     meta: order.meta || {},
     items,
   };
@@ -406,6 +457,50 @@ class OrderService {
       `/orders/${encodeURIComponent(orderId)}/status`,
       payload
     );
+    return normalizeApiResult(res);
+  }
+
+  async updateOrderAutoFlow(orderId, payload = {}) {
+    if (shouldUseMocks()) {
+      await mockDelay(400);
+      const order = mockOrders.find((o) => o.id === orderId);
+      const auto = {
+        phaseSequence:
+          typeof payload.phaseSequence === 'number'
+            ? payload.phaseSequence
+            : toNumber(order?.phaseSequence, 0) + 1,
+        phaseStartedAt: new Date().toISOString(),
+        autoAdvanceAt: null,
+        targetStatus: order?.autoAdvanceTarget || 'in_progress',
+        paused: payload.action === 'pause',
+        pauseReason: payload.reason || '',
+        durationSeconds: toNumber(
+          payload.durationSeconds,
+          AUTO_ADVANCE_DEFAULT_SECONDS
+        ),
+      };
+      return normalizeApiResult({
+        success: true,
+        data: normalizeOrder({
+          ...(order || {}),
+          autoAdvance: auto,
+          autoAdvancePaused: auto.paused,
+          autoAdvancePauseReason: auto.pauseReason,
+          autoAdvanceAt: auto.autoAdvanceAt,
+          phaseSequence: auto.phaseSequence,
+          phaseStartedAt: auto.phaseStartedAt,
+          autoAdvanceTarget: auto.targetStatus,
+          autoAdvanceDurationSeconds: auto.durationSeconds,
+        }),
+      });
+    }
+    const res = await apiClient.patch(
+      `/orders/${encodeURIComponent(orderId)}/auto-flow`,
+      payload
+    );
+    if (res && typeof res === 'object' && 'data' in res) {
+      return { ...res, data: normalizeOrder(res.data) };
+    }
     return normalizeApiResult(res);
   }
 

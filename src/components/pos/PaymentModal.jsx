@@ -71,33 +71,20 @@ const PaymentModal = ({
     setPaymentAmount((prev) => prev.slice(0, -1));
   };
 
-  const handleProcessPayment = useCallback(async () => {
+  const handleProcessPayment = useCallback(() => {
     if (!paymentIsSufficient || isProcessing) return;
 
     setIsProcessing(true);
+    setPaymentAmount('');
 
-    if (typeof window !== 'undefined') {
-      await new Promise((resolve) => {
-        if ('requestAnimationFrame' in window) {
-          window.requestAnimationFrame(() => resolve());
-        } else {
-          setTimeout(resolve, 16);
-        }
-      });
-    }
-
-    try {
-      const success = await onProcessPayment({
+    const promise = Promise.resolve(
+      onProcessPayment({
         tenderedAmount: paymentValue,
         change,
-      });
+      })
+    );
 
-      if (success) {
-        setPaymentAmount('');
-      }
-    } finally {
-      setIsProcessing(false);
-    }
+    promise.finally(() => setIsProcessing(false));
   }, [
     paymentIsSufficient,
     isProcessing,
@@ -142,11 +129,11 @@ const PaymentModal = ({
               <Input
                 id="payment-amount"
                 type="text"
+                inputMode="decimal"
                 placeholder="0.00"
                 value={paymentAmount}
                 onChange={handlePaymentAmountChange}
                 className="text-lg text-center"
-                readOnly
               />
             </div>
 

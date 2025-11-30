@@ -1,12 +1,12 @@
 import React from 'react';
-import { Star, ThumbsUp, ThumbsDown } from 'lucide-react';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  BarChart3,
+  CheckCircle,
+  Star,
+  ThumbsDown,
+  ThumbsUp,
+} from 'lucide-react';
+import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 export const FeedbackMetrics = ({ feedback }) => {
   const averageRating =
@@ -45,122 +45,120 @@ export const FeedbackMetrics = ({ feedback }) => {
   const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Overall Rating</CardTitle>
-          <CardDescription>Average customer satisfaction</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center mb-4">
-            <span className="text-3xl font-bold mr-2">{averageRating}</span>
-            <div className="flex">
-              {renderStars(Math.round(parseFloat(averageRating)))}
+    <div className="grid gap-4 md:grid-cols-3">
+      <FeaturePanelCard
+        title="Overall Rating"
+        titleStyle="accent"
+        titleIcon={Star}
+        titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+        titleClassName="text-xs md:text-sm"
+        description="Average customer satisfaction"
+        contentClassName="space-y-3"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-3xl font-semibold tracking-tight">
+            {averageRating}
+          </span>
+          <div className="flex items-center gap-1 text-primary">
+            {renderStars(Math.round(parseFloat(averageRating)))}
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Based on {feedback.length} reviews
+        </p>
+      </FeaturePanelCard>
+
+      <FeaturePanelCard
+        title="Sentiment Analysis"
+        titleStyle="accent"
+        titleIcon={BarChart3}
+        titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+        titleClassName="text-xs md:text-sm"
+        description="Feedback sentiment breakdown"
+        contentClassName="space-y-4"
+      >
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ThumbsUp className="h-4 w-4 text-green-500" />
+              <span>Positive</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {sentimentCounts.positive}
+              </span>
+              <span>({pct(sentimentCounts.positive)}%)</span>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Based on {feedback.length} reviews
-          </p>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Sentiment Analysis</CardTitle>
-          <CardDescription>Feedback sentiment breakdown</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <ThumbsUp className="h-4 w-4 mr-2 text-green-500" />
-                <span>Positive</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium mr-2">
-                  {sentimentCounts.positive}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  ({pct(sentimentCounts.positive)}%)
-                </span>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span>Neutral</span>
             </div>
-
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <Star className="h-4 w-4 mr-2 text-yellow-500" />
-                <span>Neutral</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium mr-2">
-                  {sentimentCounts.neutral}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  ({pct(sentimentCounts.neutral)}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <ThumbsDown className="h-4 w-4 mr-2 text-red-500" />
-                <span>Negative</span>
-              </div>
-              <div className="flex items-center">
-                <span className="font-medium mr-2">
-                  {sentimentCounts.negative}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  ({pct(sentimentCounts.negative)}%)
-                </span>
-              </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {sentimentCounts.neutral}
+              </span>
+              <span>({pct(sentimentCounts.neutral)}%)</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle>Resolution Status</CardTitle>
-          <CardDescription>Feedback resolution tracking</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span>Resolved</span>
-              <div className="flex items-center">
-                <span className="font-medium mr-2">
-                  {feedback.filter((f) => f.resolved).length}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  ({pct(feedback.filter((f) => f.resolved).length)}%)
-                </span>
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ThumbsDown className="h-4 w-4 text-red-500" />
+              <span>Negative</span>
             </div>
-
-            <div className="flex justify-between items-center">
-              <span>Pending</span>
-              <div className="flex items-center">
-                <span className="font-medium mr-2">
-                  {feedback.filter((f) => !f.resolved).length}
-                </span>
-                <span className="text-muted-foreground text-sm">
-                  ({pct(feedback.filter((f) => !f.resolved).length)}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full bg-muted rounded-full h-2.5 mt-2">
-              <div
-                className="bg-primary h-2.5 rounded-full"
-                style={{
-                  width: `${pct(feedback.filter((f) => f.resolved).length)}%`,
-                }}
-              ></div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {sentimentCounts.negative}
+              </span>
+              <span>({pct(sentimentCounts.negative)}%)</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FeaturePanelCard>
+
+      <FeaturePanelCard
+        title="Resolution Status"
+        titleStyle="accent"
+        titleIcon={CheckCircle}
+        titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+        titleClassName="text-xs md:text-sm"
+        description="Feedback resolution tracking"
+        contentClassName="space-y-4"
+      >
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span>Resolved</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {feedback.filter((f) => f.resolved).length}
+              </span>
+              <span>({pct(feedback.filter((f) => f.resolved).length)}%)</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span>Pending</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {feedback.filter((f) => !f.resolved).length}
+              </span>
+              <span>({pct(feedback.filter((f) => !f.resolved).length)}%)</span>
+            </div>
+          </div>
+
+          <div className="h-2 rounded-full bg-muted">
+            <div
+              className="h-2 rounded-full bg-primary"
+              style={{
+                width: `${pct(feedback.filter((f) => f.resolved).length)}%`,
+              }}
+            />
+          </div>
+        </div>
+      </FeaturePanelCard>
     </div>
   );
 };

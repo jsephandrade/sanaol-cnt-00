@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, PenSquare, Ban, Trash2 } from 'lucide-react';
+import { MoreVertical, PenSquare, Archive, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CustomBadge } from '@/components/ui/custom-badge';
@@ -22,6 +22,18 @@ export const InventoryGrid = ({
   getStockBadgeVariant,
   getStockStatusText,
 }) => {
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Package className="h-12 w-12 text-muted-foreground/50 mb-3" />
+        <p className="text-muted-foreground">No items found</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Try adjusting your filters or search criteria
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
       {items.map((item) => (
@@ -35,7 +47,7 @@ export const InventoryGrid = ({
                 <h3 className="font-medium">{item.name}</h3>
                 {item.disabled && (
                   <Badge variant="secondary" className="text-xs">
-                    Disabled
+                    Archived
                   </Badge>
                 )}
               </div>
@@ -84,23 +96,12 @@ export const InventoryGrid = ({
                 <DropdownMenuItem
                   onClick={() => onDisableItem(item.id, item.name)}
                   className={
-                    item.disabled ? 'text-green-600' : 'text-destructive'
+                    item.disabled ? 'text-green-600' : 'text-orange-600'
                   }
                 >
-                  <Ban className="mr-2 h-4 w-4" />
-                  {item.disabled ? 'Enable' : 'Disable'}
+                  <Archive className="mr-2 h-4 w-4" />
+                  {item.disabled ? 'Unarchive' : 'Archive'}
                 </DropdownMenuItem>
-                {onDeleteItem ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDeleteItem(item)}
-                      className="text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

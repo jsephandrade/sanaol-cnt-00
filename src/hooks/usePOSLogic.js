@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import { orderService } from '@/api/services/orderService';
 
 const FALLBACK_PREFIX = 'W';
@@ -178,12 +179,12 @@ export const usePOSLogic = () => {
   const applyDiscount = (discountInput, discountType) => {
     const value = parseFloat(discountInput);
     if (isNaN(value) || value < 0) {
-      alert('Please enter a valid discount value');
+      toast.error('Please enter a valid discount value');
       return false;
     }
 
     if (discountType === 'percentage' && value > 100) {
-      alert('Percentage discount cannot exceed 100%');
+      toast.error('Percentage discount cannot exceed 100%');
       return false;
     }
 
@@ -195,10 +196,17 @@ export const usePOSLogic = () => {
     setDiscount({ type: 'percentage', value: 0 });
   };
 
+  const logDuration = (label, startTs) => {
+    const endTs =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const duration = Math.max(0, endTs - startTs).toFixed(1);
+    console.debug(`[POS][Payment] ${label} took ${duration}ms`);
+  };
+
   const processPayment = async (paymentMethod, paymentDetails = {}) => {
     const total = calculateTotal();
     if (!currentOrder.length) {
-      alert('No items in order.');
+      toast.error('No items in order.');
       return null;
     }
     const identifiers =
@@ -216,6 +224,9 @@ export const usePOSLogic = () => {
         ? paymentDetails.change
         : Math.max(0, tenderedAmount - total);
     let createdOrder = null;
+    const overallStart =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const toastId = toast.loading('Processing payment...');
     try {
       const payload = {
         items: currentOrder.map((it) => ({
@@ -232,13 +243,14 @@ export const usePOSLogic = () => {
         type: 'walk-in',
         orderNumber: identifiers.number,
         orderReference: identifiers.reference,
-        payment: {
-          method: paymentMethod,
-          tenderedAmount,
-          change,
-        },
+        paymentMethod: paymentMethod,
+        tenderedAmount,
+        change,
       };
+      const createStart =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
       const res = await orderService.createOrder(payload);
+      logDuration('createOrder', createStart);
       const data = res?.data ?? res;
       const infoRaw = extractOrderInfo(data) || {
         id: data?.id || null,
@@ -252,14 +264,33 @@ export const usePOSLogic = () => {
         orderNumber: infoRaw.orderNumber || identifiers.number,
       };
       createdOrder = info;
+      // Prefetch next order identifiers while payment finalizes
+      const nextIdentifiersPromise = obtainOrderIdentifiers().catch((err) => {
+        console.error('Failed to prefetch next order number:', err);
+        return null;
+      });
+      const paymentStart =
+        typeof performance !== 'undefined' ? performance.now() : Date.now();
       await orderService.processPayment(info.id, {
         amount: total,
         method: paymentMethod,
         tenderedAmount,
         change,
       });
+      logDuration('processPayment', paymentStart);
       clearOrder();
-      await refreshOrderIdentifiers();
+      const nextIdentifiers =
+        (await nextIdentifiersPromise) ||
+        (await obtainOrderIdentifiers().catch((err) => {
+          console.error('Retrying order number fetch failed:', err);
+          return null;
+        })) ||
+        createFallbackOrderIdentifiers();
+      if (isMountedRef.current) {
+        setOrderIdentifiers(nextIdentifiers);
+      }
+      toast.success('Payment completed');
+      logDuration('totalPaymentFlow', overallStart);
       return info;
     } catch (e) {
       console.error(e);
@@ -273,8 +304,14 @@ export const usePOSLogic = () => {
           console.error(cancelError);
         }
       }
-      alert('Failed to process payment. Please try again.');
+      const message =
+        e?.message ||
+        e?.details?.message ||
+        'Failed to process payment. Please try again.';
+      toast.error(message);
       return null;
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 

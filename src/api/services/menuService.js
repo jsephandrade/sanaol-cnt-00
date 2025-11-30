@@ -1,4 +1,76 @@
 import apiClient from '../client';
+import { getEnvValue, resolveApiBase, resolveMediaBase } from '../env';
+
+const ABSOLUTE_MEDIA_REGEX = /^(blob:|data:|https?:\/\/)/i;
+const ABSOLUTE_HTTP_REGEX = /^https?:\/\//i;
+const IMAGE_KEYS = [
+  'imageUrl',
+  'image_url',
+  'image',
+  'photo',
+  'picture',
+  'image_path',
+  'img',
+  'url',
+  'path',
+  'location',
+  'href',
+];
+
+const pickUrl = (source) => {
+  if (!source) return '';
+  for (const key of IMAGE_KEYS) {
+    const value = source?.[key];
+    if (!value) continue;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      const nested = pickUrl(value);
+      if (nested) return nested;
+    }
+  }
+  return '';
+};
+
+const computeBackendOrigin = () => {
+  const candidates = [
+    resolveMediaBase(''),
+    getEnvValue(
+      ['VITE_API_BASE_URL', 'API_BASE_URL', 'EXPO_PUBLIC_API_URL'],
+      ''
+    ),
+    apiClient?.baseURL,
+    resolveApiBase(''),
+  ];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== 'string') continue;
+    if (!ABSOLUTE_HTTP_REGEX.test(candidate)) continue;
+    try {
+      return new URL(candidate).origin;
+    } catch {
+      continue;
+    }
+  }
+  try {
+    return typeof window !== 'undefined' ? window.location.origin : '';
+  } catch {
+    return '';
+  }
+};
+
+const absoluteUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  if (ABSOLUTE_MEDIA_REGEX.test(url)) return url;
+  const path = url.startsWith('/') ? url : `/${url}`;
+  const origin = computeBackendOrigin();
+  if (!origin) return path;
+  try {
+    return new URL(path, origin).toString();
+  } catch {
+    return path;
+  }
+};
+
+const normalizeImage = (obj) => absoluteUrl(pickUrl(obj));
 
 class MenuService {
   async getMenuItems(params = {}) {
@@ -11,63 +83,6 @@ class MenuService {
     });
     const raw = res?.data || res;
     const list = raw?.data || raw || [];
-    const getBackendOrigin = () => {
-      try {
-        const env =
-          (typeof import.meta !== 'undefined' && import.meta.env) || {};
-        const mediaBase = env?.VITE_MEDIA_BASE_URL;
-        if (typeof mediaBase === 'string' && /^https?:\/\//i.test(mediaBase)) {
-          return new URL(mediaBase).origin;
-        }
-        const apiBase = env?.VITE_API_BASE_URL || apiClient?.baseURL;
-        if (typeof apiBase === 'string' && /^https?:\/\//i.test(apiBase)) {
-          return new URL(apiBase).origin;
-        }
-      } catch {}
-      try {
-        return typeof window !== 'undefined' ? window.location.origin : '';
-      } catch {
-        return '';
-      }
-    };
-    const absoluteUrl = (url) => {
-      if (!url || typeof url !== 'string') return '';
-      if (/^(blob:|data:|https?:\/\/)/i.test(url)) return url;
-      const path = url.startsWith('/') ? url : `/${url}`;
-      const baseOrigin = getBackendOrigin();
-      try {
-        return baseOrigin ? new URL(path, baseOrigin).toString() : path;
-      } catch {
-        return path;
-      }
-    };
-    const pickUrl = (o) => {
-      if (!o) return '';
-      const keys = [
-        'imageUrl',
-        'image_url',
-        'image',
-        'photo',
-        'picture',
-        'image_path',
-        'img',
-        'url',
-        'path',
-        'location',
-        'href',
-      ];
-      for (const k of keys) {
-        const v = o?.[k];
-        if (!v) continue;
-        if (typeof v === 'string') return v;
-        if (typeof v === 'object') {
-          const nested = pickUrl(v);
-          if (nested) return nested;
-        }
-      }
-      return '';
-    };
-    const normalizeImage = (obj) => absoluteUrl(pickUrl(obj));
     const normalized = Array.isArray(list)
       ? list.map((it) => ({
           ...it,
@@ -143,6 +158,13 @@ class MenuService {
     return { success: true, data: raw?.data || raw };
   }
 
+  async createCategory(categoryData) {
+    const res = await apiClient.post('/menu/categories', categoryData, {
+      retry: { retries: 1 },
+    });
+    return { success: true, data: res?.data || res };
+  }
+
   async uploadItemImage(itemId, imageFile) {
     const formData = new FormData();
     formData.append('image', imageFile);
@@ -150,64 +172,8 @@ class MenuService {
       body: formData,
       retry: { retries: 1 },
     });
-    const getBackendOrigin = () => {
-      try {
-        const env =
-          (typeof import.meta !== 'undefined' && import.meta.env) || {};
-        const mediaBase = env?.VITE_MEDIA_BASE_URL;
-        if (typeof mediaBase === 'string' && /^https?:\/\//i.test(mediaBase)) {
-          return new URL(mediaBase).origin;
-        }
-        const apiBase = env?.VITE_API_BASE_URL || apiClient?.baseURL;
-        if (typeof apiBase === 'string' && /^https?:\/\//i.test(apiBase)) {
-          return new URL(apiBase).origin;
-        }
-      } catch {}
-      try {
-        return typeof window !== 'undefined' ? window.location.origin : '';
-      } catch {
-        return '';
-      }
-    };
-    const absoluteUrl = (url) => {
-      if (!url || typeof url !== 'string') return '';
-      if (/^(blob:|data:|https?:\/\/)/i.test(url)) return url;
-      const path = url.startsWith('/') ? url : `/${url}`;
-      const baseOrigin = getBackendOrigin();
-      try {
-        return baseOrigin ? new URL(path, baseOrigin).toString() : path;
-      } catch {
-        return path;
-      }
-    };
-    const pickUrl = (o) => {
-      if (!o) return '';
-      const keys = [
-        'imageUrl',
-        'image_url',
-        'image',
-        'photo',
-        'picture',
-        'image_path',
-        'img',
-        'url',
-        'path',
-        'location',
-        'href',
-      ];
-      for (const k of keys) {
-        const v = o?.[k];
-        if (!v) continue;
-        if (typeof v === 'string') return v;
-        if (typeof v === 'object') {
-          const nested = pickUrl(v);
-          if (nested) return nested;
-        }
-      }
-      return '';
-    };
     const raw = res?.data || res || {};
-    const imageUrlAbs = absoluteUrl(pickUrl(raw));
+    const imageUrlAbs = normalizeImage(raw);
     const imageUrl = imageUrlAbs
       ? `${imageUrlAbs}${imageUrlAbs.includes('?') ? '&' : '?'}v=${Date.now()}`
       : '';

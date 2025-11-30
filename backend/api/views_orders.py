@@ -15,6 +15,7 @@ from uuid import UUID
 from decimal import Decimal
 from typing import Iterable, Optional
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
@@ -336,6 +337,177 @@ ORDER_ACTIVE_STATUSES = {
 
 ORDER_TERMINAL_STATUSES = {"completed", "cancelled", "voided", "refunded"}
 
+AUTO_ADVANCE_DEFAULT_SECONDS = max(
+    5,
+    int(getattr(settings, "POS_QUEUE_AUTO_ADVANCE_SECONDS", 60) or 60),
+)
+AUTO_ADVANCE_PHASE_RULES = [
+    {
+        "name": "prep",
+        "current": {"new", "pending", "accepted", "in_queue"},
+        "target": "in_progress",
+    },
+    {
+        "name": "stage",
+        "current": {"in_progress", "in_prep", "assembling"},
+        "target": "ready",
+    },
+    {
+        "name": "complete",
+        "current": {"ready", "staged"},
+        "target": "completed",
+    },
+]
+
+
+def _auto_next_status(status: Optional[str]) -> Optional[str]:
+    canonical = canonical_status(status)
+    for rule in AUTO_ADVANCE_PHASE_RULES:
+        if canonical in rule["current"]:
+            return rule["target"]
+    return None
+
+
+def _auto_should_track(status: Optional[str]) -> bool:
+    canonical = canonical_status(status)
+    return canonical not in ORDER_TERMINAL_STATUSES
+
+
+def _coerce_duration_seconds(candidate: Optional[int]) -> int:
+    try:
+        seconds = int(candidate)
+        if seconds <= 0:
+            raise ValueError
+        return seconds
+    except Exception:
+        return AUTO_ADVANCE_DEFAULT_SECONDS
+
+
+def _reset_auto_flow(
+    order,
+    *,
+    now=None,
+    target: Optional[str] = None,
+    duration_seconds: Optional[int] = None,
+    increment_sequence: bool = True,
+) -> list[str]:
+    """
+    Configure or clear the auto-advance timer for the given order.
+    Returns a list of model fields that were mutated.
+    """
+    update_fields: list[str] = []
+    if not _auto_should_track(order.status):
+        order.auto_advance_target = ""
+        order.auto_advance_at = None
+        order.phase_started_at = None
+        order.auto_advance_paused = False
+        order.auto_advance_pause_reason = ""
+        update_fields.extend(
+            [
+                "auto_advance_target",
+                "auto_advance_at",
+                "phase_started_at",
+                "auto_advance_paused",
+                "auto_advance_pause_reason",
+            ]
+        )
+        return update_fields
+
+    auto_candidate = _auto_next_status(order.status)
+    selected_target = target or order.auto_advance_target or auto_candidate
+    if selected_target:
+        current_canonical = canonical_status(order.status)
+        target_canonical = canonical_status(selected_target)
+        allowed_targets = ALLOWED_TRANSITIONS.get(current_canonical, set())
+        if (
+            not allowed_targets
+            or target_canonical == current_canonical
+            or target_canonical not in allowed_targets
+        ):
+            selected_target = auto_candidate or ""
+    if not selected_target:
+        order.auto_advance_target = ""
+        order.auto_advance_at = None
+        order.phase_started_at = None
+        order.auto_advance_paused = False
+        order.auto_advance_pause_reason = ""
+        update_fields.extend(
+            [
+                "auto_advance_target",
+                "auto_advance_at",
+                "phase_started_at",
+                "auto_advance_paused",
+                "auto_advance_pause_reason",
+            ]
+        )
+        return update_fields
+
+    now_ts = now or dj_tz.now()
+    seconds = _coerce_duration_seconds(
+        duration_seconds or order.auto_advance_duration_seconds or AUTO_ADVANCE_DEFAULT_SECONDS
+    )
+    order.auto_advance_target = selected_target
+    order.auto_advance_duration_seconds = seconds
+    order.phase_started_at = now_ts
+    order.auto_advance_at = now_ts + timedelta(seconds=seconds)
+    order.auto_advance_paused = False
+    order.auto_advance_pause_reason = ""
+    update_fields.extend(
+        [
+            "auto_advance_target",
+            "auto_advance_duration_seconds",
+            "phase_started_at",
+            "auto_advance_at",
+            "auto_advance_paused",
+            "auto_advance_pause_reason",
+        ]
+    )
+    if increment_sequence:
+        order.phase_sequence = (order.phase_sequence or 0) + 1
+        update_fields.append("phase_sequence")
+    return update_fields
+
+
+def _pause_auto_flow(order, *, reason: str = "") -> list[str]:
+    order.auto_advance_paused = True
+    order.auto_advance_pause_reason = reason or ""
+    order.phase_started_at = None
+    order.auto_advance_at = None
+    return [
+        "auto_advance_paused",
+        "auto_advance_pause_reason",
+        "phase_started_at",
+        "auto_advance_at",
+    ]
+
+
+def _clear_auto_flow(order, *, reason: str = "") -> list[str]:
+    order.auto_advance_target = ""
+    order.auto_advance_at = None
+    order.phase_started_at = None
+    order.auto_advance_paused = False
+    order.auto_advance_pause_reason = reason or ""
+    return [
+        "auto_advance_target",
+        "auto_advance_at",
+        "phase_started_at",
+        "auto_advance_paused",
+        "auto_advance_pause_reason",
+    ]
+
+
+def _start_auto_flow(order, *, now=None, duration_seconds: Optional[int] = None) -> list[str]:
+    if not _auto_should_track(order.status):
+        return _clear_auto_flow(order)
+    next_target = _auto_next_status(order.status)
+    return _reset_auto_flow(
+        order,
+        now=now,
+        target=next_target,
+        duration_seconds=duration_seconds,
+        increment_sequence=True,
+    )
+
 ITEM_STATES = [
     ("queued", "Queued"),
     ("firing", "Firing"),
@@ -490,6 +662,28 @@ def _safe_order(o, with_items=True):
         "lateBySeconds": int(o.late_by_seconds or 0),
         "ageSeconds": age_seconds,
         "meta": o.meta or {},
+        "phaseSequence": int(o.phase_sequence or 0),
+        "phaseStartedAt": o.phase_started_at.isoformat()
+        if o.phase_started_at
+        else None,
+        "autoAdvanceAt": o.auto_advance_at.isoformat()
+        if o.auto_advance_at
+        else None,
+        "autoAdvanceTarget": o.auto_advance_target or "",
+        "autoAdvancePaused": bool(o.auto_advance_paused),
+        "autoAdvancePauseReason": o.auto_advance_pause_reason or "",
+        "autoAdvanceDurationSeconds": int(
+            o.auto_advance_duration_seconds or AUTO_ADVANCE_DEFAULT_SECONDS
+        ),
+    }
+    data["autoAdvance"] = {
+        "phaseSequence": data["phaseSequence"],
+        "phaseStartedAt": data["phaseStartedAt"],
+        "autoAdvanceAt": data["autoAdvanceAt"],
+        "targetStatus": data["autoAdvanceTarget"],
+        "paused": data["autoAdvancePaused"],
+        "pauseReason": data["autoAdvancePauseReason"],
+        "durationSeconds": data["autoAdvanceDurationSeconds"],
     }
     if with_items:
         try:
@@ -665,11 +859,13 @@ def orders(request):
                 modifiers = it.get("modifiers") or []
                 allergens = it.get("allergens") or []
                 notes = it.get("notes") or ""
+                category = mi.category or ""
                 line_blueprints.append(
                     {
                         "menu_item": mi,
                         "quantity": qty,
                         "price": price,
+                        "category": category,
                         "station_code": station_code,
                         "station_name": station_name,
                         "cook_seconds_estimate": cook_seconds_estimate,
@@ -736,6 +932,7 @@ def orders(request):
                 throttle_reason=throttle_reason,
                 bulk_reference=bulk_reference,
                 shelf_slot=requested_shelf,
+                auto_advance_duration_seconds=AUTO_ADVANCE_DEFAULT_SECONDS,
             )
 
             created_items = []
@@ -744,6 +941,7 @@ def orders(request):
                     order=o,
                     menu_item=blueprint["menu_item"],
                     item_name=blueprint["menu_item"].name,
+                    category=blueprint["category"],
                     price=blueprint["price"],
                     quantity=blueprint["quantity"],
                     state="queued",
@@ -775,6 +973,15 @@ def orders(request):
             },
         )
         publish_event("order.created", {"order": order_payload}, roles={"admin", "manager", "staff"}, user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None)
+
+        # Trigger notifications for new order and large orders
+        try:
+            from .notification_triggers import trigger_new_order, trigger_large_order
+            trigger_new_order(o)
+            trigger_large_order(o)
+        except Exception:
+            pass
+
         return JsonResponse({"success": True, "data": order_payload})
     except Exception:
         logger.exception("Failed to create order")
@@ -1421,6 +1628,113 @@ def order_detail(request, oid):
         return JsonResponse({"success": False, "message": "Server error"}, status=500)
 
 
+@require_http_methods(["PATCH"])  # auto flow controls
+@rate_limit(limit=30, window_seconds=60)
+def order_auto_flow(request, oid):
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "order.status.update"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+    try:
+        from .models import Order
+
+        o = (
+            Order.objects.select_related("placed_by")
+            .prefetch_related("items__menu_item")
+            .filter(id=oid)
+            .first()
+        )
+        if not o:
+            return JsonResponse({"success": False, "message": "Not found"}, status=404)
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except Exception:
+            payload = {}
+
+        action = str(payload.get("action") or "").strip().lower()
+        reason = str(payload.get("reason") or "").strip()
+        duration_seconds = payload.get("durationSeconds")
+        target_override = payload.get("targetStatus")
+
+        update_fields: list[str] = []
+
+        if action == "pause":
+            update_fields = _pause_auto_flow(o, reason=reason)
+        elif action in {"resume", "start"}:
+            target = target_override or o.auto_advance_target or _auto_next_status(o.status)
+            update_fields = _reset_auto_flow(
+                o,
+                now=dj_tz.now(),
+                target=target,
+                duration_seconds=duration_seconds,
+                increment_sequence=True,
+            )
+        elif action == "reset":
+            update_fields = _reset_auto_flow(
+                o,
+                now=dj_tz.now(),
+                target=target_override or _auto_next_status(o.status),
+                duration_seconds=duration_seconds,
+                increment_sequence=True,
+            )
+        elif action in {"clear", "disable"}:
+            update_fields = _clear_auto_flow(o, reason=reason)
+        else:
+            return JsonResponse({"success": False, "message": "Invalid action"}, status=400)
+
+        if update_fields:
+            if "updated_at" not in update_fields:
+                update_fields.append("updated_at")
+            o.save(update_fields=update_fields)
+        else:
+            o.save(update_fields=["updated_at"])
+
+        o.refresh_from_db()
+        order_payload = _safe_order(o)
+        record_order_event(
+            o,
+            event_type="order.auto_flow",
+            actor=actor if hasattr(actor, "id") else None,
+            payload={
+                "action": action,
+                "reason": reason,
+                "durationSeconds": duration_seconds,
+                "targetStatus": target_override or "",
+            },
+        )
+        try:
+            from .utils_audit import record_audit
+
+            record_audit(
+                request,
+                user=actor if hasattr(actor, "id") else None,
+                type="action",
+                action="Order auto flow update",
+                details=f"order={o.order_number} action={action}",
+                severity="info",
+                meta={
+                    "orderId": str(o.id),
+                    "action": action,
+                    "reason": reason,
+                    "durationSeconds": duration_seconds,
+                },
+            )
+        except Exception:
+            pass
+
+        publish_event(
+            "order.auto_flow",
+            {"order": order_payload, "action": action},
+            roles={"admin", "manager", "staff"},
+            user_ids=[str(o.placed_by_id)] if getattr(o, "placed_by_id", None) else None,
+        )
+        return JsonResponse({"success": True, "data": order_payload})
+    except Exception:
+        logger.exception("Failed to update order auto flow")
+        return JsonResponse({"success": False, "message": "Server error"}, status=500)
+
+
 @require_http_methods(["PATCH"])  # status update
 @rate_limit(limit=30, window_seconds=60)
 def order_status(request, oid):
@@ -1476,6 +1790,14 @@ def order_status(request, oid):
             elif previous_canonical == "completed" and target_status != "completed":
                 o.completed_at = None
                 update_fields.append("completed_at")
+
+        auto_fields: list[str] = []
+
+        if status_changed:
+            if canonical_status(o.status) in ORDER_TERMINAL_STATUSES:
+                auto_fields = _clear_auto_flow(o, reason="status_changed")
+            else:
+                auto_fields = _start_auto_flow(o)
 
         if "shelfSlot" in payload:
             o.shelf_slot = (payload.get("shelfSlot") or "").upper()
@@ -1537,6 +1859,9 @@ def order_status(request, oid):
             o.meta = meta
             update_fields.append("meta")
 
+        if auto_fields:
+            update_fields.extend(auto_fields)
+
         if update_fields:
             if "updated_at" not in update_fields:
                 update_fields.append("updated_at")
@@ -1574,6 +1899,14 @@ def order_status(request, oid):
                         consume_for_order(order_id=str(o.id), components=components, location=loc, actor=actor if hasattr(actor, "id") else None)
             except Exception:
                 pass
+
+            # Trigger notification for completed order
+            if status_changed and previous_canonical != "completed":
+                try:
+                    from .notification_triggers import trigger_order_completed
+                    trigger_order_completed(o)
+                except Exception:
+                    pass
         # Optional: audit log
         try:
             from .utils_audit import record_audit
@@ -1646,6 +1979,7 @@ __all__ = [
     "order_history",
     "order_bulk_progress",
     "order_detail",
+    "order_auto_flow",
     "order_item_state",
     "order_status",
 ]

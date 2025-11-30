@@ -24,13 +24,42 @@ from .views_common import MENU_ITEMS, _paginate, _actor_from_request, _has_permi
 from .utils_audit import record_audit
 
 
-def _safe_menu_item(mi):
+def _resolve_category_id(category_value, category_map=None):
+    category = (category_value or "").strip()
+    if not category:
+        return None
+
+    key = category.lower()
+    if category_map and key in category_map:
+        identified = category_map[key]
+        return str(identified) if identified else None
+
+    if category_map is not None:
+        return None
+
     try:
+        from .models import MenuCategory  # local import to avoid circulars during migrations
+
+        found = (
+            MenuCategory.objects.filter(name__iexact=category)
+            .values_list("id", flat=True)
+            .first()
+        )
+        return str(found) if found else None
+    except Exception:
+        return None
+
+
+def _safe_menu_item(mi, category_map=None):
+    try:
+        category_name = getattr(mi, "category", "")
+        category_id = _resolve_category_id(category_name, category_map)
         return {
             "id": str(mi.id),
             "name": mi.name,
             "description": mi.description or "",
             "category": mi.category or "",
+            "categoryId": category_id,
             "price": float(mi.price or 0),
             "available": bool(mi.available),
             "archived": bool(getattr(mi, "archived", False)),
@@ -42,12 +71,15 @@ def _safe_menu_item(mi):
             "updatedAt": mi.updated_at.isoformat() if getattr(mi, "updated_at", None) else None,
         }
     except Exception:
+        category_name = getattr(mi, "category", "")
+        category_id = _resolve_category_id(category_name, category_map)
         # Fallback for in-memory dicts to keep compatibility if ever used
         return {
             "id": str(getattr(mi, "id", "")),
             "name": getattr(mi, "name", "Unnamed"),
             "description": getattr(mi, "description", ""),
             "category": getattr(mi, "category", ""),
+            "categoryId": category_id,
             "price": float(getattr(mi, "price", 0) or 0),
             "available": bool(getattr(mi, "available", True)),
             "archived": bool(getattr(mi, "archived", False)),
@@ -148,7 +180,7 @@ def _restore_menu_item_fallback(request, actor, item_dict):
 def menu_items(request):
     if request.method == "GET":
         try:
-            from .models import MenuItem
+            from .models import MenuItem, MenuCategory
             search = (request.GET.get("search") or request.GET.get("q") or "").strip()
             category = (request.GET.get("category") or "").strip()
             available = request.GET.get("available")
@@ -183,7 +215,19 @@ def menu_items(request):
             qs = qs.order_by(order)
             paginator = Paginator(qs, limit)
             page_obj = paginator.get_page(page)
-            items = [_safe_menu_item(it) for it in page_obj.object_list]
+            category_names = {
+                (getattr(it, "category", "") or "").strip()
+                for it in page_obj.object_list
+                if getattr(it, "category", "") and getattr(it, "category", "").strip()
+            }
+            category_map = {}
+            if category_names:
+                category_lookup = (
+                    MenuCategory.objects.filter(name__in=category_names)
+                    .values_list("name", "id")
+                )
+                category_map = {name.strip().lower(): str(cat_id) for name, cat_id in category_lookup}
+            items = [_safe_menu_item(it, category_map) for it in page_obj.object_list]
             pagination = {
                 "page": page_obj.number,
                 "limit": limit,
@@ -269,6 +313,12 @@ def menu_items(request):
                 preparation_time=prep,
             )
         item = _safe_menu_item(mi)
+        # Trigger notification for new menu item
+        try:
+            from .notification_triggers import trigger_menu_item_added
+            trigger_menu_item_added(mi)
+        except Exception:
+            pass
     except Exception:
         if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
             return JsonResponse({"success": False, "message": "Failed to create menu item"}, status=500)
@@ -601,43 +651,100 @@ def menu_item_image(request, item_id):
     return JsonResponse({"success": True, "data": {"imageUrl": image_url}})
 
 
-@require_http_methods(["GET"]) 
+@require_http_methods(["GET", "POST"])
 def menu_categories(request):
-    try:
-        from .models import MenuItem
-        rows = (
-            MenuItem.objects.filter(archived=False)
-            .values_list("category")
-            .order_by("category")
-            .distinct()
-        )
-        cats = [c[0] or "" for c in rows]
-        # Optional counts
-        out = []
-        for name in cats:
-            count = MenuItem.objects.filter(category=name, archived=False).count()
-            out.append({
-                "id": (name or "").lower().replace(" ", "_") or "uncategorized",
-                "name": name or "Uncategorized",
-                "itemCount": count,
-            })
-        return JsonResponse({"success": True, "data": out})
-    except Exception:
-        if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
-            return JsonResponse({"success": False, "data": [], "message": "Failed to load categories"}, status=500)
-        # Fallback based on in-memory items (dev only)
+    if request.method == "GET":
         try:
-            names = sorted({(i.get("category") or "") for i in MENU_ITEMS if not i.get("archived")})
+            from .models import MenuCategory, MenuItem
+            # Get categories from MenuCategory table
+            categories = MenuCategory.objects.all().order_by("sort_order", "name")
             out = []
-            for name in names:
+            for cat in categories:
+                # Count items in this category
+                count = MenuItem.objects.filter(category=cat.name, archived=False).count()
                 out.append({
-                    "id": (name or "").lower().replace(" ", "_") or "uncategorized",
-                    "name": name or "Uncategorized",
-                    "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
+                    "id": str(cat.id),
+                    "name": cat.name,
+                    "description": cat.description or "",
+                    "itemCount": count,
+                    "sortOrder": cat.sort_order,
+                    "createdAt": cat.created_at.isoformat() if cat.created_at else None,
+                    "updatedAt": cat.updated_at.isoformat() if cat.updated_at else None,
                 })
             return JsonResponse({"success": True, "data": out})
         except Exception:
-            return JsonResponse({"success": True, "data": []})
+            if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+                return JsonResponse({"success": False, "data": [], "message": "Failed to load categories"}, status=500)
+            # Fallback based on in-memory items (dev only)
+            try:
+                names = sorted({(i.get("category") or "") for i in MENU_ITEMS if not i.get("archived")})
+                out = []
+                for name in names:
+                    out.append({
+                        "id": (name or "").lower().replace(" ", "_") or "uncategorized",
+                        "name": name or "Uncategorized",
+                        "itemCount": len([1 for i in MENU_ITEMS if (i.get("category") or "") == name and not i.get("archived")]),
+                        "sortOrder": 0,
+                        "createdAt": None,
+                        "updatedAt": None,
+                    })
+                return JsonResponse({"success": True, "data": out})
+            except Exception:
+                return JsonResponse({"success": True, "data": []})
+
+    # POST - Create new category
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+    if not _has_permission(actor, "menu.manage") and not _has_permission(actor, "inventory.menu.manage"):
+        return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+
+    try:
+        from .models import MenuCategory
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+        name = (payload.get("name") or "").strip()
+
+        if not name:
+            return JsonResponse({"success": False, "message": "Category name is required"}, status=400)
+
+        # Check if category already exists
+        if MenuCategory.objects.filter(name__iexact=name).exists():
+            return JsonResponse({"success": False, "message": "Category already exists"}, status=400)
+
+        description = (payload.get("description") or "").strip()
+        sort_order = payload.get("sortOrder", 0)
+
+        try:
+            sort_order = int(sort_order)
+        except:
+            sort_order = 0
+
+        category = MenuCategory.objects.create(
+            name=name,
+            description=description,
+            sort_order=sort_order
+        )
+
+        result = {
+            "id": str(category.id),
+            "name": category.name,
+            "description": category.description,
+            "sortOrder": category.sort_order,
+            "itemCount": 0,
+        }
+
+        _record_menu_audit(
+            request,
+            actor,
+            action="Category created",
+            details=f"Created category '{name}'",
+            severity="info",
+            meta={"id": str(category.id), "name": name},
+        )
+
+        return JsonResponse({"success": True, "data": result})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Failed to create category: {str(e)}"}, status=500)
 
 
 __all__ = [

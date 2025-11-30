@@ -7,6 +7,7 @@ import InventoryTabs from '@/components/inventory/InventoryTabs';
 import InventoryFooter from '@/components/inventory/InventoryFooter';
 import InventoryModals from '@/components/inventory/InventoryModals';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import { Boxes } from 'lucide-react';
 import {
   useInventoryManagement,
   useInventoryActivities,
@@ -178,7 +179,7 @@ const Inventory = () => {
       const next = { ...prev, [itemId]: !prev[itemId] };
       const disabled = !!next[itemId];
       toast.success(
-        `${itemName} has been ${disabled ? 'disabled' : 'enabled'}`
+        `${itemName} has been ${disabled ? 'archived' : 'unarchived'}`
       );
       return next;
     });
@@ -190,6 +191,10 @@ const Inventory = () => {
       <div className="md:col-span-2 space-y-4">
         <FeaturePanelCard
           title="Raw Materials Inventory"
+          titleStyle="accent"
+          titleIcon={Boxes}
+          titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+          titleClassName="text-xs md:text-sm"
           description="Track and manage inventory items"
           headerActions={
             <InventoryHeader onAddItem={() => setShowAddModal(true)} />

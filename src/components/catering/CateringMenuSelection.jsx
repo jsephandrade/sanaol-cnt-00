@@ -5,11 +5,12 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, Image as ImageIcon } from 'lucide-react';
 
 const CateringMenuSelection = ({
   categories,
@@ -47,19 +48,119 @@ const CateringMenuSelection = ({
 
   const searchResults = getFilteredItems();
 
+  const ItemListRow = ({ item, showCategoryBadge = false }) => {
+    const imageSrc = item.image || item.imageUrl || null;
+    const categoryLabel = item.categoryName || item.category || '';
+    const isUnavailable = item.available === false;
+
+    const handleActivate = (event) => {
+      if (isUnavailable) return;
+      if (event?.type === 'keydown') {
+        event.preventDefault();
+      }
+      onAddToOrder(item);
+    };
+
+    return (
+      <div
+        role="button"
+        tabIndex={isUnavailable ? -1 : 0}
+        onClick={handleActivate}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            handleActivate(event);
+          }
+        }}
+        className={`group flex items-center gap-4 p-3 border rounded-lg transition-all duration-200 ${
+          isUnavailable
+            ? 'cursor-not-allowed opacity-60 bg-muted/30'
+            : 'cursor-pointer hover:bg-accent/50 hover:shadow-md hover:border-primary/20 active:scale-[0.99]'
+        }`}
+        aria-disabled={isUnavailable}
+      >
+        {/* Image Thumbnail */}
+        <div className="shrink-0">
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={item.name}
+              className="h-16 w-16 rounded-md object-cover border border-border/50"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-md bg-muted/50 border border-border/50 flex items-center justify-center">
+              <ImageIcon
+                className="h-6 w-6 text-muted-foreground"
+                aria-hidden="true"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Item Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2 mb-1">
+            <h4 className="font-semibold text-base leading-tight line-clamp-1">
+              {item.name}
+            </h4>
+            <Badge
+              variant={isUnavailable ? 'destructive' : 'outline'}
+              className={`shrink-0 text-[10px] font-medium ${
+                isUnavailable
+                  ? ''
+                  : 'bg-[#CDECC7] text-[#1E5B36] border-transparent'
+              }`}
+            >
+              {isUnavailable ? 'Unavailable' : 'Available'}
+            </Badge>
+          </div>
+
+          {item.description && (
+            <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
+              {item.description}
+            </p>
+          )}
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-baseline gap-1">
+              <span className="text-xs text-muted-foreground">PHP</span>
+              <span className="text-lg font-bold text-primary">
+                {Number(item.price).toFixed(2)}
+              </span>
+            </div>
+
+            {showCategoryBadge && categoryLabel && (
+              <Badge
+                variant="outline"
+                className="text-[10px] bg-[#FFF3BF] text-[#5C4300] border-transparent"
+              >
+                {categoryLabel}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Hover Indicator */}
+        {!isUnavailable && (
+          <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-primary text-xl font-bold">+</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-2">
+    <div className="h-full flex flex-col">
+      <div className="pb-4 space-y-3">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>Menu Selection</CardTitle>
-            <CardDescription>
-              {eventName} - {attendees} attendees
-            </CardDescription>
+            <h3 className="text-lg font-semibold sr-only">Menu</h3>
           </div>
-          <Badge variant="outline">Catering</Badge>
         </div>
-        <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0 pt-2">
+        <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -71,42 +172,27 @@ const CateringMenuSelection = ({
             />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 overflow-hidden flex flex-col">
+      </div>
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         {searchTerm.trim() ? (
           // Search results view
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground px-1">
                 Search results for "{searchTerm}"
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-2">
                 {searchResults.length > 0 ? (
                   searchResults.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border rounded-md p-3 hover:bg-accent hover:cursor-pointer transition-colors"
-                      onClick={() => onAddToOrder(item)}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-medium">{item.name}</h4>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                        {item.description}
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-semibold">
-                          ₱{item.price.toFixed(2)}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {item.categoryName}
-                        </Badge>
-                      </div>
-                    </div>
+                    <ItemListRow
+                      key={`${item.categoryName}-${item.id}`}
+                      item={item}
+                      showCategoryBadge
+                    />
                   ))
                 ) : (
-                  <div className="col-span-full text-center py-12">
-                    <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <div className="py-12 text-center">
+                    <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
                     <p className="text-muted-foreground">
                       No menu items found matching "{searchTerm}"
                     </p>
@@ -136,46 +222,40 @@ const CateringMenuSelection = ({
                 ))}
               </TabsList>
             </div>
-            {categories.map((category) => (
-              <TabsContent
-                key={category.id}
-                value={category.id}
-                className="flex-1 overflow-y-auto p-0 mt-0"
-              >
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
-                  {category.items.length > 0 ? (
-                    category.items.map((item) => (
-                      <div
+            {categories.map((category) => {
+              const categoryItems = Array.isArray(category.items)
+                ? category.items
+                : [];
+              const showBadge = category.id === 'all' || category.id === 'All';
+              return (
+                <TabsContent
+                  key={category.id}
+                  value={category.id}
+                  className="flex-1 overflow-y-auto scrollbar-hide mt-0 p-2 space-y-2"
+                >
+                  {categoryItems.length > 0 ? (
+                    categoryItems.map((item) => (
+                      <ItemListRow
                         key={item.id}
-                        className="border rounded-md p-3 hover:bg-accent hover:cursor-pointer transition-colors"
-                        onClick={() => onAddToOrder(item)}
-                      >
-                        <div className="flex justify-between items-start mb-1">
-                          <h4 className="font-medium">{item.name}</h4>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {item.description}
-                        </p>
-                        <p className="text-sm font-semibold">
-                          ₱{item.price.toFixed(2)}
-                        </p>
-                      </div>
+                        item={item}
+                        showCategoryBadge={showBadge}
+                      />
                     ))
                   ) : (
-                    <div className="col-span-full text-center py-12">
-                      <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <div className="py-12 text-center">
+                      <AlertCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
                       <p className="text-muted-foreground">
                         No items in this category
                       </p>
                     </div>
                   )}
-                </div>
-              </TabsContent>
-            ))}
+                </TabsContent>
+              );
+            })}
           </Tabs>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

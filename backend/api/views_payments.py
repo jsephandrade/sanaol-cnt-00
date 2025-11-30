@@ -9,12 +9,38 @@ Permissions:
 from __future__ import annotations
 
 import json
+import logging
+import threading
+from uuid import UUID
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone as dj_timezone
 from django.db.utils import OperationalError, ProgrammingError
+from django.db.models import F
+from decimal import Decimal
 
-from .views_common import _actor_from_request, _has_permission, _client_meta, _require_admin_or_manager, rate_limit
+from .views_common import (
+    _actor_from_request,
+    _has_permission,
+    _require_admin_or_manager,
+    rate_limit,
+)
+
+
+logger = logging.getLogger(__name__)
+
+
+LOYALTY_EARN_PER_PURCHASE = Decimal("0.01")
+
+
+def _derive_catering_order_number(order_id: str) -> str:
+    try:
+        uid = UUID(str(order_id))
+    except Exception:
+        return ""
+    number = uid.int % 900_000
+    number += 100_000
+    return f"C-{number:06d}"
 
 
 def _lookup_order_number(order_id, order_numbers=None):
@@ -39,6 +65,14 @@ def _lookup_order_number(order_id, order_numbers=None):
 def _serialize_db(p, order_numbers=None):
     order_id = str(p.order_id)
     order_number = _lookup_order_number(order_id, order_numbers)
+    if not order_number:
+        meta = getattr(p, "meta", {}) or {}
+        if isinstance(meta, dict):
+            order_number = meta.get("order_number") or meta.get("orderNumber") or ""
+            if not order_number and (
+                meta.get("source") == "catering" or "event_name" in meta
+            ):
+                order_number = _derive_catering_order_number(order_id)
     return {
         "id": str(p.id),
         "orderId": order_id,
@@ -51,6 +85,59 @@ def _serialize_db(p, order_numbers=None):
         "processedBy": (p.processed_by.email if getattr(p, "processed_by", None) else ""),
         "date": (p.created_at or dj_timezone.now()).isoformat(),
     }
+
+
+def _run_background_task(target, *args, **kwargs):
+    def wrapper():
+        try:
+            target(*args, **kwargs)
+        except Exception:
+            logger.exception("Background payment task failed")
+
+    thread = threading.Thread(target=wrapper, daemon=True)
+    thread.start()
+
+
+def _post_payment_tasks(
+    request,
+    actor,
+    reward_user_id,
+    order_id,
+    amount,
+    method,
+    payment_id,
+    order_number,
+):
+    if reward_user_id:
+        try:
+            from .models import AppUser
+
+            AppUser.objects.filter(id=reward_user_id).update(
+                credit_points=F("credit_points") + LOYALTY_EARN_PER_PURCHASE
+            )
+        except Exception:
+            logger.exception("Failed to award credit points for purchase (background)")
+
+    try:
+        from .utils_audit import record_audit
+
+        record_audit(
+            request,
+            user=actor if hasattr(actor, "id") else None,
+            type="action",
+            action="Payment processed",
+            details=f"order={order_id} amount={amount} method={method}",
+            severity="info",
+            meta={
+                "orderId": str(order_id),
+                "amount": float(amount),
+                "method": method,
+                "paymentId": payment_id,
+                "orderNumber": order_number or "",
+            },
+        )
+    except Exception:
+        logger.exception("Failed to record payment audit log (background)")
 
 
 @require_http_methods(["POST"])  # /orders/<order_id>/payment
@@ -77,13 +164,14 @@ def order_payment(request, order_id: str):
     if not amount or not method:
         return JsonResponse({"success": False, "message": "Missing amount or method"}, status=400)
     try:
-        from decimal import Decimal
         amt = Decimal(str(amount))
     except Exception:
         return JsonResponse({"success": False, "message": "Invalid amount"}, status=400)
 
+    reward_user_id = None
+
     try:
-        from .models import PaymentTransaction, PaymentMethodConfig
+        from .models import PaymentTransaction, PaymentMethodConfig, Order
         # Enforce allowed payment methods
         cfg = None
         try:
@@ -133,33 +221,50 @@ def order_payment(request, order_id: str):
         # Update the order's payment method for consistency
         order_number = ""
         try:
-            from .models import Order
-            o = Order.objects.filter(id=order_id).first()
-            if o and getattr(o, "payment_method", None) != method:
-                o.payment_method = method
+            o = Order.objects.filter(id=order_id).select_related("placed_by").first()
+            if o:
+                if getattr(o, "payment_method", None) != method:
+                    o.payment_method = method
+                    try:
+                        o.save(update_fields=["payment_method", "updated_at"])
+                    except Exception:
+                        o.save(update_fields=["payment_method"])  # fallback if updated_at missing
                 try:
-                    o.save(update_fields=["payment_method", "updated_at"])
+                    from .views_orders import _start_auto_flow
+
+                    needs_start = (
+                        not getattr(o, "auto_advance_at", None)
+                        or getattr(o, "phase_started_at", None) is None
+                        or getattr(o, "auto_advance_paused", False)
+                    )
+                    if needs_start:
+                        auto_fields = _start_auto_flow(o)
+                        if auto_fields:
+                            if "updated_at" not in auto_fields:
+                                auto_fields.append("updated_at")
+                            o.save(update_fields=auto_fields)
                 except Exception:
-                    o.save(update_fields=["payment_method"])  # fallback if updated_at missing
-            if o and getattr(o, "order_number", None):
-                order_number = o.order_number or ""
+                    logger.exception("Failed to initialize auto advance for order payment")
+                if getattr(o, "order_number", None):
+                    order_number = o.order_number or ""
+                if getattr(o, "placed_by_id", None):
+                    reward_user_id = o.placed_by_id
         except Exception:
             pass
-        # Audit log
-        try:
-            from .utils_audit import record_audit
-            ua, ip = _client_meta(request)
-            record_audit(
-                request,
-                user=actor if hasattr(actor, "id") else None,
-                type="action",
-                action="Payment processed",
-                details=f"order={order_id} amount={amt} method={method}",
-                severity="info",
-                meta={"orderId": str(order_id), "amount": float(amt), "method": method, "paymentId": str(p.id)},
-            )
-        except Exception:
-            pass
+        if not reward_user_id and hasattr(actor, "id"):
+            reward_user_id = getattr(actor, "id", None)
+
+        _run_background_task(
+            _post_payment_tasks,
+            request,
+            actor,
+            reward_user_id,
+            order_id,
+            float(amt),
+            method,
+            str(p.id),
+            order_number,
+        )
         mapping = None
         if order_number:
             mapping = {str(order_id): order_number}

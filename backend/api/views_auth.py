@@ -3,6 +3,7 @@
 import json
 import uuid
 import os
+import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
@@ -13,6 +14,8 @@ from django.contrib.auth.hashers import check_password
 import jwt
 import secrets
 import requests as _requests
+
+logger = logging.getLogger(__name__)
 
 from .views_common import (
     rate_limit,
@@ -277,18 +280,20 @@ def auth_login(request):
                     "user": safe_user,
                 }
             )
-    except (OperationalError, ProgrammingError):
-        pass
-
-    # Fallback to in-memory (disabled when DISABLE_INMEM_FALLBACK is true)
-    if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
-        return JsonResponse(
-            {
-                "success": False,
-                "message": "Service temporarily unavailable. Please try again later.",
-            },
-            status=503,
-        )
+    except (OperationalError, ProgrammingError) as e:
+        logger.exception(f"Database error during login for email={email}: {e}")
+        # Fallback to in-memory (disabled when DISABLE_INMEM_FALLBACK is true)
+        if getattr(settings, "DISABLE_INMEM_FALLBACK", False):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Service temporarily unavailable. Please try again later.",
+                },
+                status=503,
+            )
+    except Exception as e:
+        logger.exception(f"Unexpected error during login for email={email}: {e}")
+        # Continue to in-memory fallback or final validation
 
     user = next((u for u in USERS if (u.get("email") or "").lower() == email), None)
     if user:
@@ -977,9 +982,19 @@ def auth_register(request):
 
     try:
         from .models import AppUser, AccessRequest
+        from django.db import IntegrityError
         _maybe_seed_from_memory()
-        db_user = AppUser.objects.filter(email=email).first()
-        if not db_user:
+
+        # Check if email already exists
+        existing_user = AppUser.objects.filter(email=email).first()
+        if existing_user:
+            return JsonResponse({
+                "success": False,
+                "message": "Email already registered. Please use a different email or try logging in."
+            }, status=400)
+
+        # Create new user
+        try:
             with transaction.atomic():
                 db_user = AppUser.objects.create(
                     email=email,
@@ -991,6 +1006,13 @@ def auth_register(request):
                     email_verified=False,
                     phone=phone,
                 )
+        except IntegrityError:
+            # Safety net in case of race condition
+            return JsonResponse({
+                "success": False,
+                "message": "Email already registered. Please use a different email."
+            }, status=400)
+
         try:
             AccessRequest.objects.get_or_create(user=db_user)
         except Exception:

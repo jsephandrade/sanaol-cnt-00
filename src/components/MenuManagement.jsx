@@ -10,7 +10,7 @@ import EditItemDialog from '@/components/menu/EditItemDialog';
 import CategoryTabs from '@/components/menu/CategoryTabs';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Menu as MenuIcon } from 'lucide-react';
 import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
 
 const MenuManagement = () => {
@@ -28,7 +28,8 @@ const MenuManagement = () => {
     restoreMenuItem: restoreArchivedItem,
     refetch: refetchArchived,
   } = useMenuManagement({ archived: true });
-  const { categories: categoryRows } = useMenuCategories();
+  const { categories: categoryRows, refetch: refetchCategories } =
+    useMenuCategories();
   const categories = useMemo(
     () => (categoryRows || []).map((c) => c.name),
     [categoryRows]
@@ -129,15 +130,6 @@ const MenuManagement = () => {
         variant="outline"
         size="sm"
         className="flex items-center gap-1"
-        onClick={() => setCategoryDialogOpen(true)}
-      >
-        <PlusCircle className="h-4 w-4" />
-        Add Category
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-1"
         onClick={() => setComboDialogOpen(true)}
       >
         <PlusCircle className="h-4 w-4" />
@@ -149,6 +141,8 @@ const MenuManagement = () => {
         newItem={newItem}
         setNewItem={setNewItem}
         onAdd={handleAddItem}
+        categories={categories}
+        onAddCategory={() => setCategoryDialogOpen(true)}
       />
     </div>
   );
@@ -157,7 +151,8 @@ const MenuManagement = () => {
     <div className="space-y-6 animate-fade-in">
       <FeaturePanelCard
         title="Menu Management"
-        description="Organize categories, combo meals, and menu items."
+        titleStyle="accent"
+        titleIcon={MenuIcon}
         headerActions={actionButtons}
         contentClassName="space-y-6"
       >
@@ -196,7 +191,12 @@ const MenuManagement = () => {
         onConfirm={(catName) => {
           setNewItem((prev) => ({ ...prev, category: catName }));
           setCategoryDialogOpen(false);
-          setDialogOpen(true);
+          // Refresh categories list to include the newly added category
+          refetchCategories();
+          // Keep AddItemDialog open if it was already open
+          if (!dialogOpen) {
+            setDialogOpen(true);
+          }
         }}
       />
 

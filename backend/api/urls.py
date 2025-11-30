@@ -61,6 +61,7 @@ urlpatterns = [
 
     # Users endpoints
     path("users", user_views.users, name="users"),
+    path("users/active-options", user_views.active_user_options, name="users_active_options"),
     path("users/<uuid:user_id>", user_views.user_detail, name="user_detail"),
     path("users/<uuid:user_id>/status", user_views.user_status, name="user_status"),
     path("users/<uuid:user_id>/role", user_views.user_role, name="user_role"),
@@ -81,6 +82,7 @@ urlpatterns = [
     path("notifications", notif_views.notifications, name="notifications"),
     path("notifications/mark-all-read", notif_views.notifications_mark_all, name="notifications_mark_all"),
     path("notifications/settings", notif_views.notifications_settings, name="notifications_settings"),
+    path("notifications/test-trigger", notif_views.notifications_test_trigger, name="notifications_test_trigger"),
     path("notifications/<str:notif_id>/read", notif_views.notification_read, name="notification_read"),
     path("notifications/<str:notif_id>", notif_views.notification_delete, name="notification_delete"),
     path("notifications/push/public-key", notif_views.notifications_push_public_key, name="notifications_push_public_key"),
@@ -101,6 +103,7 @@ urlpatterns = [
     path("orders/history", order_views.order_history, name="order_history"),
     path("orders/bulk-progress", order_views.order_bulk_progress, name="order_bulk_progress"),
     path("orders/<uuid:oid>", order_views.order_detail, name="order_detail"),
+    path("orders/<uuid:oid>/auto-flow", order_views.order_auto_flow, name="order_auto_flow"),
     path("orders/<uuid:oid>/status", order_views.order_status, name="order_status"),
     path("orders/<uuid:oid>/items/<uuid:item_id>/state", order_views.order_item_state, name="order_item_state"),
 
@@ -108,6 +111,7 @@ urlpatterns = [
     path("employees", emp_views.employees, name="employees"),
     path("employees/<uuid:emp_id>", emp_views.employee_detail, name="employee_detail"),
     path("schedule", emp_views.schedule, name="schedule"),
+    path("schedule/overview", emp_views.schedule_overview, name="schedule_overview"),
     path("schedule/<uuid:sid>", emp_views.schedule_detail, name="schedule_detail"),
 
     # Attendance & Leaves
@@ -140,8 +144,14 @@ urlpatterns = [
         catering_views.catering_event_menu_items,
         name="catering_event_menu_items",
     ),
+    path(
+        "catering/events/<uuid:event_id>/payment",
+        catering_views.catering_event_payment,
+        name="catering_event_payment",
+    ),
 
     # Reports
+    path("reports/dashboard", rpt_views.reports_dashboard, name="reports_dashboard"),
     path("reports/sales", rpt_views.reports_sales, name="reports_sales"),
     path("reports/inventory", rpt_views.reports_inventory, name="reports_inventory"),
     path("reports/orders", rpt_views.reports_orders, name="reports_orders"),

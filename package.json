@@ -11,8 +11,10 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
+    "verify:openapi": "npm run generate:openapi && git diff --quiet --exit-code -- shared/api/generated",
     "clean:vite": "rimraf node_modules/.vite node_modules/.cache/vite",
     "preview": "vite preview",
+    "generate:openapi": "node scripts/generate-openapi.js",
     "prepare": "husky install"
   },
   "lint-staged": {
@@ -59,6 +61,8 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "input-otp": "^1.2.4",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
@@ -75,11 +79,14 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "xlsx": "^0.18.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@babel/generator": "^7.28.5",
+    "@babel/parser": "^7.28.5",
     "@babel/preset-react": "^7.27.1",
+    "@babel/traverse": "^7.28.5",
+    "@babel/types": "^7.28.5",
     "@eslint/js": "^9.33.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
@@ -97,10 +104,12 @@
     "lovable-tagger": "^1.1.7",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.1",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.11",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^5.4.1",
+    "zod-to-json-schema": "^3.24.6"
   }
 }

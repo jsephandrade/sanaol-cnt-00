@@ -1,12 +1,6 @@
 // src/components/menu/ItemCard.jsx
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit, Archive, Image as ImageIcon } from 'lucide-react';
@@ -71,8 +65,8 @@ const ItemCard = ({ item, onEdit, onArchive = () => {} }) => {
               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                 Starting at
               </p>
-              <p className="text-lg font-semibold text-primary">
-                PHP {Number(item.price).toFixed(2)}
+              <p className="text-2xl font-semibold text-primary">
+                ₱{Number(item.price).toFixed(2)}
               </p>
             </div>
             {item.category && (
@@ -84,28 +78,27 @@ const ItemCard = ({ item, onEdit, onArchive = () => {} }) => {
               </Badge>
             )}
           </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => onEdit(item)}
+            >
+              <Edit className="h-3 w-3 mr-1" /> Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onArchive(item.id)}
+              aria-label={`Archive ${item.name}`}
+              title={`Archive ${item.name}`}
+            >
+              <Archive className="h-4 w-4" />
+            </Button>
+          </div>
         </CardContent>
-
-        <CardFooter className="p-4 pt-0 flex items-center justify-end gap-2 border-t border-border/40 bg-background/60 backdrop-blur-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-xs"
-            onClick={() => onEdit(item)}
-          >
-            <Edit className="h-3 w-3 mr-1" /> Edit
-          </Button>
-          <Button
-            variant="destructive"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => onArchive(item.id)}
-            aria-label={`Archive ${item.name}`}
-            title={`Archive ${item.name}`}
-          >
-            <Archive className="h-4 w-4" />
-          </Button>
-        </CardFooter>
       </div>
     </Card>
   );

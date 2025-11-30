@@ -296,7 +296,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setToken(null);
     setRefreshTokenValue(null);
-  }, [persistAuth, refreshTokenValue]);
+  }, [refreshTokenValue]);
 
   const refreshToken = useCallback(async () => {
     if (!refreshTokenValue) {

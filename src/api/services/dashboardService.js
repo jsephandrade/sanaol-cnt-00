@@ -1,62 +1,37 @@
-// import apiClient from '../client';
-import { mockDashboardStats } from '../mockData';
-
-// Mock delay for realistic API simulation
-const mockDelay = (ms = 800) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+import apiClient from '../client';
 
 class DashboardService {
-  async getDashboardStats(_timeRange = 'today') {
-    await mockDelay();
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/dashboard/stats?timeRange=${timeRange}`);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: mockDashboardStats,
-    };
+  async getDashboardStats(timeRange = 'today') {
+    return apiClient.get(`/reports/dashboard?range=${timeRange}`);
   }
 
-  async getSalesData(_params = {}) {
-    await mockDelay();
-
-    // TODO: Replace with actual API call
-    // const queryParams = new URLSearchParams(params).toString();
-    // return apiClient.get(`/dashboard/sales?${queryParams}`);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: mockDashboardStats.salesByTime,
-    };
+  async getSalesData(params = {}) {
+    const queryParams = new URLSearchParams(params).toString();
+    return apiClient.get(`/reports/sales?${queryParams}`);
   }
 
   async getRecentActivity(limit = 10) {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/dashboard/recent-activity?limit=${limit}`);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: mockDashboardStats.recentSales.slice(0, limit),
-    };
+    // Use dashboard endpoint with limit parameter if needed
+    const response = await apiClient.get('/reports/dashboard?range=today');
+    if (response.success && response.data.recentSales) {
+      return {
+        success: true,
+        data: response.data.recentSales.slice(0, limit),
+      };
+    }
+    return response;
   }
 
-  async getPopularItems(_timeRange = 'week') {
-    await mockDelay(600);
-
-    // TODO: Replace with actual API call
-    // return apiClient.get(`/dashboard/popular-items?timeRange=${timeRange}`);
-
-    // Mock implementation
-    return {
-      success: true,
-      data: mockDashboardStats.popularItems,
-    };
+  async getPopularItems(timeRange = 'week') {
+    // Use dashboard endpoint for popular items
+    const response = await apiClient.get(`/reports/dashboard?range=${timeRange}`);
+    if (response.success && response.data.popularItems) {
+      return {
+        success: true,
+        data: response.data.popularItems,
+      };
+    }
+    return response;
   }
 }
 

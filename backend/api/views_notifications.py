@@ -351,3 +351,42 @@ def notifications_push_unsubscribe(request):
     except (OperationalError, ProgrammingError):
         pass
     return JsonResponse({"success": True})
+
+
+@require_http_methods(["POST"])  # trigger test notification
+@rate_limit(limit=10, window_seconds=60)  # Max 10 test notifications per minute
+def notifications_test_trigger(request):
+    """Trigger a test notification for testing purposes"""
+    actor, err = _actor_from_request(request)
+    if not actor:
+        return err
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        data = {}
+
+    notification_type = (data.get("type") or "info").lower()
+    if notification_type not in ['info', 'success', 'warning', 'error']:
+        notification_type = 'info'
+
+    try:
+        from .notification_triggers import trigger_test_notification
+        success = trigger_test_notification(actor.id, notification_type)
+
+        if success:
+            return JsonResponse({
+                "success": True,
+                "message": f"Test {notification_type} notification triggered successfully"
+            })
+        else:
+            return JsonResponse({
+                "success": False,
+                "message": "Failed to trigger notification"
+            }, status=500)
+
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": f"Error triggering notification: {str(e)}"
+        }, status=500)

@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 from django.test import TestCase, Client
 from django.conf import settings
 from django.utils import timezone as dj_tz
@@ -57,4 +58,6 @@ class OrderFlowTests(TestCase):
         self.assertEqual(p1.status_code, 200)
         self.assertEqual(p2.status_code, 200)
         self.assertEqual(p1.json()['data']['id'], p2.json()['data']['id'])
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.credit_points, Decimal('0.01'))
 

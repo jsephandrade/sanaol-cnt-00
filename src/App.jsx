@@ -6,6 +6,7 @@ import { AuthProvider } from './components/AuthContext';
 import AppRoutes from './components/app/AppRoutes';
 import { ThemeProvider } from 'next-themes';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import OrderAutoAdvanceService from './components/app/OrderAutoAdvanceService';
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <OrderAutoAdvanceService />
           <ErrorBoundary>
             <AppRoutes />
           </ErrorBoundary>

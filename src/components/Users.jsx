@@ -1,14 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import FeaturePanelCard from '@/components/shared/FeaturePanelCard';
+import UserManagementCard from '@/components/users/UserManagementCard';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import {
+  UserPlus,
+  Users as UsersIcon,
+  ShieldCheck,
+  UserCheck,
+} from 'lucide-react';
 import { AddUserModal } from './users/AddUserModal';
 import { EditUserModal } from './users/EditUserModal';
 import { RoleConfigModal } from './users/RoleConfigModal';
 import { UserTable } from './users/UserTable';
 import { RoleManagement } from './users/RoleManagement';
 import { ActiveUsersList } from './users/ActiveUsersList';
-// Header handled via FeaturePanelCard props
+// Header handled via UserManagementCard props
 import { UsersSearch } from './users/UsersSearch';
 import {
   Select,
@@ -17,7 +22,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-// Footer rendered inline for FeaturePanelCard
+// Footer rendered inline for UserManagementCard
 import { useUserManagement, useRoles } from '@/hooks/useUserManagement';
 import { PendingVerifications } from './users/PendingVerifications';
 import { useDebouncedValue } from '@/hooks/useDebounce';
@@ -141,8 +146,12 @@ const Users = () => {
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2 space-y-4">
-        <FeaturePanelCard
+        <UserManagementCard
           title="User Management"
+          titleStyle="accent"
+          titleIcon={UsersIcon}
+          titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+          titleClassName="text-xs md:text-sm"
           description="Manage system users and access"
           headerActions={
             hasAnyRole(['admin']) ? (
@@ -212,7 +221,7 @@ const Users = () => {
             Showing {nonPendingUsers.length} of{' '}
             {pagination?.total ?? nonPendingUsers.length} users
           </div>
-        </FeaturePanelCard>
+        </UserManagementCard>
 
         {/* Admin/Manager-only: show verification queue below the Users card */}
         {showVerifyQueue && <PendingVerifications />}
@@ -220,8 +229,12 @@ const Users = () => {
 
       <div className="space-y-4">
         {rolesLoading ? (
-          <FeaturePanelCard
+          <UserManagementCard
             title="Role Management"
+            titleStyle="accent"
+            titleIcon={ShieldCheck}
+            titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+            titleClassName="text-xs md:text-sm"
             description="Configure user roles and permissions"
             contentClassName="space-y-4"
           >
@@ -238,21 +251,29 @@ const Users = () => {
                 </div>
               ))}
             </div>
-          </FeaturePanelCard>
+          </UserManagementCard>
         ) : rolesError ? (
-          <FeaturePanelCard
+          <UserManagementCard
             title="Role Management"
+            titleStyle="accent"
+            titleIcon={ShieldCheck}
+            titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+            titleClassName="text-xs md:text-sm"
             description="Configure user roles and permissions"
           >
             <ErrorState message={rolesError} />
-          </FeaturePanelCard>
+          </UserManagementCard>
         ) : (
           <RoleManagement roles={roles} onConfigureRole={handleConfigureRole} />
         )}
 
         {loading ? (
-          <FeaturePanelCard
+          <UserManagementCard
             title="Active Users"
+            titleStyle="accent"
+            titleIcon={UserCheck}
+            titleAccentClassName="px-3 py-1 text-xs md:text-sm"
+            titleClassName="text-xs md:text-sm"
             description="Currently active system users"
           >
             <div className="flex flex-wrap gap-2">
@@ -263,7 +284,7 @@ const Users = () => {
                 </div>
               ))}
             </div>
-          </FeaturePanelCard>
+          </UserManagementCard>
         ) : (
           <ActiveUsersList
             users={nonPendingUsers.filter((u) => u.status === 'active')}

@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "TechnoMart",
+    "slug": "technomart-mobile-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "web": {
+      "bundler": "metro"
+    },
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFE0C2"
+    },
+    "userInterfaceStyle": "light",
+    "updates": {
+      "enabled": false,
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "enableMocks": false,
+      "eas": {
+        "projectId": "724f128a-e5fa-4d17-b1dc-5358de696900"
+      }
+    },
+    "android": {
+      "package": "com.joseph224.technomartmobileapp",
+      "softwareKeyboardLayoutMode": "pan",
+      "permissions": ["CAMERA"],
+      "blockedPermissions": []
+    },
+    "owner": "joseph224",
+    "plugins": ["expo-router"]
+  }
+}

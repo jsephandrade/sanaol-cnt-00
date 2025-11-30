@@ -25,6 +25,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Verify OpenAPI artifacts
+        run: npm run verify:openapi
+
       - name: Build
         run: npm run build
 

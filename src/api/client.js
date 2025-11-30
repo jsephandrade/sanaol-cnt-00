@@ -1,11 +1,8 @@
+import { getEnvBoolean, getEnvValue, resolveApiBase } from './env';
+
 // Central API client configuration
-// Uses Vite env var when available; falls back to '/api' for dev proxy
-const API_BASE_URL =
-  typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  import.meta.env.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL
-    : '/api';
+// Uses runtime env helper when available; falls back to '/api' for dev proxy
+const API_BASE_URL = resolveApiBase('/api');
 
 // Normalized API error type
 class ApiError extends Error {
@@ -37,25 +34,12 @@ class ApiClient {
       retryOnStatuses: [408, 429, 500, 502, 503, 504],
       retryMethods: ['GET', 'HEAD', 'OPTIONS'],
     };
-    this.sendCredentials = Boolean(
-      typeof import.meta !== 'undefined' &&
-        import.meta.env &&
-        (import.meta.env.VITE_SEND_CREDENTIALS === 'true' ||
-          import.meta.env.VITE_SEND_CREDENTIALS === '1')
-    );
+    this.sendCredentials = getEnvBoolean('VITE_SEND_CREDENTIALS', false);
     this.csrf = {
       // Right-size default: enable CSRF only when using cookie-based auth
       enabled: this.sendCredentials,
-      cookieName:
-        (typeof import.meta !== 'undefined' &&
-          import.meta.env &&
-          import.meta.env.VITE_CSRF_COOKIE_NAME) ||
-        'csrftoken',
-      headerName:
-        (typeof import.meta !== 'undefined' &&
-          import.meta.env &&
-          import.meta.env.VITE_CSRF_HEADER_NAME) ||
-        'X-CSRFToken',
+      cookieName: getEnvValue('VITE_CSRF_COOKIE_NAME', 'csrftoken'),
+      headerName: getEnvValue('VITE_CSRF_HEADER_NAME', 'X-CSRFToken'),
     };
   }
 
@@ -315,6 +299,7 @@ class ApiClient {
 
 export const apiClient = new ApiClient();
 export default apiClient;
+export { ApiClient };
 
 // Private helpers
 ApiClient.prototype._readCookie = function (name) {

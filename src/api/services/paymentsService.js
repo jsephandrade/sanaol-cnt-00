@@ -1,4 +1,5 @@
 import apiClient from '../client';
+import { resolveApiBase } from '../env';
 
 const toQuery = (obj = {}) => {
   const p = new URLSearchParams();
@@ -41,12 +42,13 @@ class PaymentsService {
   }
 
   async downloadInvoiceBlob(paymentId) {
-    const base =
-      (typeof import.meta !== 'undefined' &&
-        import.meta.env &&
-        import.meta.env.VITE_API_BASE_URL) ||
-      '/api';
-    const url = `${base}/payments/${encodeURIComponent(paymentId)}/invoice`;
+    const baseCandidate =
+      (typeof apiClient?.baseURL === 'string' && apiClient.baseURL) ||
+      resolveApiBase('/api');
+    const normalizedBase = (baseCandidate || '/api').replace(/\/+$/, '');
+    const url = `${normalizedBase}/payments/${encodeURIComponent(
+      paymentId
+    )}/invoice`;
     const headers = { ...(apiClient.defaultHeaders || {}) };
     if (headers['Content-Type']) delete headers['Content-Type'];
     const resp = await fetch(url, {

@@ -14,6 +14,11 @@ class EmployeeService {
     return list.map((e) => ({
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',
@@ -25,6 +30,7 @@ class EmployeeService {
   async createEmployee(employee) {
     const payload = {
       name: employee?.name || '',
+      userId: employee?.userId || employee?.user || null,
       position: employee?.position || '',
       hourlyRate: Number(employee?.hourlyRate ?? 0),
       contact: employee?.contact || '',
@@ -37,6 +43,11 @@ class EmployeeService {
     return {
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',
@@ -54,6 +65,11 @@ class EmployeeService {
     return {
       id: e.id,
       name: e.name,
+      userId: e.userId || null,
+      userName: e.userName || '',
+      userEmail: e.userEmail || '',
+      userRole: e.userRole || '',
+      userStatus: e.userStatus || '',
       position: e.position || '',
       hourlyRate: Number(e.hourlyRate ?? 0),
       contact: e.contact || '',
@@ -125,6 +141,64 @@ class EmployeeService {
   async deleteSchedule(id) {
     await apiClient.delete(`/schedule/${id}`, { retry: { retries: 1 } });
     return true;
+  }
+
+  async getScheduleOverview(params = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        qs.append(key, String(value));
+      }
+    });
+    const query = qs.toString();
+    const url = query ? `/schedule/overview?${query}` : '/schedule/overview';
+    const res = await apiClient.get(url, {
+      retry: { retries: 1 },
+    });
+    const payload = res?.data || res || {};
+    const totals = payload?.totals || {};
+
+    const serializeDays = Array.isArray(payload?.days)
+      ? payload.days.map((day) => ({
+          day: day?.day || '',
+          shifts: Number(day?.shifts ?? 0),
+          totalHours: Number(day?.totalHours ?? 0),
+          earliestStart: day?.earliestStart || null,
+          latestEnd: day?.latestEnd || null,
+          coverageRating: day?.coverageRating || 'none',
+        }))
+      : [];
+
+    const serializeAlerts = Array.isArray(payload?.alerts)
+      ? payload.alerts.map((alert) => ({
+          day: alert?.day || '',
+          message: alert?.message || '',
+          severity: alert?.severity || 'warning',
+          shifts: Number(alert?.shifts ?? 0),
+        }))
+      : [];
+
+    const serializeContributors = Array.isArray(payload?.topContributors)
+      ? payload.topContributors.map((entry) => ({
+          employeeId: entry?.employeeId,
+          employeeName: entry?.employeeName || '',
+          shifts: Number(entry?.shifts ?? 0),
+          totalHours: Number(entry?.totalHours ?? 0),
+        }))
+      : [];
+
+    return {
+      totals: {
+        shifts: Number(totals?.shifts ?? 0),
+        uniqueEmployees: Number(totals?.uniqueEmployees ?? 0),
+        totalHours: Number(totals?.totalHours ?? 0),
+        avgHoursPerShift: Number(totals?.avgHoursPerShift ?? 0),
+        utilizationScore: Number(totals?.utilizationScore ?? 0),
+      },
+      days: serializeDays,
+      alerts: serializeAlerts,
+      topContributors: serializeContributors,
+    };
   }
 }
 

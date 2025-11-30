@@ -1,14 +1,10 @@
 import apiClient from '../client';
 import { mockInventoryItems } from '../mockData';
+import { getEnvBoolean } from '../env';
 
 const mockDelay = (ms = 800) =>
   new Promise((resolve) => setTimeout(resolve, ms));
-const USE_MOCKS = !(
-  typeof import.meta !== 'undefined' &&
-  import.meta.env &&
-  (import.meta.env.VITE_ENABLE_MOCKS === 'false' ||
-    import.meta.env.VITE_ENABLE_MOCKS === '0')
-);
+const USE_MOCKS = getEnvBoolean('VITE_ENABLE_MOCKS', true);
 
 class InventoryService {
   async getInventoryItems(params = {}) {

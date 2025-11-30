@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { cn } from '@/lib/utils';
 
 export const AUTH_BRAND_BADGE_IMAGE = '/src/assets/technomart-logo.png';
 
@@ -12,8 +13,10 @@ const AuthBrandIntro = ({
   badgeTextClassName = 'text-primary font-semibold text-xl',
   title,
   description,
-  className = 'text-center md:text-left space-y-3',
+  className = '',
   contentClassName = 'space-y-2',
+  titleClassName = '',
+  descriptionClassName = '',
   children,
 }) => {
   const badgeImageClasses = [badgeClassName, badgeImageClassName]
@@ -24,25 +27,45 @@ const AuthBrandIntro = ({
     .join(' ');
 
   return (
-    <div className={className}>
-      {(badgeImageSrc || badgeText) &&
-        (badgeImageSrc ? (
-          <img
-            src={badgeImageSrc}
-            alt={badgeImageAlt}
-            className={badgeImageClasses}
-          />
-        ) : (
-          <span className={badgeTextClasses}>{badgeText}</span>
-        ))}
+    <div
+      className={cn(
+        'flex flex-col items-center md:items-start justify-center text-center md:text-left space-y-3',
+        className
+      )}
+    >
+      {(badgeImageSrc || badgeText) && (
+        <div className="flex w-full items-center justify-center md:w-auto md:justify-start">
+          {badgeImageSrc ? (
+            <img
+              src={badgeImageSrc}
+              alt={badgeImageAlt}
+              className={cn(badgeImageClasses, 'mx-auto md:mx-0')}
+            />
+          ) : (
+            <span className={cn(badgeTextClasses, 'mx-auto md:mx-0')}>
+              {badgeText}
+            </span>
+          )}
+        </div>
+      )}
       <div className={contentClassName}>
         {title && (
-          <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900">
+          <h1
+            className={cn(
+              'text-3xl sm:text-4xl font-semibold text-gray-900',
+              titleClassName
+            )}
+          >
             {title}
           </h1>
         )}
         {description && (
-          <p className="text-sm text-gray-600 max-w-sm mx-auto md:mx-0">
+          <p
+            className={cn(
+              'text-sm text-gray-600 max-w-sm mx-auto md:mx-0',
+              descriptionClassName
+            )}
+          >
             {description}
           </p>
         )}
@@ -63,6 +86,8 @@ AuthBrandIntro.propTypes = {
   description: PropTypes.node,
   className: PropTypes.string,
   contentClassName: PropTypes.string,
+  titleClassName: PropTypes.string,
+  descriptionClassName: PropTypes.string,
   children: PropTypes.node,
 };
 

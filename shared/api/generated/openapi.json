@@ -1,0 +1,2892 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Technomart API (auto-generated)",
+    "version": "1.0.0",
+    "description": "This OpenAPI document is generated from the existing JavaScript service layer. Update via `npm run generate:openapi` after modifying services or schemas."
+  },
+  "paths": {
+    "/attendance": {
+      "get": {
+        "operationId": "attendance_getAttendance",
+        "summary": "Generated from src/api/services/attendanceService.js#getAttendance",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "attendance_createAttendance",
+        "summary": "Generated from src/api/services/attendanceService.js#createAttendance",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/attendance/{id}": {
+      "delete": {
+        "operationId": "attendance_deleteAttendance",
+        "summary": "Generated from src/api/services/attendanceService.js#deleteAttendance",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "attendance_updateAttendance",
+        "summary": "Generated from src/api/services/attendanceService.js#updateAttendance",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "operationId": "auth_changePassword",
+        "summary": "Generated from src/api/services/authService.js#changePassword",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/face-login": {
+      "post": {
+        "operationId": "auth_loginWithFace",
+        "summary": "Generated from src/api/services/authService.js#loginWithFace",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/face-register": {
+      "delete": {
+        "operationId": "auth_unregisterFace",
+        "summary": "Generated from src/api/services/authService.js#unregisterFace",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "auth_registerFace",
+        "summary": "Generated from src/api/services/authService.js#registerFace",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/face-unregister": {
+      "post": {
+        "operationId": "auth_unregisterFace_2",
+        "summary": "Generated from src/api/services/authService.js#unregisterFace",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "auth_forgotPassword",
+        "summary": "Generated from src/api/services/authService.js#forgotPassword",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "operationId": "auth_loginWithGoogle",
+        "summary": "Generated from src/api/services/authService.js#loginWithGoogle",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "auth_login",
+        "summary": "Generated from src/api/services/authService.js#login",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/login/resend-otp": {
+      "post": {
+        "operationId": "auth_resendLoginOtp",
+        "summary": "Generated from src/api/services/authService.js#resendLoginOtp",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/login/verify-otp": {
+      "post": {
+        "operationId": "auth_verifyLoginOtp",
+        "summary": "Generated from src/api/services/authService.js#verifyLoginOtp",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "auth_logout",
+        "summary": "Generated from src/api/services/authService.js#logout",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/password-reset/confirm": {
+      "post": {
+        "operationId": "auth_confirmPasswordReset",
+        "summary": "Generated from src/api/services/authService.js#confirmPasswordReset",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/password-reset/request": {
+      "post": {
+        "operationId": "auth_requestPasswordReset",
+        "summary": "Generated from src/api/services/authService.js#requestPasswordReset",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/password-reset/verify": {
+      "post": {
+        "operationId": "auth_verifyPasswordReset",
+        "summary": "Generated from src/api/services/authService.js#verifyPasswordReset",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "operationId": "auth_refreshToken",
+        "summary": "Generated from src/api/services/authService.js#refreshToken",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "auth_register",
+        "summary": "Generated from src/api/services/authService.js#register",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "auth_resendVerification",
+        "summary": "Generated from src/api/services/authService.js#resendVerification",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "auth_resetPassword",
+        "summary": "Generated from src/api/services/authService.js#resetPassword",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/reset-password-code": {
+      "post": {
+        "operationId": "auth_resetPasswordWithCode",
+        "summary": "Generated from src/api/services/authService.js#resetPasswordWithCode",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/social": {
+      "post": {
+        "operationId": "auth_socialLogin",
+        "summary": "Generated from src/api/services/authService.js#socialLogin",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "auth_verifyEmail",
+        "summary": "Generated from src/api/services/authService.js#verifyEmail",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/auth/verify-reset-code": {
+      "post": {
+        "operationId": "auth_verifyResetCode",
+        "summary": "Generated from src/api/services/authService.js#verifyResetCode",
+        "tags": ["authService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/catering/events": {
+      "post": {
+        "operationId": "catering_createEvent",
+        "summary": "Generated from src/api/services/cateringService.js#createEvent",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/catering/events/{eventId}": {
+      "patch": {
+        "operationId": "catering_updateEvent",
+        "summary": "Generated from src/api/services/cateringService.js#updateEvent",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/catering/events/{eventId}/menu-items": {
+      "put": {
+        "operationId": "catering_setEventMenuItems",
+        "summary": "Generated from src/api/services/cateringService.js#setEventMenuItems",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/catering/events/{eventId}/payment": {
+      "post": {
+        "operationId": "catering_submitPayment",
+        "summary": "Generated from src/api/services/cateringService.js#submitPayment",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/catering/events/{eventId}{query}": {
+      "get": {
+        "operationId": "catering_getEvent",
+        "summary": "Generated from src/api/services/cateringService.js#getEvent",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/catering/events{query}": {
+      "get": {
+        "operationId": "catering_listEvents",
+        "summary": "Generated from src/api/services/cateringService.js#listEvents",
+        "tags": ["cateringService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "query",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/employees": {
+      "get": {
+        "operationId": "employee_getEmployees",
+        "summary": "Generated from src/api/services/employeeService.js#getEmployees",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "employee_createEmployee",
+        "summary": "Generated from src/api/services/employeeService.js#createEmployee",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/employees/{id}": {
+      "delete": {
+        "operationId": "employee_deleteEmployee",
+        "summary": "Generated from src/api/services/employeeService.js#deleteEmployee",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "employee_updateEmployee",
+        "summary": "Generated from src/api/services/employeeService.js#updateEmployee",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/inventory/items": {
+      "get": {
+        "operationId": "inventory_getInventoryItems",
+        "summary": "Generated from src/api/services/inventoryService.js#getInventoryItems",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "inventory_createInventoryItem",
+        "summary": "Generated from src/api/services/inventoryService.js#createInventoryItem",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/inventory/items/{itemId}": {
+      "delete": {
+        "operationId": "inventory_deleteInventoryItem",
+        "summary": "Generated from src/api/services/inventoryService.js#deleteInventoryItem",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "get": {
+        "operationId": "inventory_getInventoryItemById",
+        "summary": "Generated from src/api/services/inventoryService.js#getInventoryItemById",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "inventory_updateInventoryItem",
+        "summary": "Generated from src/api/services/inventoryService.js#updateInventoryItem",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/inventory/items/{itemId}/stock": {
+      "patch": {
+        "operationId": "inventory_updateStock",
+        "summary": "Generated from src/api/services/inventoryService.js#updateStock",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/inventory/low-stock{param1}": {
+      "get": {
+        "operationId": "inventory_getLowStockItems",
+        "summary": "Generated from src/api/services/inventoryService.js#getLowStockItems",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/inventory/recent-activity": {
+      "get": {
+        "operationId": "inventory_getInventoryActivities",
+        "summary": "Generated from src/api/services/inventoryService.js#getInventoryActivities",
+        "tags": ["inventoryService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/leaves": {
+      "get": {
+        "operationId": "attendance_getLeaves",
+        "summary": "Generated from src/api/services/attendanceService.js#getLeaves",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "attendance_createLeave",
+        "summary": "Generated from src/api/services/attendanceService.js#createLeave",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/leaves/{id}": {
+      "delete": {
+        "operationId": "attendance_deleteLeave",
+        "summary": "Generated from src/api/services/attendanceService.js#deleteLeave",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "attendance_updateLeave",
+        "summary": "Generated from src/api/services/attendanceService.js#updateLeave",
+        "tags": ["attendanceService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "operationId": "logs_list",
+        "summary": "Generated from src/api/services/logsService.js#list",
+        "tags": ["logsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "logs_create",
+        "summary": "Generated from src/api/services/logsService.js#create",
+        "tags": ["logsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/logs/alerts": {
+      "get": {
+        "operationId": "logs_alerts",
+        "summary": "Generated from src/api/services/logsService.js#alerts",
+        "tags": ["logsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/logs/summary": {
+      "get": {
+        "operationId": "logs_summary",
+        "summary": "Generated from src/api/services/logsService.js#summary",
+        "tags": ["logsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/menu/categories": {
+      "get": {
+        "operationId": "menu_getCategories",
+        "summary": "Generated from src/api/services/menuService.js#getCategories",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "menu_createCategory",
+        "summary": "Generated from src/api/services/menuService.js#createCategory",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items": {
+      "get": {
+        "operationId": "menu_getMenuItems",
+        "summary": "Generated from src/api/services/menuService.js#getMenuItems",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "menu_createMenuItem",
+        "summary": "Generated from src/api/services/menuService.js#createMenuItem",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items/{itemId}": {
+      "get": {
+        "operationId": "menu_getMenuItemById",
+        "summary": "Generated from src/api/services/menuService.js#getMenuItemById",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "menu_updateMenuItem",
+        "summary": "Generated from src/api/services/menuService.js#updateMenuItem",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items/{itemId}/availability": {
+      "patch": {
+        "operationId": "menu_updateItemAvailability",
+        "summary": "Generated from src/api/services/menuService.js#updateItemAvailability",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items/{itemId}/image": {
+      "post": {
+        "operationId": "menu_uploadItemImage",
+        "summary": "Generated from src/api/services/menuService.js#uploadItemImage",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items/{param1}/archive": {
+      "post": {
+        "operationId": "menu_deleteMenuItem",
+        "summary": "Generated from src/api/services/menuService.js#deleteMenuItem",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/menu/items/{param1}/restore": {
+      "post": {
+        "operationId": "menu_restoreMenuItem",
+        "summary": "Generated from src/api/services/menuService.js#restoreMenuItem",
+        "tags": ["menuService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "notifications_list",
+        "summary": "Generated from src/api/services/notificationsService.js#list",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/notifications/mark-all-read": {
+      "post": {
+        "operationId": "notifications_markAllRead",
+        "summary": "Generated from src/api/services/notificationsService.js#markAllRead",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/notifications/push/public-key": {
+      "get": {
+        "operationId": "notifications_getVapidPublicKey",
+        "summary": "Generated from src/api/services/notificationsService.js#getVapidPublicKey",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/notifications/push/subscribe": {
+      "post": {
+        "operationId": "notifications_subscribePush",
+        "summary": "Generated from src/api/services/notificationsService.js#subscribePush",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/notifications/push/unsubscribe": {
+      "post": {
+        "operationId": "notifications_unsubscribePush",
+        "summary": "Generated from src/api/services/notificationsService.js#unsubscribePush",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/notifications/settings": {
+      "get": {
+        "operationId": "notifications_getSettings",
+        "summary": "Generated from src/api/services/notificationsService.js#getSettings",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "put": {
+        "operationId": "notifications_updateSettings",
+        "summary": "Generated from src/api/services/notificationsService.js#updateSettings",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/notifications/{param1}": {
+      "delete": {
+        "operationId": "notifications_delete",
+        "summary": "Generated from src/api/services/notificationsService.js#delete",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/notifications/{param1}/read": {
+      "post": {
+        "operationId": "notifications_markRead",
+        "summary": "Generated from src/api/services/notificationsService.js#markRead",
+        "tags": ["notificationsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "order_createOrder",
+        "summary": "Generated from src/api/services/orderService.js#createOrder",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders/generate-number{param1}": {
+      "get": {
+        "operationId": "order_generateOrderNumber",
+        "summary": "Generated from src/api/services/orderService.js#generateOrderNumber",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/orders/history{param1}": {
+      "get": {
+        "operationId": "order_getOrderHistory",
+        "summary": "Generated from src/api/services/orderService.js#getOrderHistory",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/orders/queue{param1}": {
+      "get": {
+        "operationId": "order_getOrderQueue",
+        "summary": "Generated from src/api/services/orderService.js#getOrderQueue",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/orders/{param1}": {
+      "get": {
+        "operationId": "order_getOrderById",
+        "summary": "Generated from src/api/services/orderService.js#getOrderById",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/orders/{param1}/auto-flow": {
+      "patch": {
+        "operationId": "order_updateOrderAutoFlow",
+        "summary": "Generated from src/api/services/orderService.js#updateOrderAutoFlow",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders/{param1}/items/{param2}/state": {
+      "patch": {
+        "operationId": "order_updateOrderItemState",
+        "summary": "Generated from src/api/services/orderService.js#updateOrderItemState",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "param2",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders/{param1}/payment": {
+      "post": {
+        "operationId": "order_processPayment",
+        "summary": "Generated from src/api/services/orderService.js#processPayment",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders/{param1}/status": {
+      "patch": {
+        "operationId": "order_updateOrderStatus",
+        "summary": "Generated from src/api/services/orderService.js#updateOrderStatus",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/orders{param1}": {
+      "get": {
+        "operationId": "order_getOrders",
+        "summary": "Generated from src/api/services/orderService.js#getOrders",
+        "tags": ["orderService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/payments": {
+      "get": {
+        "operationId": "payments_list",
+        "summary": "Generated from src/api/services/paymentsService.js#list",
+        "tags": ["paymentsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/payments/config": {
+      "get": {
+        "operationId": "payments_getConfig",
+        "summary": "Generated from src/api/services/paymentsService.js#getConfig",
+        "tags": ["paymentsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "put": {
+        "operationId": "payments_updateConfig",
+        "summary": "Generated from src/api/services/paymentsService.js#updateConfig",
+        "tags": ["paymentsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/payments/{param1}/refund": {
+      "post": {
+        "operationId": "payments_refund",
+        "summary": "Generated from src/api/services/paymentsService.js#refund",
+        "tags": ["paymentsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "param1",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/reports/customer-history": {
+      "get": {
+        "operationId": "analytics_getCustomerHistory",
+        "summary": "Generated from src/api/services/analyticsService.js#getCustomerHistory",
+        "tags": ["analyticsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/dashboard": {
+      "get": {
+        "operationId": "dashboard_getPopularItems",
+        "summary": "Generated from src/api/services/dashboardService.js#getPopularItems",
+        "tags": ["dashboardService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/dashboard?range=today": {
+      "get": {
+        "operationId": "dashboard_getRecentActivity",
+        "summary": "Generated from src/api/services/dashboardService.js#getRecentActivity",
+        "tags": ["dashboardService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/inventory": {
+      "get": {
+        "operationId": "analytics_getInventoryReport",
+        "summary": "Generated from src/api/services/analyticsService.js#getInventoryReport",
+        "tags": ["analyticsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/orders": {
+      "get": {
+        "operationId": "analytics_getOrdersReport",
+        "summary": "Generated from src/api/services/analyticsService.js#getOrdersReport",
+        "tags": ["analyticsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/sales": {
+      "get": {
+        "operationId": "analytics_getSalesReport",
+        "summary": "Generated from src/api/services/analyticsService.js#getSalesReport",
+        "tags": ["analyticsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/reports/staff-attendance": {
+      "get": {
+        "operationId": "analytics_getAttendanceReport",
+        "summary": "Generated from src/api/services/analyticsService.js#getAttendanceReport",
+        "tags": ["analyticsService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/schedule": {
+      "get": {
+        "operationId": "employee_getSchedule",
+        "summary": "Generated from src/api/services/employeeService.js#getSchedule",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "employee_createSchedule",
+        "summary": "Generated from src/api/services/employeeService.js#createSchedule",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/schedule/overview": {
+      "get": {
+        "operationId": "employee_getScheduleOverview",
+        "summary": "Generated from src/api/services/employeeService.js#getScheduleOverview",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/schedule/{id}": {
+      "delete": {
+        "operationId": "employee_deleteSchedule",
+        "summary": "Generated from src/api/services/employeeService.js#deleteSchedule",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "employee_updateSchedule",
+        "summary": "Generated from src/api/services/employeeService.js#updateSchedule",
+        "tags": ["employeeService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "user_getUsers",
+        "summary": "Generated from src/api/services/userService.js#getUsers",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user_createUser",
+        "summary": "Generated from src/api/services/userService.js#createUser",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/users/roles": {
+      "get": {
+        "operationId": "user_getRoles",
+        "summary": "Generated from src/api/services/userService.js#getRoles",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/users/roles/{value}": {
+      "put": {
+        "operationId": "user_updateRoleConfig",
+        "summary": "Generated from src/api/services/userService.js#updateRoleConfig",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "value",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/users/{userId}": {
+      "delete": {
+        "operationId": "user_deleteUser",
+        "summary": "Generated from src/api/services/userService.js#deleteUser",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "get": {
+        "operationId": "user_getUserById",
+        "summary": "Generated from src/api/services/userService.js#getUserById",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "user_updateUser",
+        "summary": "Generated from src/api/services/userService.js#updateUser",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/users/{userId}/role": {
+      "patch": {
+        "operationId": "user_updateUserRole",
+        "summary": "Generated from src/api/services/userService.js#updateUserRole",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/users/{userId}/status": {
+      "patch": {
+        "operationId": "user_updateUserStatus",
+        "summary": "Generated from src/api/services/userService.js#updateUserStatus",
+        "tags": ["userService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/verify/approve": {
+      "post": {
+        "operationId": "verification_approve",
+        "summary": "Generated from src/api/services/verificationService.js#approve",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/verify/reject": {
+      "post": {
+        "operationId": "verification_reject",
+        "summary": "Generated from src/api/services/verificationService.js#reject",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/verify/requests": {
+      "get": {
+        "operationId": "verification_list",
+        "summary": "Generated from src/api/services/verificationService.js#list",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/verify/resend-token": {
+      "post": {
+        "operationId": "verification_refreshVerifyToken",
+        "summary": "Generated from src/api/services/verificationService.js#refreshVerifyToken",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    },
+    "/verify/status": {
+      "get": {
+        "operationId": "verification_getStatus",
+        "summary": "Generated from src/api/services/verificationService.js#getStatus",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        }
+      }
+    },
+    "/verify/upload": {
+      "post": {
+        "operationId": "verification_uploadHeadshot",
+        "summary": "Generated from src/api/services/verificationService.js#uploadHeadshot",
+        "tags": ["verificationService"],
+        "responses": {
+          "default": {
+            "description": "Auto-generated response placeholder"
+          }
+        },
+        "requestBody": {
+          "description": "Auto-generated placeholder body",
+          "required": false
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CateringEventSchema": {
+        "$ref": "#/definitions/CateringEventSchema",
+        "definitions": {
+          "CateringEventSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "eventName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "eventDate": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              },
+              "eventLocation": {
+                "type": "string",
+                "minLength": 1
+              },
+              "clientName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "clientEmail": {
+                "type": "string",
+                "format": "email"
+              },
+              "guestCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "menuItemId": {
+                      "$ref": "#/definitions/CateringEventSchema/properties/id"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "price": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  },
+                  "required": ["menuItemId", "name", "quantity", "price"],
+                  "additionalProperties": false
+                },
+                "default": []
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0
+              },
+              "notes": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "eventName",
+              "eventLocation",
+              "clientName",
+              "clientEmail",
+              "guestCount",
+              "status",
+              "total"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "DashboardStatsSchema": {
+        "$ref": "#/definitions/DashboardStatsSchema",
+        "definitions": {
+          "DashboardStatsSchema": {
+            "type": "object",
+            "properties": {
+              "dailySales": {
+                "type": "number"
+              },
+              "monthlySales": {
+                "type": "number"
+              },
+              "customerCount": {
+                "type": "integer"
+              },
+              "orderCount": {
+                "type": "integer"
+              },
+              "salesByTime": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "time": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["time", "amount"],
+                  "additionalProperties": false
+                }
+              },
+              "salesByCategory": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["category", "amount"],
+                  "additionalProperties": false
+                }
+              },
+              "popularItems": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["name", "count"],
+                  "additionalProperties": false
+                }
+              },
+              "recentSales": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "number"
+                    },
+                    "date": {},
+                    "paymentMethod": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "total", "paymentMethod"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "dailySales",
+              "monthlySales",
+              "customerCount",
+              "orderCount",
+              "salesByTime",
+              "salesByCategory",
+              "popularItems",
+              "recentSales"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "FeedbackSchema": {
+        "$ref": "#/definitions/FeedbackSchema",
+        "definitions": {
+          "FeedbackSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "customerName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rating": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "comment": {
+                "type": "string"
+              },
+              "orderNumber": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              },
+              "createdAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              }
+            },
+            "required": ["id", "customerName", "rating", "category", "status"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "InventoryItemSchema": {
+        "$ref": "#/definitions/InventoryItemSchema",
+        "definitions": {
+          "InventoryItemSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "category": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minStock": {
+                "type": "number",
+                "minimum": 0
+              },
+              "supplier": {
+                "type": "string"
+              },
+              "lastRestocked": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              },
+              "expiryDate": {
+                "$ref": "#/definitions/InventoryItemSchema/properties/lastRestocked"
+              }
+            },
+            "required": ["id", "name", "category", "quantity", "unit"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "MenuItemSchema": {
+        "$ref": "#/definitions/MenuItemSchema",
+        "definitions": {
+          "MenuItemSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "default": ""
+              },
+              "price": {
+                "type": "number",
+                "minimum": 0
+              },
+              "category": {
+                "type": "string",
+                "minLength": 1
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "image": {
+                "type": "string"
+              },
+              "ingredients": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "preparationTime": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["id", "name", "price", "category", "available"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "OrderItemSchema": {
+        "$ref": "#/definitions/OrderItemSchema",
+        "definitions": {
+          "OrderItemSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "menuItemId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "price": {
+                "type": "number",
+                "minimum": 0
+              },
+              "quantity": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": ["menuItemId", "name", "price", "quantity"],
+            "additionalProperties": false
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "OrderSchema": {
+        "$ref": "#/definitions/OrderSchema",
+        "definitions": {
+          "OrderSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "orderNumber": {
+                "type": "string",
+                "minLength": 1
+              },
+              "type": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["walk-in", "online"]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["pending", "preparing", "completed", "cancelled"]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "menuItemId": {
+                      "$ref": "#/definitions/OrderSchema/properties/id"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "price": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": ["menuItemId", "name", "price", "quantity"],
+                  "additionalProperties": false
+                }
+              },
+              "subtotal": {
+                "type": "number",
+                "minimum": 0
+              },
+              "discount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0
+              },
+              "paymentMethod": {
+                "type": ["string", "null"]
+              },
+              "timeReceived": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "anyOf": [
+                      {
+                        "not": {}
+                      },
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          {
+                            "type": "string",
+                            "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "timeCompleted": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      {
+                        "$ref": "#/definitions/OrderSchema/properties/timeReceived/anyOf/1"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "customerName": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": [
+              "id",
+              "orderNumber",
+              "type",
+              "status",
+              "items",
+              "total"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "OrderStatus": {
+        "$ref": "#/definitions/OrderStatus",
+        "definitions": {
+          "OrderStatus": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["pending", "preparing", "completed", "cancelled"]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "OrderType": {
+        "$ref": "#/definitions/OrderType",
+        "definitions": {
+          "OrderType": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["walk-in", "online"]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "PaymentMethod": {
+        "$ref": "#/definitions/PaymentMethod",
+        "definitions": {
+          "PaymentMethod": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["cash", "card", "mobile"]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "PaymentSchema": {
+        "$ref": "#/definitions/PaymentSchema",
+        "definitions": {
+          "PaymentSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "orderId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "method": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["cash", "card", "mobile"]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": ["completed", "pending", "failed"]
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "timestamp": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              },
+              "reference": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["id", "orderId", "amount", "method", "status"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "PaymentStatus": {
+        "$ref": "#/definitions/PaymentStatus",
+        "definitions": {
+          "PaymentStatus": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["completed", "pending", "failed"]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "RoleSchema": {
+        "$ref": "#/definitions/RoleSchema",
+        "definitions": {
+          "RoleSchema": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string",
+                "enum": ["admin", "manager", "staff"]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              }
+            },
+            "required": ["label", "value", "description"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "RoleValue": {
+        "$ref": "#/definitions/RoleValue",
+        "definitions": {
+          "RoleValue": {
+            "type": "string",
+            "enum": ["admin", "manager", "staff"]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "UserCreateSchema": {
+        "$ref": "#/definitions/UserCreateSchema",
+        "definitions": {
+          "UserCreateSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "manager", "staff"],
+                "default": "staff"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "minLength": 8
+              }
+            },
+            "required": ["name", "email"],
+            "additionalProperties": false
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "UserSchema": {
+        "$ref": "#/definitions/UserSchema",
+        "definitions": {
+          "UserSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "phone": {
+                "type": "string",
+                "default": ""
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "manager", "staff"]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["active", "deactivated", "pending"]
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "createdAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              },
+              "lastLogin": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/UserSchema/properties/createdAt"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": ["id", "name", "email", "role", "status"],
+            "additionalProperties": true
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "UserStatus": {
+        "$ref": "#/definitions/UserStatus",
+        "definitions": {
+          "UserStatus": {
+            "type": "string",
+            "enum": ["active", "deactivated", "pending"]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "UserUpdateSchema": {
+        "$ref": "#/definitions/UserUpdateSchema",
+        "definitions": {
+          "UserUpdateSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "phone": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": ["admin", "manager", "staff"]
+              },
+              "status": {
+                "type": "string",
+                "enum": ["active", "deactivated", "pending"]
+              },
+              "password": {
+                "type": "string",
+                "minLength": 8
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "ISODateTime": {
+        "$ref": "#/definitions/ISODateTime",
+        "definitions": {
+          "ISODateTime": {
+            "anyOf": [
+              {
+                "not": {}
+              },
+              {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "Z|[+-]\\d{2}:?\\d{2}$"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "IdSchema": {
+        "$ref": "#/definitions/IdSchema",
+        "definitions": {
+          "IdSchema": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  }
+}

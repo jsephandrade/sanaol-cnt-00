@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_PROXY_TARGET ||
     env.VITE_API_BASE_URL ||
     'http://localhost:8000';
+  const exposedEnv = Object.fromEntries(
+    Object.entries(env).filter(([key]) => key.startsWith('VITE_'))
+  );
 
   return {
     server: {
@@ -35,6 +38,9 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+    },
+    define: {
+      __APP_VITE_ENV__: JSON.stringify(exposedEnv),
     },
     cacheDir: path.resolve(__dirname, 'node_modules/.vite'),
     optimizeDeps: {

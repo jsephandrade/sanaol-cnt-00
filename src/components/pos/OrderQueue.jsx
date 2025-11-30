@@ -1,25 +1,61 @@
-import React, { useMemo, useState } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Smartphone, Clock, Check, ChevronDown } from 'lucide-react';
+import {
+  Package,
+  Smartphone,
+  Clock,
+  Check,
+  PauseCircle,
+  PlayCircle,
+  Loader2,
+} from 'lucide-react';
 import { useAuth } from '@/components/AuthContext';
 import { formatOrderNumber } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const truthyValues = new Set([true, 'true', 1, '1']);
 const falsyValues = new Set([false, 'false', 0, '0']);
-const MAX_VISIBLE_PER_SECTION = 4;
 
 const normalizeStatus = (value) => {
   if (!value) return '';
   return String(value).toLowerCase().trim();
+};
+
+const STATUS_CANONICAL_MAP = {
+  pending: 'new',
+  accepted: 'accepted',
+  in_queue: 'accepted',
+  'in-queue': 'accepted',
+  in_progress: 'in_prep',
+  'in-progress': 'in_prep',
+  in_prep: 'in_prep',
+  preparing: 'in_prep',
+  ready: 'staged',
+  staged: 'staged',
+  handoff: 'handoff',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  voided: 'voided',
+  refunded: 'refunded',
+};
+
+const toCanonicalStatus = (status) => {
+  const normalized = normalizeStatus(status);
+  return STATUS_CANONICAL_MAP[normalized] || normalized;
 };
 
 const isOrderPaid = (order) => {
@@ -119,6 +155,20 @@ const getOrderChannel = (order) => {
   return 'walk-in';
 };
 
+const READY_STATUS_SET = new Set(['ready', 'staged', 'handoff']);
+
+const shouldDisableReadyAutoAdvance = (order, statusOverride = null) => {
+  if (!order) return false;
+  const currentStatus = normalizeStatus(
+    statusOverride || getOrderStatus(order)
+  );
+  if (!READY_STATUS_SET.has(currentStatus)) {
+    return false;
+  }
+  const target = toCanonicalStatus(order?.autoAdvanceTarget);
+  return target === 'completed';
+};
+
 const formatStatusLabel = (status) => {
   const normalized = normalizeStatus(status);
   if (!normalized) return 'Unknown';
@@ -143,8 +193,16 @@ const formatStatusLabel = (status) => {
     .join(' ');
 };
 
-const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
+const formatCountdown = (seconds) => {
+  const value = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const mins = Math.floor(value / 60);
+  const secs = value % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
+const OrderQueue = ({ orderQueue, updateOrderStatus, updateOrderAutoFlow }) => {
   const { can } = useAuth();
+  const [statusUpdating, setStatusUpdating] = useState({});
   const queueOrders = useMemo(() => {
     if (!orderQueue) return [];
     if (Array.isArray(orderQueue)) return orderQueue;
@@ -172,18 +230,101 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
     [visibleOrders]
   );
 
-  const [showAllWalkIn, setShowAllWalkIn] = useState(false);
-  const [showAllOnline, setShowAllOnline] = useState(false);
+  const handleStatusChange = useCallback(
+    async (orderId, targetStatus) => {
+      if (!orderId || !targetStatus) return;
+      setStatusUpdating((prev) => ({ ...prev, [orderId]: true }));
+      try {
+        await updateOrderStatus(orderId, targetStatus);
+      } catch (err) {
+        const message =
+          err?.message ||
+          err?.details?.message ||
+          'Failed to update order status';
+        toast.error(message);
+      } finally {
+        setStatusUpdating((prev) => ({ ...prev, [orderId]: false }));
+      }
+    },
+    [updateOrderStatus]
+  );
 
-  const walkInHasMore = walkInOrders.length > MAX_VISIBLE_PER_SECTION;
-  const onlineHasMore = onlineOrders.length > MAX_VISIBLE_PER_SECTION;
+  const [nowTs, setNowTs] = useState(() => Date.now());
 
-  const displayedWalkInOrders = showAllWalkIn
-    ? walkInOrders
-    : walkInOrders.slice(0, MAX_VISIBLE_PER_SECTION);
-  const displayedOnlineOrders = showAllOnline
-    ? onlineOrders
-    : onlineOrders.slice(0, MAX_VISIBLE_PER_SECTION);
+  useEffect(() => {
+    const id =
+      typeof window !== 'undefined'
+        ? window.setInterval(() => setNowTs(Date.now()), 1000)
+        : null;
+    return () => {
+      if (id) {
+        window.clearInterval(id);
+      }
+    };
+  }, []);
+
+  const computeCountdownSeconds = useCallback(
+    (order) => {
+      if (!order || order.autoAdvancePaused) {
+        return null;
+      }
+      if (shouldDisableReadyAutoAdvance(order)) {
+        return null;
+      }
+      const targetTimestamp = order.autoAdvanceAt
+        ? new Date(order.autoAdvanceAt).getTime()
+        : NaN;
+      if (Number.isNaN(targetTimestamp)) {
+        return null;
+      }
+      const diff = Math.ceil((targetTimestamp - nowTs) / 1000);
+      return diff <= 0 ? 0 : diff;
+    },
+    [nowTs]
+  );
+
+  const handleToggleAutoFlow = useCallback(
+    async (order) => {
+      if (!updateOrderAutoFlow) return;
+      const action = order?.autoAdvancePaused ? 'resume' : 'pause';
+      const result = await updateOrderAutoFlow(order.id, { action });
+      if (!result) {
+        toast.error('Unable to update auto timer.');
+      }
+    },
+    [updateOrderAutoFlow]
+  );
+
+  const renderAutoBadge = useCallback(
+    (order) => {
+      if (!order?.autoAdvanceTarget) return null;
+      if (shouldDisableReadyAutoAdvance(order)) return null;
+      const countdown = computeCountdownSeconds(order);
+      const paused = order.autoAdvancePaused;
+      const displayCountdown =
+        paused || countdown === null ? null : formatCountdown(countdown);
+      const nextLabel = formatStatusLabel(order.autoAdvanceTarget);
+      const badgeClasses = paused
+        ? 'border bg-slate-200 text-slate-700 border-slate-300'
+        : countdown !== null && countdown <= 5
+          ? 'border bg-red-100 text-red-700 border-red-200'
+          : 'border bg-slate-100 text-slate-700 border-slate-200';
+
+      return (
+        <div className="flex flex-col items-end gap-1 text-xs">
+          <Badge variant="outline" className={badgeClasses}>
+            {paused
+              ? 'Auto Paused'
+              : displayCountdown
+                ? `Auto ${displayCountdown}`
+                : 'Auto'}
+          </Badge>
+          <span className="text-muted-foreground">{`Next: ${nextLabel}`}</span>
+        </div>
+      );
+    },
+    [computeCountdownSeconds]
+  );
 
   const formatTimeAgo = (input) => {
     const d = input instanceof Date ? input : new Date(input);
@@ -250,43 +391,49 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
         </CardHeader>
         <CardContent className="p-0">
           {walkInOrders.length > 0 ? (
-            <div className="relative">
-              <div
-                className={`divide-y ${walkInHasMore && !showAllWalkIn ? 'max-h-96 overflow-hidden' : ''}`}
-              >
-                {displayedWalkInOrders.map((order) => {
-                  const status = getOrderStatus(order);
-                  const statusLabel = formatStatusLabel(status);
-                  const isPending = [
-                    'pending',
-                    'accepted',
-                    'in_queue',
-                    'new',
-                  ].includes(status);
-                  const isPreparing = [
-                    'preparing',
-                    'in_progress',
-                    'in_prep',
-                  ].includes(status);
-                  const isReady = ['ready', 'staged', 'handoff'].includes(
-                    status
-                  );
+            <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
+              {walkInOrders.map((order) => {
+                const status = getOrderStatus(order);
+                const statusLabel = formatStatusLabel(status);
+                const isPending = [
+                  'pending',
+                  'accepted',
+                  'in_queue',
+                  'new',
+                ].includes(status);
+                const isPreparing = [
+                  'preparing',
+                  'in_progress',
+                  'in_prep',
+                ].includes(status);
+                const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const disableAutoAdvance = shouldDisableReadyAutoAdvance(
+                  order,
+                  status
+                );
+                const showAutoControls = Boolean(
+                  updateOrderAutoFlow &&
+                    order.autoAdvanceTarget &&
+                    can('order.status.update') &&
+                    !disableAutoAdvance
+                );
 
-                  return (
-                    <div key={order.id} className="p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            #
-                            {formatOrderNumber(order.orderNumber) ||
-                              order.orderNumber ||
-                              'N/A'}
-                          </h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />{' '}
-                            {formatTimeAgo(order.timeReceived)}
-                          </p>
-                        </div>
+                return (
+                  <div key={order.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          #
+                          {formatOrderNumber(order.orderNumber) ||
+                            order.orderNumber ||
+                            'N/A'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />{' '}
+                          {formatTimeAgo(order.timeReceived)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
                         <div
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
                             status
@@ -294,34 +441,42 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                         >
                           {statusLabel}
                         </div>
+                        {renderAutoBadge(order)}
                       </div>
+                    </div>
 
-                      <div className="bg-muted/50 p-3 rounded-md">
-                        {order.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>
-                              {item.quantity}x {item.name}
-                            </span>
-                            <span>
-                              PHP {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-muted/50 p-3 rounded-md">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span>
+                            ₱{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
 
+                    <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         {isPending && can('order.status.update') && (
                           <Button
                             size="sm"
                             className="flex-1"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'in_progress')
+                              handleStatusChange(order.id, 'in_progress')
                             }
                           >
-                            Start Preparing
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Start Preparing'
+                            )}
                           </Button>
                         )}
 
@@ -329,9 +484,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                           <Button
                             size="sm"
                             className="flex-1"
-                            onClick={() => updateOrderStatus(order.id, 'ready')}
+                            disabled={statusUpdating[order.id]}
+                            onClick={() =>
+                              handleStatusChange(order.id, 'ready')
+                            }
                           >
-                            Mark Ready
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Coming right up...
+                              </>
+                            ) : (
+                              'Mark Ready'
+                            )}
                           </Button>
                         )}
 
@@ -340,21 +505,50 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                             size="sm"
                             variant="default"
                             className="flex-1 bg-green-600 hover:bg-green-700"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'completed')
+                              handleStatusChange(order.id, 'completed')
                             }
                           >
-                            <Check className="h-4 w-4 mr-1" /> Complete Order
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Coming right up...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" /> Complete
+                                Order
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
+
+                      {showAutoControls && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleToggleAutoFlow(order)}
+                        >
+                          {order.autoAdvancePaused ? (
+                            <>
+                              <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                              Timer
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                              Timer
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-              {walkInHasMore && !showAllWalkIn && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -365,35 +559,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
             </div>
           )}
         </CardContent>
-        {walkInHasMore && (
-          <CardFooter className="border-t py-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {displayedWalkInOrders.length} of {walkInOrders.length}{' '}
-              walk-in orders
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group flex items-center gap-1"
-              onClick={() => setShowAllWalkIn((prev) => !prev)}
-              aria-expanded={showAllWalkIn}
-              aria-label={
-                showAllWalkIn
-                  ? 'Collapse walk-in orders'
-                  : 'Expand walk-in orders'
-              }
-            >
-              <span className="text-sm font-medium">
-                {showAllWalkIn ? 'Show Less' : 'Show All'}
-              </span>
-              <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-300 ease-in-out ${showAllWalkIn ? 'rotate-180' : ''}`}
-                />
-              </span>
-            </Button>
-          </CardFooter>
-        )}
       </Card>
 
       {/* Online Orders */}
@@ -421,46 +586,52 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
         </CardHeader>
         <CardContent className="p-0">
           {onlineOrders.length > 0 ? (
-            <div className="relative">
-              <div
-                className={`divide-y ${onlineHasMore && !showAllOnline ? 'max-h-96 overflow-hidden' : ''}`}
-              >
-                {displayedOnlineOrders.map((order) => {
-                  const status = getOrderStatus(order);
-                  const statusLabel = formatStatusLabel(status);
-                  const isPending = [
-                    'pending',
-                    'accepted',
-                    'in_queue',
-                    'new',
-                  ].includes(status);
-                  const isPreparing = [
-                    'preparing',
-                    'in_progress',
-                    'in_prep',
-                  ].includes(status);
-                  const isReady = ['ready', 'staged', 'handoff'].includes(
-                    status
-                  );
+            <div className="divide-y max-h-[600px] overflow-y-auto scrollbar-hide">
+              {onlineOrders.map((order) => {
+                const status = getOrderStatus(order);
+                const statusLabel = formatStatusLabel(status);
+                const isPending = [
+                  'pending',
+                  'accepted',
+                  'in_queue',
+                  'new',
+                ].includes(status);
+                const isPreparing = [
+                  'preparing',
+                  'in_progress',
+                  'in_prep',
+                ].includes(status);
+                const isReady = ['ready', 'staged', 'handoff'].includes(status);
+                const disableAutoAdvance = shouldDisableReadyAutoAdvance(
+                  order,
+                  status
+                );
+                const showAutoControls = Boolean(
+                  updateOrderAutoFlow &&
+                    order.autoAdvanceTarget &&
+                    can('order.status.update') &&
+                    !disableAutoAdvance
+                );
 
-                  return (
-                    <div key={order.id} className="p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-lg">
-                            #
-                            {formatOrderNumber(order.orderNumber) ||
-                              order.orderNumber ||
-                              'N/A'}
-                          </h3>
-                          <p className="text-sm font-medium">
-                            {order.customerName}
-                          </p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />{' '}
-                            {formatTimeAgo(order.timeReceived)}
-                          </p>
-                        </div>
+                return (
+                  <div key={order.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          #
+                          {formatOrderNumber(order.orderNumber) ||
+                            order.orderNumber ||
+                            'N/A'}
+                        </h3>
+                        <p className="text-sm font-medium">
+                          {order.customerName}
+                        </p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />{' '}
+                          {formatTimeAgo(order.timeReceived)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
                         <div
                           className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(
                             status
@@ -468,34 +639,42 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                         >
                           {statusLabel}
                         </div>
+                        {renderAutoBadge(order)}
                       </div>
+                    </div>
 
-                      <div className="bg-muted/50 p-3 rounded-md">
-                        {order.items.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>
-                              {item.quantity}x {item.name}
-                            </span>
-                            <span>
-                              PHP {(item.price * item.quantity).toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-muted/50 p-3 rounded-md">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span>
+                            ₱{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
 
+                    <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         {isPending && can('order.status.update') && (
                           <Button
                             size="sm"
                             className="flex-1"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'in_progress')
+                              handleStatusChange(order.id, 'in_progress')
                             }
                           >
-                            Start Preparing
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Start Preparing'
+                            )}
                           </Button>
                         )}
 
@@ -503,9 +682,19 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                           <Button
                             size="sm"
                             className="flex-1"
-                            onClick={() => updateOrderStatus(order.id, 'ready')}
+                            disabled={statusUpdating[order.id]}
+                            onClick={() =>
+                              handleStatusChange(order.id, 'ready')
+                            }
                           >
-                            Ready for Pickup
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              'Ready for Pickup'
+                            )}
                           </Button>
                         )}
 
@@ -514,21 +703,50 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
                             size="sm"
                             variant="default"
                             className="flex-1 bg-green-600 hover:bg-green-700"
+                            disabled={statusUpdating[order.id]}
                             onClick={() =>
-                              updateOrderStatus(order.id, 'completed')
+                              handleStatusChange(order.id, 'completed')
                             }
                           >
-                            <Check className="h-4 w-4 mr-1" /> Complete Order
+                            {statusUpdating[order.id] ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Updating...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4 mr-1" /> Complete
+                                Order
+                              </>
+                            )}
                           </Button>
                         )}
                       </div>
+
+                      {showAutoControls && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => handleToggleAutoFlow(order)}
+                        >
+                          {order.autoAdvancePaused ? (
+                            <>
+                              <PlayCircle className="h-4 w-4 mr-1" /> Resume
+                              Timer
+                            </>
+                          ) : (
+                            <>
+                              <PauseCircle className="h-4 w-4 mr-1" /> Pause
+                              Timer
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-              {onlineHasMore && !showAllOnline && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent" />
-              )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
@@ -537,35 +755,6 @@ const OrderQueue = ({ orderQueue, updateOrderStatus }) => {
             </div>
           )}
         </CardContent>
-        {onlineHasMore && (
-          <CardFooter className="border-t py-3 flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              Showing {displayedOnlineOrders.length} of {onlineOrders.length}{' '}
-              online orders
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="group flex items-center gap-1"
-              onClick={() => setShowAllOnline((prev) => !prev)}
-              aria-expanded={showAllOnline}
-              aria-label={
-                showAllOnline
-                  ? 'Collapse online orders'
-                  : 'Expand online orders'
-              }
-            >
-              <span className="text-sm font-medium">
-                {showAllOnline ? 'Show Less' : 'Show All'}
-              </span>
-              <span className="rounded-full border border-border bg-background p-1 transition-transform duration-300 ease-in-out group-hover:translate-y-0.5">
-                <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-300 ease-in-out ${showAllOnline ? 'rotate-180' : ''}`}
-                />
-              </span>
-            </Button>
-          </CardFooter>
-        )}
       </Card>
 
       {/* Statistics Overview */}

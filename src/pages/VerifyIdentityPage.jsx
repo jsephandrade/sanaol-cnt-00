@@ -31,6 +31,7 @@ const VerifyIdentityPage = () => {
   const [step, setStep] = useState('initial'); // initial | scanning | processing | done | error
   const [error, setError] = useState('');
   const [imageData, setImageData] = useState('');
+  const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
     try {
@@ -49,19 +50,55 @@ const VerifyIdentityPage = () => {
       return;
     }
     setStep('scanning');
+
+    let stream;
+    const stopStream = () => {
+      if (stream) {
+        try {
+          stream.getTracks().forEach((track) => track.stop());
+        } catch {}
+        stream = null;
+      }
+      const videoEl = cameraRef.current?.getVideoRef();
+      if (videoEl && videoEl.srcObject) {
+        videoEl.srcObject = null;
+      }
+    };
+
+    const runCountdown = (seconds = 3) =>
+      new Promise((resolve) => {
+        let remaining = seconds;
+        setCountdown(remaining);
+        const interval = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearInterval(interval);
+            setCountdown(0);
+            resolve();
+          } else {
+            setCountdown(remaining);
+          }
+        }, 1000);
+      });
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, facingMode: 'user' },
       });
       const video = cameraRef.current?.getVideoRef();
       if (video) video.srcObject = stream;
-      // give camera a moment to initialize
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // brief warm-up before countdown
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await runCountdown();
+
       const shot = cameraRef.current?.captureImage(0);
-      stream.getTracks().forEach((track) => track.stop());
+      stopStream();
+
       if (!shot?.data) throw new Error('Failed to capture image');
       setImageData(shot.data);
       setStep('processing');
+
       const res = await verificationService.uploadHeadshot({
         verifyToken,
         imageData: shot.data,
@@ -77,20 +114,16 @@ const VerifyIdentityPage = () => {
         throw new Error(res?.message || 'Upload failed');
       }
     } catch (err) {
+      stopStream();
       setStep('error');
       setError(err?.message || 'Could not complete verification.');
+    } finally {
+      setCountdown(0);
     }
   };
 
   const formContent = (
     <div className="space-y-6">
-      <Link
-        to="/login"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
-      </Link>
-
       <Card className="shadow-2xl">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2">
@@ -102,6 +135,15 @@ const VerifyIdentityPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="flex">
+            <Link
+              to="/login"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
+            </Link>
+          </div>
+
           <div className="text-sm text-muted-foreground">
             <p className="mb-2">
               We will collect a photo of your face to verify your identity. This
@@ -142,6 +184,7 @@ const VerifyIdentityPage = () => {
               currentPosition={{ instruction: 'Look straight at the camera' }}
               capturedImages={imageData ? [{ data: imageData }] : []}
               capturePositions={[{ name: 'Center' }]}
+              countdown={countdown}
             />
           </div>
 

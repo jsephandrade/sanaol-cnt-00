@@ -38,6 +38,7 @@ const EmployeeSchedule = lazy(
 const CustomerFeedback = lazy(() => import('../CustomerFeedback'));
 const POS = lazy(() => import('../POS'));
 const Catering = lazy(() => import('../Catering'));
+const CateringMenuPage = lazy(() => import('../catering/CateringMenuPage'));
 const Inventory = lazy(() => import('../Inventory'));
 const Payments = lazy(() => import('../Payments'));
 const Users = lazy(() => import('../Users'));
@@ -129,6 +130,7 @@ const AppRoutes = () => {
         '/feedback': 'Customer Feedback',
         '/pos': 'Point of Sale',
         '/catering': 'Catering',
+        '/catering-menu-selection': 'Catering Menu',
         '/inventory': 'Inventory',
         '/payments': 'Payments',
         '/users': 'User Management',
@@ -318,6 +320,18 @@ const AppRoutes = () => {
             }
           />
           <Route
+            path="/catering-menu-selection/:eventId"
+            element={
+              <ProtectedRoute>
+                <RoleGuard disallowRoles={['staff']}>
+                  <MainLayout title="Catering Menu">
+                    <CateringMenuPage />
+                  </MainLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/inventory"
             element={
               <ProtectedRoute>
@@ -357,11 +371,11 @@ const AppRoutes = () => {
             path="/logs"
             element={
               <ProtectedRoute>
-                <RoleGuard disallowRoles={['staff']}>
+                <AdminRoute>
                   <MainLayout title="Activity Logs">
                     <UserLogs />
                   </MainLayout>
-                </RoleGuard>
+                </AdminRoute>
               </ProtectedRoute>
             }
           />

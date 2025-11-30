@@ -11,18 +11,40 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import menuService from '@/api/services/menuService';
+import { toast } from 'sonner';
 
 const AddCategoryDialog = ({ open, onOpenChange, onConfirm }) => {
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!open) setName('');
+    if (!open) {
+      setName('');
+      setLoading(false);
+    }
   }, [open]);
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     const value = (name || '').trim();
     if (!value) return;
-    onConfirm && onConfirm(value);
+
+    setLoading(true);
+    try {
+      // Call API to create category
+      const response = await menuService.createCategory({ name: value });
+
+      if (response.success) {
+        toast.success(`Category "${value}" created successfully`);
+        onConfirm && onConfirm(value);
+      } else {
+        toast.error(response.message || 'Failed to create category');
+      }
+    } catch (error) {
+      toast.error(error?.message || 'Failed to create category');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,11 +73,11 @@ const AddCategoryDialog = ({ open, onOpenChange, onConfirm }) => {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!name.trim()}>
-            Continue
+          <Button onClick={handleConfirm} disabled={!name.trim() || loading}>
+            {loading ? 'Creating...' : 'Continue'}
           </Button>
         </DialogFooter>
       </DialogContent>

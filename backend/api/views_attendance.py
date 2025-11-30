@@ -78,11 +78,7 @@ def _safe_leave(l):
 
 
 def _employee_for_actor(actor, *, create_if_missing=False):
-    """Resolve the employee profile linked to the authenticated actor.
-
-    Optionally creates a lightweight Employee entry when none exists so staff
-    can record attendance without admin intervention.
-    """
+    """Resolve (and optionally create) the employee profile linked to the actor."""
 
     if not actor:
         return None
@@ -92,65 +88,57 @@ def _employee_for_actor(actor, *, create_if_missing=False):
     except Exception:
         return None
 
-    # Prefer direct relation via AppUser
+    # Extract actor information
     try:
         actor_id = getattr(actor, "id", None)
-        actor_email = (getattr(actor, "email", "") or "").strip()
-        actor_name = (getattr(actor, "name", "") or "").strip()
     except Exception:
         actor_id = None
-        actor_email = ""
-        actor_name = ""
+
+    # STRICT lookup by user_id first - prevents cross-user sharing
+    if not actor_id:
+        return None
 
     try:
-        if actor_id:
-            emp = Employee.objects.filter(user_id=actor_id).first()
-            if emp:
-                return emp
-            if create_if_missing and getattr(actor, "id", None):
-                emp = Employee.objects.create(
-                    user=actor,
-                    name=actor_name or actor_email or "Staff Member",
-                    contact=actor_email,
-                    position="Staff",
-                    status="active",
-                )
-                return emp
-    except Exception:
-        pass
+        emp = Employee.objects.filter(user_id=actor_id).first()
+        if emp:
+            return emp
 
-    # Fallback lookups (email, then name)
-    try:
-        if actor_email:
-            emp = Employee.objects.filter(contact__iexact=actor_email).first()
-            if emp:
-                return emp
-            if create_if_missing:
-                emp = Employee.objects.create(
-                    name=actor_name or actor_email or "Staff Member",
-                    contact=actor_email,
-                    position="Staff",
-                    status="active",
-                )
-                return emp
-    except Exception:
-        pass
+        # Optionally create/link an employee for this user (staff/manager only)
+        if create_if_missing:
+            role_l = (getattr(actor, "role", "") or "").lower()
+            if role_l not in {"staff", "manager"}:
+                return None
 
-    try:
-        if actor_name:
-            emp = Employee.objects.filter(name__iexact=actor_name).first()
-            if emp:
-                return emp
-            if create_if_missing:
-                emp = Employee.objects.create(
-                    name=actor_name,
-                    contact=actor_email,
-                    position="Staff",
-                    status="active",
+            # Try to reuse an employee row that matches the actor's email in contact
+            actor_email = (getattr(actor, "email", "") or "").strip().lower()
+            reusable = None
+            if actor_email:
+                reusable = (
+                    Employee.objects.filter(contact__iexact=actor_email, user__isnull=True)
+                    .order_by("created_at")
+                    .first()
                 )
-                return emp
-    except Exception:
-        pass
+            if reusable:
+                reusable.user_id = actor_id
+                reusable.name = reusable.name or (getattr(actor, "name", "") or actor_email or "New Staff")
+                reusable.status = reusable.status or "active"
+                reusable.save()
+                return reusable
+
+            # Create a minimal employee linked to this user
+            emp = Employee.objects.create(
+                user_id=actor_id,
+                name=getattr(actor, "name", "") or actor_email or "New Staff",
+                position="",
+                contact=actor_email or "",
+                status="active",
+            )
+            return emp
+
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error resolving employee for user {actor_id}: {e}")
 
     return None
 
@@ -169,14 +157,26 @@ def attendance(request):
             status = (request.GET.get("status") or "").lower()
             qs = AttendanceRecord.objects.select_related("employee").all()
             can_manage = _has_permission(actor, "attendance.manage")
-            self_employee = None
+
+            # Resolve the authenticated user's employee profile for staff-only filtering.
+            self_employee = _employee_for_actor(actor, create_if_missing=False)
+            if not self_employee and not can_manage:
+                return JsonResponse(
+                    {"success": False, "message": "No employee profile found"},
+                    status=403,
+                )
+
+            # Determine which employee's records to show
             if not can_manage:
-                self_employee = _employee_for_actor(actor, create_if_missing=True)
-                if not self_employee:
-                    return JsonResponse({"success": False, "message": "Forbidden"}, status=403)
+                # Staff: Always filter to their own records, ignore employeeId param
                 qs = qs.filter(employee_id=self_employee.id)
-            elif employee_id:
-                qs = qs.filter(employee_id=employee_id)
+            else:
+                # Manager/Admin: filter only when a specific employee is requested or when they have their own profile.
+                if employee_id:
+                    qs = qs.filter(employee_id=employee_id)
+                elif self_employee:
+                    qs = qs.filter(employee_id=self_employee.id)
+
             if dfrom:
                 qs = qs.filter(date__gte=dfrom)
             if dto:

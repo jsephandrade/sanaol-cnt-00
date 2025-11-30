@@ -16,6 +16,52 @@ import {
   clearRememberedEmail,
 } from '@/lib/credentials';
 
+const PASSWORD_MISMATCH_MESSAGE = 'Incorrect email and password.';
+
+const isPasswordMismatchError = (result) => {
+  if (!result || (result?.status ?? null) !== 401) return false;
+  const raw = result?.error || result?.message || '';
+  const code = result?.code || '';
+
+  const normalize = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    try {
+      return String(value);
+    } catch {
+      return '';
+    }
+  };
+
+  const rawMessage = normalize(raw);
+  if (
+    /invalid credential/i.test(rawMessage) ||
+    /incorrect password/i.test(rawMessage)
+  ) {
+    return true;
+  }
+
+  if (
+    typeof code === 'string' &&
+    /invalid_credential|invalid_password/i.test(code)
+  ) {
+    return true;
+  }
+
+  const details = result?.details;
+  if (typeof details === 'string') {
+    return /invalid credential|incorrect password/i.test(details);
+  }
+  if (details && typeof details === 'object') {
+    const detailMessage = normalize(details.message || details.reason);
+    if (detailMessage) {
+      return /invalid credential|incorrect password/i.test(detailMessage);
+    }
+  }
+
+  return false;
+};
+
 const LoginPage = () => {
   const { login, socialLogin, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
@@ -41,15 +87,27 @@ const LoginPage = () => {
   const resolveLoginErrorMessage = (result) => {
     const status = result?.status ?? null;
     const raw = result?.error || result?.message || '';
-    if (status === 401 || status === 404)
-      return 'Incorrect account credentials.';
+    if (status === 401) {
+      if (isPasswordMismatchError(result)) {
+        return PASSWORD_MISMATCH_MESSAGE;
+      }
+      if (typeof raw === 'string' && raw.trim()) {
+        return raw;
+      }
+      return PASSWORD_MISMATCH_MESSAGE;
+    }
+    if (status === 404) return 'Account not found.';
     if (typeof raw === 'string') {
-      if (/invalid credentials/i.test(raw))
-        return 'Incorrect account credentials.';
-      if (/account not found/i.test(raw))
-        return 'Incorrect account credentials.';
+      if (/invalid credentials/i.test(raw)) return PASSWORD_MISMATCH_MESSAGE;
+      if (/account not found/i.test(raw)) return 'Account not found.';
     }
     return raw || 'Something went wrong. Please try again.';
+  };
+
+  const applyAuthFailure = (result) => {
+    const mismatch = isPasswordMismatchError(result);
+    setPasswordError(mismatch ? PASSWORD_MISMATCH_MESSAGE : '');
+    setError(resolveLoginErrorMessage(result));
   };
 
   const validate = () => {
@@ -83,7 +141,7 @@ const LoginPage = () => {
     try {
       const res = await login(email, password, { remember });
       if (!res?.success) {
-        setError(resolveLoginErrorMessage(res));
+        applyAuthFailure(res);
         return;
       }
 
@@ -116,12 +174,12 @@ const LoginPage = () => {
       remember ? rememberEmail(email) : clearRememberedEmail();
       navigate('/');
     } catch (err) {
-      setError(
-        resolveLoginErrorMessage({
-          error: err?.message,
-          status: err?.status ?? null,
-        })
-      );
+      applyAuthFailure({
+        error: err?.message,
+        status: err?.status ?? null,
+        code: err?.code ?? null,
+        details: err?.details ?? null,
+      });
     } finally {
       setPending(false);
     }
@@ -162,7 +220,12 @@ const LoginPage = () => {
   };
 
   const loginCard = (
-    <AuthCard title="Login" compact cardClassName="shadow-2xl">
+    <AuthCard
+      title="Login"
+      compact
+      className="!max-w-full sm:!max-w-md lg:!max-w-lg"
+      cardClassName="shadow-2xl lg:p-8"
+    >
       <LoginForm
         email={email}
         password={password}
@@ -178,11 +241,11 @@ const LoginPage = () => {
         onSubmit={handleSubmit}
       />
       <SocialProviders onSocial={handleSocial} pending={pending} />
-      <p className="mt-6 text-sm text-gray-600 text-center">
-        Don’t have an account yet?{' '}
+      <p className="mt-6 text-xs sm:text-sm md:text-base text-gray-600 text-center leading-relaxed max-w-prose mx-auto px-2 sm:px-0">
+        Don't have an account yet?{' '}
         <button
           onClick={() => navigate('/signup')}
-          className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60"
+          className="font-semibold text-primary hover:text-primary-dark disabled:opacity-60 text-xs sm:text-sm"
           type="button"
           disabled={pending}
         >
@@ -196,6 +259,10 @@ const LoginPage = () => {
     <AuthBrandIntro
       title="Welcome back"
       description="Sign in to manage orders, inventory, and your team for a smooth day at the canteen."
+      className="w-full max-w-xl px-3 sm:px-6 lg:px-8"
+      contentClassName="space-y-1 sm:space-y-3 text-center sm:text-left"
+      titleClassName="text-[20px] sm:text-4xl"
+      descriptionClassName="text-[9px] sm:text-sm"
     />
   );
 
@@ -204,8 +271,10 @@ const LoginPage = () => {
       <AuthPageShell
         backgroundImage={AUTH_PAGE_DEFAULT_BACKGROUND}
         waveImage="/images/b1bc6b54-fe3f-45eb-8a39-005cc575deef.png"
-        formWrapperClassName="order-2 md:order-1 w-full flex justify-center px-4 md:px-0"
-        asideWrapperClassName="order-1 md:order-2 mb-10 md:mb-0 flex justify-center"
+        paddingClassName="px-4 sm:px-6 lg:px-10 xl:px-16 py-10 sm:py-12 lg:py-16"
+        gridClassName="gap-2 sm:gap-10 lg:gap-16"
+        formWrapperClassName="order-2 md:order-1 w-full flex justify-center px-2 sm:px-4 md:px-0"
+        asideWrapperClassName="order-1 md:order-2 mb-2 sm:mb-0 flex justify-center px-2 sm:px-4"
         formSlot={loginCard}
         asideSlot={welcomeIntro}
       />

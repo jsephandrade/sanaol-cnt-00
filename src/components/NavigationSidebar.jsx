@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   SidebarHeader,
@@ -28,17 +28,20 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import logo from '@/assets/technomart-logo.png';
 
 export const NavigationSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const activeItemRef = useRef(null);
+  const isMobile = useIsMobile?.() ?? false;
 
   const displayName = user?.name || 'Admin';
   const displayRole = user?.role || 'admin';
   const avatarInitial = (displayName?.[0] || 'A').toUpperCase();
-  const isAdmin = true;
+  const userRole = user?.role?.toLowerCase() || '';
   // no-op: initials are derived directly from displayName when needed
 
   // Read collapsed state; default to expanded if hook not present
@@ -64,37 +67,88 @@ export const NavigationSidebar = () => {
     {
       label: 'Core',
       items: [
-        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-        { name: 'Point of Sale', href: '/pos', icon: ShoppingCart },
+        {
+          name: 'Dashboard',
+          href: '/',
+          icon: LayoutDashboard,
+          allowedRoles: ['admin', 'manager', 'staff'],
+        },
+        {
+          name: 'Point of Sale',
+          href: '/pos',
+          icon: ShoppingCart,
+          allowedRoles: ['admin', 'manager', 'staff'],
+        },
       ],
     },
     {
       label: 'Operations',
       items: [
-        { name: 'Menu Management', href: '/menu', icon: MenuIcon },
-        { name: 'Catering', href: '/catering', icon: Utensils },
-        { name: 'Inventory', href: '/inventory', icon: Package },
+        {
+          name: 'Menu Management',
+          href: '/menu',
+          icon: MenuIcon,
+          allowedRoles: ['admin', 'manager'],
+        },
+        {
+          name: 'Catering',
+          href: '/catering',
+          icon: Utensils,
+          allowedRoles: ['admin', 'manager'],
+        },
+        {
+          name: 'Inventory',
+          href: '/inventory',
+          icon: Package,
+          allowedRoles: ['admin', 'manager'],
+        },
       ],
     },
     {
       label: 'Management',
       items: [
-        { name: 'Analytics', href: '/analytics', icon: TrendingUp },
         {
-          name: 'Employee Management',
+          name: 'Analytics',
+          href: '/analytics',
+          icon: TrendingUp,
+          allowedRoles: ['admin', 'manager'],
+        },
+        {
+          name: 'Employee Shift',
           href: '/employees',
           icon: CalendarClock,
+          allowedRoles: ['admin', 'manager', 'staff'],
         },
-        { name: 'Payments', href: '/payments', icon: CreditCard },
-        { name: 'Users', href: '/users', icon: Users, adminOnly: true },
+        {
+          name: 'Payments',
+          href: '/payments',
+          icon: CreditCard,
+          allowedRoles: ['admin', 'manager'],
+        },
+        { name: 'Users', href: '/users', icon: Users, allowedRoles: ['admin'] },
       ],
     },
     {
       label: 'Support',
       items: [
-        { name: 'Activity Logs', href: '/logs', icon: FileText },
-        { name: 'Notifications', href: '/notifications', icon: Bell },
-        { name: 'Customer Feedback', href: '/feedback', icon: MessageSquare },
+        {
+          name: 'Activity Logs',
+          href: '/logs',
+          icon: FileText,
+          allowedRoles: ['admin'],
+        },
+        {
+          name: 'Notifications',
+          href: '/notifications',
+          icon: Bell,
+          allowedRoles: ['admin', 'manager', 'staff'],
+        },
+        {
+          name: 'Customer Feedback',
+          href: '/feedback',
+          icon: MessageSquare,
+          allowedRoles: ['admin', 'manager'],
+        },
       ],
     },
   ];
@@ -102,9 +156,21 @@ export const NavigationSidebar = () => {
   const visibleGroups = navigationGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.adminOnly || isAdmin),
+      items: group.items.filter(
+        (item) => item.allowedRoles && item.allowedRoles.includes(userRole)
+      ),
     }))
     .filter((group) => group.items.length > 0);
+
+  // Scroll active item into view when location changes
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [location.pathname]);
 
   return (
     <>
@@ -150,7 +216,7 @@ export const NavigationSidebar = () => {
               <SidebarGroupLabel
                 className={cn(
                   'mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-group-label',
-                  isCollapsed && 'sr-only'
+                  isCollapsed && !isMobile && 'sr-only'
                 )}
               >
                 {group.label}
@@ -174,6 +240,7 @@ export const NavigationSidebar = () => {
                         key={item.name}
                         className="animate-slide-in"
                         style={{ animationDelay }}
+                        ref={isActive ? activeItemRef : null}
                       >
                         <SidebarMenuButton
                           asChild
@@ -244,9 +311,10 @@ export const NavigationSidebar = () => {
                 </SidebarMenu>
               </SidebarGroupContent>
 
-              {!isCollapsed && groupIndex < visibleGroups.length - 1 && (
-                <div className="my-3 h-px bg-sidebar-divider" />
-              )}
+              {(!isCollapsed || isMobile) &&
+                groupIndex < visibleGroups.length - 1 && (
+                  <div className="my-3 h-px bg-sidebar-divider" />
+                )}
             </SidebarGroup>
           ))}
         </div>

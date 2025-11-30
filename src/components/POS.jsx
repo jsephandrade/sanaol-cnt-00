@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuSelection from '@/components/pos/MenuSelection';
 import CurrentOrder from '@/components/pos/CurrentOrder';
 import OrderQueue from '@/components/pos/OrderQueue';
+import CustomerDisplay from '@/components/pos/CustomerDisplay';
 import PaymentModal from '@/components/pos/PaymentModal';
 import DiscountModal from '@/components/pos/DiscountModal';
 import OrderHistoryModal from '@/components/pos/OrderHistoryModal';
@@ -10,6 +11,15 @@ import { usePOSData, EMPTY_QUEUE_STATE } from '@/hooks/usePOSData';
 import { usePOSLogic } from '@/hooks/usePOSLogic';
 import { useOrderHistory } from '@/hooks/useOrderManagement';
 import { orderService } from '@/api/services/orderService';
+import { paymentsService } from '@/api/services/paymentsService';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { formatOrderNumber } from '@/lib/utils';
 
 const POS = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +31,12 @@ const POS = () => {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('pos');
+  const [paymentConfig, setPaymentConfig] = useState({
+    cash: true,
+    card: true,
+    mobile: true,
+  });
+  const [isMobileOrderSheetOpen, setIsMobileOrderSheetOpen] = useState(false);
 
   // Get data and business logic from custom hooks
   const { categories, orderQueue, setOrderQueue } = usePOSData();
@@ -52,6 +68,29 @@ const POS = () => {
   } = usePOSLogic();
 
   const hasOrderItems = Array.isArray(currentOrder) && currentOrder.length > 0;
+  const normalizedPaymentConfig = {
+    cash: paymentConfig.cash !== false,
+    card: paymentConfig.card !== false,
+    mobile: paymentConfig.mobile !== false,
+  };
+  const paymentMethodLabels = {
+    cash: 'Cash',
+    card: 'Card',
+    mobile: 'Mobile wallet',
+  };
+  const isSelectedPaymentEnabled =
+    normalizedPaymentConfig[paymentMethod] ?? true;
+  const paymentDisabledMessage = isSelectedPaymentEnabled
+    ? null
+    : `${paymentMethodLabels[paymentMethod] || 'Selected'} payments are disabled`;
+  const orderCount = Array.isArray(currentOrder) ? currentOrder.length : 0;
+  const orderLabel = orderNumber
+    ? formatOrderNumber(orderNumber)
+    : 'Pending Payment';
+  const orderDescription = orderNumber
+    ? `Order #${orderLabel}`
+    : orderLabel || 'Pending Payment';
+  const itemSummary = `${orderCount} item${orderCount === 1 ? '' : 's'} in cart`;
 
   const handleApplyDiscount = () => {
     const success = applyDiscount(discountInput, discountType);
@@ -75,35 +114,67 @@ const POS = () => {
     return EMPTY_QUEUE_STATE;
   }, [setOrderQueue]);
 
-  const handleProcessPayment = async (paymentDetails) => {
-    const info = await processPayment(paymentMethod, paymentDetails);
-    if (info?.id) {
-      setIsPaymentModalOpen(false);
-      setActiveTab('queue');
-
-      const triggerQueueRefresh = () => {
-        refreshQueue().catch((e) => console.error(e));
-      };
-
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(triggerQueueRefresh);
-      } else {
-        setTimeout(triggerQueueRefresh, 0);
-      }
-
-      return true;
+  const scheduleQueueRefresh = useCallback(() => {
+    const update = () => {
+      refreshQueue().catch((error) => console.error(error));
+    };
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      window.requestIdleCallback(update);
+    } else {
+      setTimeout(update, 0);
     }
-    return false;
+  }, [refreshQueue]);
+
+  const handleProcessPayment = (paymentDetails) => {
+    const paymentPromise = processPayment(paymentMethod, paymentDetails);
+
+    setIsPaymentModalOpen(false);
+    setActiveTab('queue');
+
+    scheduleQueueRefresh();
+
+    paymentPromise
+      .then((info) => {
+        if (info?.id) {
+          scheduleQueueRefresh();
+        }
+      })
+      .catch((error) => {
+        console.error('Payment flow failed after optimistic accept:', error);
+        scheduleQueueRefresh();
+      });
+
+    return paymentPromise;
   };
 
   const handleOpenPaymentModal = () => {
-    if (!hasOrderItems) return;
+    if (!hasOrderItems || !isSelectedPaymentEnabled) return;
     setIsPaymentModalOpen(true);
   };
   // Fetch order history only when modal opens
   useEffect(() => {
     if (isOrderHistoryModalOpen) refetchHistory();
   }, [isOrderHistoryModalOpen, refetchHistory]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const cfg = await paymentsService.getConfig();
+        if (!active) return;
+        setPaymentConfig({
+          cash: cfg?.cash !== false,
+          card: cfg?.card !== false,
+          mobile: cfg?.mobile !== false,
+        });
+      } catch (error) {
+        console.error('Failed to load payment configuration', error);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
@@ -123,6 +194,17 @@ const POS = () => {
         itemId,
         payload
       );
+      await refreshQueue();
+      return res?.data ?? null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const updateOrderAutoFlow = async (orderId, payload) => {
+    try {
+      const res = await orderService.updateOrderAutoFlow(orderId, payload);
       await refreshQueue();
       return res?.data ?? null;
     } catch (e) {
@@ -157,9 +239,10 @@ const POS = () => {
         onValueChange={(value) => setActiveTab(value)}
         className="w-full"
       >
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pos">Point of Sale</TabsTrigger>
           <TabsTrigger value="queue">Order Queue</TabsTrigger>
+          <TabsTrigger value="display">Claim Monitor</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pos">
@@ -174,6 +257,8 @@ const POS = () => {
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               onAddToOrder={addToOrder}
+              mobileOrderCount={orderCount}
+              onOpenMobileOrder={() => setIsMobileOrderSheetOpen(true)}
             />
 
             <CurrentOrder
@@ -190,6 +275,8 @@ const POS = () => {
               onOpenPaymentModal={handleOpenPaymentModal}
               onOpenDiscountModal={() => setIsDiscountModalOpen(true)}
               onOpenHistoryModal={() => setIsOrderHistoryModalOpen(true)}
+              isPaymentMethodEnabled={isSelectedPaymentEnabled}
+              paymentDisabledMessage={paymentDisabledMessage}
             />
           </div>
         </TabsContent>
@@ -200,9 +287,64 @@ const POS = () => {
             refreshQueue={refreshQueue}
             updateOrderStatus={updateOrderStatus}
             updateOrderItemState={updateOrderItemState}
+            updateOrderAutoFlow={updateOrderAutoFlow}
           />
         </TabsContent>
+
+        <TabsContent value="display">
+          <CustomerDisplay queue={orderQueue} />
+        </TabsContent>
       </Tabs>
+
+      <Sheet
+        open={isMobileOrderSheetOpen}
+        onOpenChange={setIsMobileOrderSheetOpen}
+      >
+        <SheetContent
+          side="bottom"
+          className="flex h-[88vh] flex-col overflow-hidden rounded-t-3xl border-t border-border bg-background/95 p-0 md:hidden"
+        >
+          <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 pb-3 pt-4">
+            <SheetHeader className="space-y-1 text-left">
+              <SheetTitle className="text-base font-semibold text-foreground">
+                {orderDescription}
+              </SheetTitle>
+              <SheetDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {itemSummary}
+              </SheetDescription>
+            </SheetHeader>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-5">
+            <CurrentOrder
+              variant="sheet"
+              currentOrder={currentOrder}
+              discount={discount}
+              orderNumber={orderNumber}
+              onUpdateQuantity={updateQuantity}
+              onRemoveFromOrder={removeFromOrder}
+              onClearOrder={clearOrder}
+              onRemoveDiscount={removeDiscount}
+              calculateSubtotal={calculateSubtotal}
+              calculateDiscountAmount={calculateDiscountAmount}
+              calculateTotal={calculateTotal}
+              onOpenPaymentModal={() => {
+                setIsMobileOrderSheetOpen(false);
+                handleOpenPaymentModal();
+              }}
+              onOpenDiscountModal={() => {
+                setIsMobileOrderSheetOpen(false);
+                setIsDiscountModalOpen(true);
+              }}
+              onOpenHistoryModal={() => {
+                setIsMobileOrderSheetOpen(false);
+                setIsOrderHistoryModalOpen(true);
+              }}
+              isPaymentMethodEnabled={isSelectedPaymentEnabled}
+              paymentDisabledMessage={paymentDisabledMessage}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <PaymentModal
         isOpen={isPaymentModalOpen}
